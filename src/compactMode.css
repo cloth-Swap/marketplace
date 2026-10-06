@@ -1,0 +1,79 @@
+/* =========================================================
+   CLOTHSWAP COMPACT MODE
+   Only active when Compact Mode is ON
+   ========================================================= */
+
+body.clothswap-compact-mode {
+  --clothswap-compact-scale: 0.88;
+}
+
+/* Main page spacing */
+
+body.clothswap-compact-mode
+.clothswap-settings-page,
+body.clothswap-compact-mode
+.container,
+body.clothswap-compact-mode
+.container-fluid {
+  --clothswap-compact-gap: 0.85;
+}
+
+/* ClothSwap custom sections */
+
+body.clothswap-compact-mode
+.clothswap-setting-row {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+body.clothswap-compact-mode
+.clothswap-settings-card {
+  margin-bottom: 14px !important;
+}
+
+body.clothswap-compact-mode
+.clothswap-settings-header {
+  margin-bottom: 18px !important;
+}
+
+/* Navigation */
+
+body.clothswap-compact-mode
+.clothswap-navbar {
+  min-height: 58px;
+}
+
+/* Generic Bootstrap spacing
+   Only when compact mode is active */
+
+body.clothswap-compact-mode
+.py-5 {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+
+body.clothswap-compact-mode
+.py-4 {
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
+
+body.clothswap-compact-mode
+.mb-5 {
+  margin-bottom: 2rem !important;
+}
+
+body.clothswap-compact-mode
+.mb-4 {
+  margin-bottom: 1.25rem !important;
+}
+
+body.clothswap-compact-mode
+.gap-4 {
+  gap: 1rem !important;
+}
+
+body.clothswap-compact-mode
+.gap-3 {
+  gap: 0.75rem !important;
+}
