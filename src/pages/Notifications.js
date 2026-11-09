@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import API_URL from "../api.js";
 
 function Notifications() {
   const navigate = useNavigate();
@@ -9,57 +10,37 @@ function Notifications() {
   const [loading, setLoading] = useState(true);
   const [selectAll, setSelectAll] = useState(false);
 
-  /* ================= MARK AS READ ================= */
-
   async function markAsRead(notificationId) {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/notifications/" +
-          notificationId +
-          "/read",
+        `${API_URL}/api/notifications/${notificationId}/read`,
         {
           method: "PUT"
         }
       );
 
       if (response.ok) {
-        setNotifications(function (
-          currentNotifications
-        ) {
-          return currentNotifications.map(
-            function (notification) {
-              if (
-                notification._id ===
-                notificationId
-              ) {
-                return {
-                  ...notification,
-                  isRead: true
-                };
-              }
-
-              return notification;
+        setNotifications(function (currentNotifications) {
+          return currentNotifications.map(function (notification) {
+            if (notification._id === notificationId) {
+              return {
+                ...notification,
+                isRead: true
+              };
             }
-          );
+
+            return notification;
+          });
         });
 
-        window.dispatchEvent(
-          new Event("notificationsUpdated")
-        );
+        window.dispatchEvent(new Event("notificationsUpdated"));
       }
     } catch (error) {
-      console.error(
-        "Notification read error:",
-        error
-      );
+      console.error("Notification read error:", error);
     }
   }
 
-  /* ================= DELETE NOTIFICATION ================= */
-
-  async function deleteNotification(
-    notificationId
-  ) {
+  async function deleteNotification(notificationId) {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this notification?"
     );
@@ -70,8 +51,7 @@ function Notifications() {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/notifications/" +
-          notificationId,
+        `${API_URL}/api/notifications/${notificationId}`,
         {
           method: "DELETE"
         }
@@ -80,53 +60,33 @@ function Notifications() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(
-          data.message ||
-            "Failed to delete notification."
-        );
+        alert(data.message || "Failed to delete notification.");
         return;
       }
 
-      setNotifications(function (
-        currentNotifications
-      ) {
-        return currentNotifications.filter(
-          function (notification) {
-            return (
-              notification._id !==
-              notificationId
-            );
-          }
-        );
+      setNotifications(function (currentNotifications) {
+        return currentNotifications.filter(function (notification) {
+          return notification._id !== notificationId;
+        });
       });
 
-      window.dispatchEvent(
-        new Event("notificationsUpdated")
-      );
-
+      window.dispatchEvent(new Event("notificationsUpdated"));
     } catch (error) {
-      console.error(
-        "Notification delete error:",
-        error
-      );
+      console.error("Notification delete error:", error);
 
-      alert(
-        "Something went wrong while deleting notification."
-      );
+      alert("Something went wrong while deleting notification.");
     }
-  }  /* ================= DELETE ALL NOTIFICATIONS ================= */
+  }
 
   async function deleteAllNotifications() {
     try {
-      const notificationIds =
-        notifications.map(function (notification) {
-          return notification._id;
-        });
+      const notificationIds = notifications.map(function (notification) {
+        return notification._id;
+      });
 
       for (const notificationId of notificationIds) {
         const response = await fetch(
-          "http://localhost:5000/api/notifications/" +
-            notificationId,
+          `${API_URL}/api/notifications/${notificationId}`,
           {
             method: "DELETE"
           }
@@ -141,178 +101,93 @@ function Notifications() {
       }
 
       setNotifications([]);
-
       setSelectAll(false);
 
-      window.dispatchEvent(
-        new Event("notificationsUpdated")
-      );
-
+      window.dispatchEvent(new Event("notificationsUpdated"));
     } catch (error) {
-      console.error(
-        "Delete all notifications error:",
-        error
-      );
+      console.error("Delete all notifications error:", error);
 
-      alert(
-        "Something went wrong while deleting notifications."
-      );
+      alert("Something went wrong while deleting notifications.");
     }
   }
-    /* ================= DELETE ALL NOTIFICATIONS ================= */
 
-  async function deleteAllNotifications() {
-    try {
-      const notificationIds =
-        notifications.map(function (notification) {
-          return notification._id;
-        });
-
-      for (const notificationId of notificationIds) {
-        const response = await fetch(
-          "http://localhost:5000/api/notifications/" +
-            notificationId,
-          {
-            method: "DELETE"
-          }
-        );
-
-        if (!response.ok) {
-          console.error(
-            "Failed to delete notification:",
-            notificationId
-          );
-        }
-      }
-
-      setNotifications([]);
-
-      setSelectAll(false);
-
-      window.dispatchEvent(
-        new Event("notificationsUpdated")
-      );
-
-    } catch (error) {
-      console.error(
-        "Delete all notifications error:",
-        error
-      );
-
-      alert(
-        "Something went wrong while deleting notifications."
-      );
-    }
-  }
   function openNotification(notification) {
-  if (!notification) {
-    return;
-  }
+    if (!notification) {
+      return;
+    }
 
-  if (!notification.isRead) {
-    markAsRead(notification._id);
-  }
+    if (!notification.isRead) {
+      markAsRead(notification._id);
+    }
 
-  if (
-    notification.type === "chat" &&
-    notification.relatedId
-  ) {
-    navigate(
-      "/chat?requestId=" +
-        encodeURIComponent(notification.relatedId)
-    );
+    if (notification.type === "chat" && notification.relatedId) {
+      navigate(
+        "/chat?requestId=" +
+          encodeURIComponent(notification.relatedId)
+      );
 
-    return;
-  }
+      return;
+    }
 
-  if (notification.relatedId) {
     navigate("/swap-requests");
-    return;
   }
-
-  navigate("/swap-requests");
-}
-
-  /* ================= LOAD NOTIFICATIONS ================= */
 
   async function loadNotifications() {
     const email =
-      localStorage.getItem(
-        "clothswapUserEmail"
-      ) ||
-      localStorage.getItem(
-        "clothswapEmail"
-      ) ||
+      localStorage.getItem("clothswapUserEmail") ||
+      localStorage.getItem("clothswapEmail") ||
       "";
-      const notificationKey =
-  "clothSwapNotifications_" +
-  email.trim().toLowerCase();
 
-const notificationsEnabled =
-  localStorage.getItem(notificationKey) !== "false";
+    const notificationKey =
+      "clothSwapNotifications_" + email.trim().toLowerCase();
+
+    const notificationsEnabled =
+      localStorage.getItem(notificationKey) !== "false";
 
     if (!email) {
       setNotifications([]);
       setLoading(false);
       return;
     }
-if (!notificationsEnabled) {
-  setNotifications([]);
-  setLoading(false);
-  return;
-}
+
+    if (!notificationsEnabled) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
       const response = await fetch(
-        "http://localhost:5000/api/notifications/" +
-          encodeURIComponent(email)
+        `${API_URL}/api/notifications/${encodeURIComponent(email)}`
       );
 
       const data = await response.json();
 
-      if (
-        response.ok &&
-        Array.isArray(
-          data.notifications
-        )
-      ) {
-        setNotifications(
-          data.notifications
-        );
+      if (response.ok && Array.isArray(data.notifications)) {
+        setNotifications(data.notifications);
       } else {
         setNotifications([]);
+        console.error("Failed to load notifications:", data);
       }
-
     } catch (error) {
-      console.error(
-        "Notification loading error:",
-        error
-      );
-
+      console.error("Notification loading error:", error);
       setNotifications([]);
-
     } finally {
       setLoading(false);
     }
   }
 
-  /* ================= LOAD ================= */
-
   useEffect(function () {
     loadNotifications();
   }, []);
 
-  /* ================= PAGE ================= */
-
   return React.createElement(
     "div",
     {
-      className:
-        "container py-5"
+      className: "container py-5"
     },
-
-    /* ================= HEADER ================= */
 
     React.createElement(
       "div",
@@ -324,90 +199,81 @@ if (!notificationsEnabled) {
       React.createElement(
         "h2",
         {
-          className:
-            "fw-bold mb-0"
+          className: "fw-bold mb-0"
         },
         "Notifications"
       ),
 
       notifications.length > 0 &&
-  React.createElement(
-    "div",
-    {
-      className:
-        "d-flex align-items-center gap-3"
-    },
+        React.createElement(
+          "div",
+          {
+            className: "d-flex align-items-center gap-3"
+          },
 
-    React.createElement(
-      "span",
-      {
-        className:
-           "clothswap-notification-count"
-      },
-      notifications.length +
-        (notifications.length === 1
-          ? " notification"
-          : " notifications")
+          React.createElement(
+            "span",
+            {
+              className: "clothswap-notification-count"
+            },
+            notifications.length +
+              (notifications.length === 1
+                ? " notification"
+                : " notifications")
+          ),
+
+          React.createElement(
+            "button",
+            {
+              type: "button",
+              className: "clothswap-select-all-btn",
+              onClick: function () {
+                setSelectAll(!selectAll);
+              }
+            },
+            "☑ Select All"
+          ),
+
+          selectAll &&
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                className: "clothswap-delete-all-btn",
+                onClick: function () {
+                  const confirmed = window.confirm(
+                    "Are you sure you want to delete all notifications?"
+                  );
+
+                  if (confirmed) {
+                    deleteAllNotifications();
+                  }
+                }
+              },
+              "🗑️ Delete All"
+            )
+        )
     ),
-
-    React.createElement(
-      "button",
-      {
-        type: "button",
-        className:
-           "clothswap-select-all-btn",
-        onClick:
-          function () {
-            setSelectAll(
-              !selectAll
-            );
-          }
-      },
-      "☑ Select All"
-    ),
-
-    selectAll &&
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className:
-            "clothswap-delete-all-btn",
-          onClick:
-            deleteAllNotifications
-        },
-        "🗑️ Delete All"
-      )
-  )
-    ),
-
-    /* ================= CONTENT ================= */
 
     loading
-
       ? React.createElement(
           "p",
           {
-            className:
-              "text-muted"
+            className: "text-muted"
           },
           "Loading notifications..."
         )
-
       : notifications.length === 0
-
       ? React.createElement(
           "div",
           {
-            className:
-              "text-center py-5"
+            className: "text-center py-5"
           },
 
           React.createElement(
             "i",
             {
-              className:
-                "bi bi-bell-slash",
+              className: "bi bi-bell-slash",
               style: {
                 fontSize: "45px"
               }
@@ -417,8 +283,7 @@ if (!notificationsEnabled) {
           React.createElement(
             "h5",
             {
-              className:
-                "mt-3"
+              className: "mt-3"
             },
             "No notifications yet"
           ),
@@ -426,149 +291,121 @@ if (!notificationsEnabled) {
           React.createElement(
             "p",
             {
-              className:
-                "text-muted"
+              className: "text-muted"
             },
             "You will see swap requests, messages and updates here."
           )
         )
-
       : React.createElement(
           "div",
           {
-            className:
-              "d-flex flex-column gap-3"
+            className: "d-flex flex-column gap-3"
           },
 
-          notifications.map(
-            function (notification) {
-              return React.createElement(
-                "div",
-                {
-                  key:
-                    notification._id,
+          notifications.map(function (notification) {
+            return React.createElement(
+              "div",
+              {
+                key: notification._id,
 
-                  className:
-  "p-3 border rounded-3 " +
-  (
-    selectAll
-      ? "bg-danger-subtle"
-      : notification.isRead
-      ? "bg-white"
-      : "bg-light"
-  ),
+                className:
+                  "p-3 border rounded-3 " +
+                  (selectAll
+                    ? "bg-danger-subtle"
+                    : notification.isRead
+                    ? "bg-white"
+                    : "bg-light"),
 
-                  style: {
-                    cursor: "pointer"
-                  },
-
-                  onClick:
-  function () {
-    openNotification(
-      notification
-    );
-  }
+                style: {
+                  cursor: "pointer"
                 },
 
-                /* ================= TOP ROW ================= */
+                onClick: function () {
+                  openNotification(notification);
+                }
+              },
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "d-flex justify-content-between align-items-start"
+                },
 
                 React.createElement(
                   "div",
                   {
-                    className:
-                      "d-flex justify-content-between align-items-start"
+                    className: "d-flex align-items-start gap-3"
                   },
 
-                  /* LEFT */
+                  React.createElement(
+                    "i",
+                    {
+                      className: "bi bi-bell-fill fs-4"
+                    }
+                  ),
 
                   React.createElement(
                     "div",
-                    {
-                      className:
-                        "d-flex align-items-start gap-3"
-                    },
+                    null,
 
                     React.createElement(
-                      "i",
+                      "h6",
                       {
-                        className:
-                          "bi bi-bell-fill fs-4"
-                      }
+                        className: "fw-bold mb-1"
+                      },
+                      notification.title
                     ),
 
                     React.createElement(
-                      "div",
-                      null,
+                      "p",
+                      {
+                        className: "mb-1"
+                      },
+                      notification.message
+                    ),
 
+                    notification.senderName &&
                       React.createElement(
-                        "h6",
+                        "small",
                         {
-                          className:
-                            "fw-bold mb-1"
+                          className: "text-muted"
                         },
-                        notification.title
-                      ),
+                        "From: " + notification.senderName
+                      )
+                  )
+                ),
 
-                      React.createElement(
-                        "p",
-                        {
-                          className:
-                            "mb-1"
-                        },
-                        notification.message
-                      ),
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
 
-                      notification.senderName &&
-                        React.createElement(
-                          "small",
-                          {
-                            className:
-                              "text-muted"
-                          },
-                          "From: " +
-                            notification.senderName
-                        )
-                    )
-                  ),
+                    className:
+                      "btn btn-sm btn-outline-danger",
 
-                  /* DELETE BUTTON */
+                    onClick: function (event) {
+                      event.preventDefault();
+                      event.stopPropagation();
+
+                      deleteNotification(notification._id);
+                    },
+
+                    title: "Delete notification"
+                  },
 
                   React.createElement(
-                    "button",
+                    "i",
                     {
-                      type: "button",
+                      className: "bi bi-trash"
+                    }
+                  ),
 
-                      className:
-                        "btn btn-sm btn-outline-danger",
-
-                      onClick:
-                        function (event) {
-                          event.preventDefault();
-                          event.stopPropagation();
-
-                          deleteNotification(
-                            notification._id
-                          );
-                        },
-
-                      title:
-                        "Delete notification"
-                    },
-
-                    React.createElement(
-                      "i",
-                      {
-                        className:
-                          "bi bi-trash"
-                      }
-                    ),
-
-                    " Delete"
-                  )
+                  " Delete"
                 )
-              );
-            }
-          )
+              )
+            );
+          })
         )
   );
 }

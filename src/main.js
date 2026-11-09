@@ -21,29 +21,11 @@ import { LanguageProvider } from "./LanguageContext";
 ReactDOM.createRoot(document.getElementById("root")).render(
 
   React.createElement(
-
-    React.StrictMode,
-
+  LanguageProvider,
+  null,
+  React.createElement(
+    BrowserRouter,
     null,
-
-    React.createElement(
-
-      LanguageProvider,
-
-      null,
-
-      React.createElement(
-
-        BrowserRouter,
-
-        null,
-
-        React.createElement(App)
-
-      )
-
-    )
-
+    React.createElement(App)
   )
-
-);
+));

@@ -5,6 +5,7 @@ const swapRequestSchema = new mongoose.Schema(
     clothingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Clothing",
+      
       required: true
     },
 
@@ -74,10 +75,7 @@ requesterEmail: {
       default: "Not Started"
     },
 
-    /* =====================================================
-       EXCHANGE METHOD
-    ===================================================== */
-
+    
     exchangeMethod: {
       type: String,
       enum: [
@@ -88,7 +86,6 @@ requesterEmail: {
       default: "Not Selected"
     },
 
-    /*====HAND-TO-HAND MEETING DETAILS=========== */
 
     meetingLocation: {
       type: String,
@@ -110,7 +107,6 @@ requesterEmail: {
       default: ""
     },
 
-    /* ====== HAND-TO-HAND CONFIRMATION=============== */
 
     ownerCompleted: {
       type: Boolean,
@@ -121,6 +117,42 @@ requesterEmail: {
       type: Boolean,
       default: false
     },
+    // Hand-to-Hand 48 Hours Confirmation System
+
+handToHandExchangeStartedAt: {
+  type: Date,
+  default: null
+},
+
+ownerReminder24Sent: {
+  type: Boolean,
+  default: false
+},
+
+requesterReminder24Sent: {
+  type: Boolean,
+  default: false
+},
+
+ownerReminder36Sent: {
+  type: Boolean,
+  default: false
+},
+
+requesterReminder36Sent: {
+  type: Boolean,
+  default: false
+},
+
+ownerConfirmationOverdue: {
+  type: Boolean,
+  default: false
+},
+
+requesterConfirmationOverdue: {
+  type: Boolean,
+  default: false
+},
 
     completionStatus: {
       type: String,

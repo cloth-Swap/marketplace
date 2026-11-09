@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import API_URL, { apiFetch } from "../api.js";
+import CourierTracking from "./CourierTracking.js";
 
 function SwapRequests() {
   const navigate = useNavigate();
@@ -11,20 +13,56 @@ function SwapRequests() {
   const [localExchangeForm, setLocalExchangeForm] = useState({});
   const [localExchangeLoading, setLocalExchangeLoading] = useState(null);
   const [shipments, setShipments] = useState({});
+  const [disputeLoading, setDisputeLoading] = useState(null);
+const [raisedDisputes, setRaisedDisputes] = useState([]);
+const [disputesLoaded, setDisputesLoaded] = useState(false);
 
   const currentUser =
     localStorage.getItem("clothSwapUserName") ||
     localStorage.getItem("clothswapUserName") ||
     "ClothSwap User";
-    const currentUserEmail =
+   const currentUserEmail = (
   localStorage.getItem("clothswapUserEmail") ||
   localStorage.getItem("clothswapEmail") ||
-  "";
+  ""
+).trim().toLowerCase();
 
   useEffect(function () {
     fetchRequests();
   }, []);
-    useEffect(function () {
+
+useEffect(function () {
+  async function fetchMyDisputes() {
+    try {
+      const response = await apiFetch(
+        `${API_URL}/api/swap-requests/my-disputes`
+      );
+
+      const data = await response.json();
+
+      if (
+        response.ok &&
+        Array.isArray(data.swapRequestIds)
+      ) {
+        setRaisedDisputes(
+          data.swapRequestIds.map(function (id) {
+            return String(id);
+          })
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Failed to fetch raised disputes:",
+        error
+      );
+    } finally {
+      setDisputesLoaded(true);
+    }
+  }
+
+  fetchMyDisputes();
+}, []);
+ useEffect(function () {
     fetchShipments();
 
     const shipmentTimer =
@@ -37,16 +75,14 @@ function SwapRequests() {
     };
   }, []);
 
-  /* =====================================================
-     FETCH SWAP REQUESTS
-  ===================================================== */
-
+ 
   async function fetchRequests() {
     try {
       setLoading(true);
 
+
 const response = await fetch(
-  "http://localhost:5000/api/swap-requests" +
+  `${API_URL}/api/swap-requests` +
   "?user=" +
   encodeURIComponent(currentUser) +
   "&userEmail=" +
@@ -72,17 +108,13 @@ console.log("SWAP REQUESTS FROM SERVER:", data);
       setLoading(false);
     }
   }
-  /* =====================================================
-     FETCH COURIER SHIPMENTS
-  ===================================================== */
+ 
 
   async function fetchShipments() {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/shipments"
-      );
-
-      const data = await response.json();
+      const response = await fetch
+      (`${API_URL}/api/shipments`);
+       const data = await response.json();
 
       if (!response.ok) {
         return;
@@ -111,26 +143,23 @@ console.log("SWAP REQUESTS FROM SERVER:", data);
       );
     }
   }
-  /* =====================================================
-     FIND USER EMAIL
-     -----------------------------------------------------
-     owner/requester are usernames in SwapRequest.
-     Notifications page uses email as recipient.
-  ===================================================== */
+ 
 
   async function findUserEmail(username) {
     if (!username) {
       return "";
     }
 
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/admin/users"
-      );
+    
+try {
+  const response = await fetch(
+    `${API_URL}/api/admin/users`
+  );
 
-      if (!response.ok) {
-        return "";
-      }
+  if (!response.ok) {
+    return "";
+  }
+
 
       const data = await response.json();
 
@@ -168,9 +197,7 @@ console.log("SWAP REQUESTS FROM SERVER:", data);
     }
   }
 
-  /* =====================================================
-     SEND NOTIFICATION
-  ===================================================== */
+
 
   async function sendSwapNotification(
     request,
@@ -220,13 +247,15 @@ if (
         localStorage.getItem("clothswapUserName") ||
         currentUser;
 
-      const response = await fetch(
-        "http://localhost:5000/api/notifications",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+     
+const response = await fetch(
+  `${API_URL}/api/notifications`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+
           body: JSON.stringify({
             recipient: recipientEmail,
             sender: senderEmail,
@@ -264,9 +293,7 @@ if (
     }
   }
 
-  /* =====================================================
-     GET OTHER PARTICIPANT
-  ===================================================== */
+
 
   function getOtherParticipant(request) {
   if (!request) {
@@ -289,7 +316,6 @@ if (
     return request.owner || "";
   }
 
-  /* Fallback for old requests */
 
   if (request.owner === currentUser) {
     return request.requester || "";
@@ -301,9 +327,6 @@ if (
 
   return "";
 }
-  /* =====================================================
-     UPDATE STATUS
-  ===================================================== */
 
   async function updateStatus(id, status) {
     try {
@@ -311,18 +334,18 @@ if (
         return item._id === id;
       });
 
-      const response = await fetch(
-        "http://localhost:5000/api/swap-requests/" + id,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            status: status
-          })
-        }
-      );
+     const response = await apiFetch(
+  `${API_URL}/api/swap-requests/${id}`,
+  {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      status: status
+    })
+  }
+);
 
       const data = await response.json();
 
@@ -374,9 +397,7 @@ if (
     }
   }
 
-  /* =====================================================
-     AGREE TO SWAP
-  ===================================================== */
+ 
 
   async function agreeToSwap(id) {
     try {
@@ -388,9 +409,9 @@ if (
         });
 
       const response = await fetch(
-        "http://localhost:5000/api/swap-requests/" +
-          id +
-          "/agree",
+        
+`${API_URL}/api/swap-requests/${id}/agree`
+,
         {
           method: "PUT",
           headers: {
@@ -456,9 +477,7 @@ if (
     }
   }
 
-  /* =====================================================
-     COMPLETE SWAP
-  ===================================================== */
+
 
   async function completeSwap(id) {
     try {
@@ -469,13 +488,13 @@ if (
           return item._id === id;
         });
 
-      const response = await fetch(
-        "http://localhost:5000/api/swap-requests/" +
-          id +
-          "/complete",
-        {
-          method: "PUT",
-          headers: {
+    
+const response = await fetch(
+  `${API_URL}/api/swap-requests/${id}/complete`,
+  {
+    method: "PUT",
+    headers: {
+
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
@@ -538,10 +557,7 @@ if (
     }
   }
 
-  /* =====================================================
-     DELETE REQUEST
-  ===================================================== */
-
+  
   async function deleteRequest(id) {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this swap request?"
@@ -551,14 +567,20 @@ if (
       return;
     }
 
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/swap-requests/" +
-          id,
-        {
-          method: "DELETE"
-        }
-      );
+   
+try {
+  const response = await fetch(
+  `${API_URL}/api/swap-requests/${id}`,
+  {
+    method: "DELETE",
+    headers: {
+      Authorization:
+        "Bearer " +
+        localStorage.getItem("clothswapToken")
+    }
+  }
+);
+
 
       const data = await response.json();
 
@@ -585,9 +607,7 @@ if (
     }
   }
 
-  /* =====================================================
-     SAVE LOCAL EXCHANGE
-  ===================================================== */
+
 
   async function saveLocalExchange(id) {
     const form = localExchangeForm[id];
@@ -616,13 +636,13 @@ if (
           return item._id === id;
         });
 
-      const response = await fetch(
-        "http://localhost:5000/api/swap-requests/" +
-          id +
-          "/local-exchange",
-        {
-          method: "PUT",
-          headers: {
+      
+const response = await fetch(
+  `${API_URL}/api/swap-requests/${id}/local-exchange`,
+  {
+    method: "PUT",
+    headers: {
+
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
@@ -697,9 +717,7 @@ if (
     }
   }
 
-  /* =====================================================
-     COMPLETE LOCAL EXCHANGE
-  ===================================================== */
+ 
 
   async function completeLocalExchange(id) {
     try {
@@ -710,13 +728,13 @@ if (
           return item._id === id;
         });
 
-      const response = await fetch(
-        "http://localhost:5000/api/swap-requests/" +
-          id +
-          "/local-exchange/complete",
-        {
-          method: "PUT",
-          headers: {
+     
+const response = await fetch(
+  `${API_URL}/api/swap-requests/${id}/local-exchange/complete`,
+  {
+    method: "PUT",
+    headers: {
+
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
@@ -775,48 +793,111 @@ if (
       setCompleteLoading(null);
     }
   }
+async function selectExchangeMethod(id, method) {
+  if (
+    method !== "Courier" &&
+    method !== "Local Exchange"
+  ) {
+    return;
+  }
 
-  /* =====================================================
-     SELECT EXCHANGE METHOD
-  ===================================================== */
-
-  async function selectExchangeMethod(id, method) {
-    if (method !== "Local Exchange") {
-      return;
-    }
-
-    setRequests(function (previous) {
-      return previous.map(function (item) {
-        if (item._id === id) {
-          return {
-            ...item,
-            exchangeMethod: "Local Exchange"
-          };
-        }
-
-        return item;
-      });
-    });
-
+  try {
     const request = requests.find(function (item) {
       return item._id === id;
     });
 
-    if (request) {
-  const otherParticipant =
-    getOtherParticipant(request);
+    if (!request) {
+      alert("Swap request not found.");
+      return;
+    }
 
-  await sendSwapNotification(
-    request,
-    otherParticipant,
-    "Exchange Method Selected",
-    currentUser +
-      " selected Local Exchange for \"" +
-      (request.clothingTitle ||
-        "your clothing swap") +
-      "\".",
-    "exchange_method_selected"
-  );
+    const currentEmail = (
+      localStorage.getItem("clothswapUserEmail") ||
+      localStorage.getItem("clothswapEmail") ||
+      ""
+    ).trim().toLowerCase();
+
+    const isOwner = request.ownerEmail
+      ? String(request.ownerEmail).trim().toLowerCase() === currentEmail
+      : request.owner === currentUser;
+
+    if (!isOwner) {
+      alert("Only the clothing owner can select the exchange method.");
+      return;
+    }
+
+    if (
+      request.status !== "Accepted" ||
+      request.agreementStatus !== "Confirmed"
+    ) {
+      alert("Both users must confirm the swap first.");
+      return;
+    }
+
+    if (
+      request.exchangeMethod &&
+      request.exchangeMethod !== "Not Selected"
+    ) {
+      alert("Exchange method has already been selected.");
+      return;
+    }
+
+    const token =
+      localStorage.getItem("token") ||
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("jwtToken");
+
+    const response = await fetch(
+      `${API_URL}/api/swap-requests/${id}/exchange-method`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token
+            ? { Authorization: "Bearer " + token }
+            : {})
+        },
+        body: JSON.stringify({
+          exchangeMethod: method,
+          user: currentUser,
+          userEmail: currentEmail
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to select exchange method.");
+      return;
+    }
+
+    const updatedRequest = data.request;
+
+    if (updatedRequest) {
+      setRequests(function (previous) {
+        return previous.map(function (item) {
+          return item._id === id ? updatedRequest : item;
+        });
+      });
+    }
+
+    const otherParticipant =
+      getOtherParticipant(updatedRequest || request);
+
+    await sendSwapNotification(
+      updatedRequest || request,
+      otherParticipant,
+      "Exchange Method Selected",
+      currentUser + " selected " + method +
+        " for \"" +
+        (request.clothingTitle || "your clothing swap") +
+        "\".",
+      "exchange_method_selected"
+    );
+
+   if (method === "Courier") {
+  return;
 }
 
     setLocalExchangeForm(function (previous) {
@@ -824,23 +905,92 @@ if (
         ...previous,
         [id]: {
           meetingLocation:
-            request?.meetingLocation || "",
-          meetingDate:
-            request?.meetingDate || "",
-          meetingTime:
-            request?.meetingTime || "",
-          meetingNotes:
-            request?.meetingNotes || ""
+            updatedRequest?.meetingLocation || "",
+          meetingDate: updatedRequest?.meetingDate || "",
+          meetingTime: updatedRequest?.meetingTime || "",
+          meetingNotes: updatedRequest?.meetingNotes || ""
         }
       };
     });
+  } catch (error) {
+    console.error("Exchange method error:", error);
+    alert("Something went wrong while selecting the exchange method.");
+  }
+}
+
+async function raiseDispute(request) {
+  const id = String(request._id);
+
+  if (raisedDisputes.includes(id)) {
+    alert("You have already raised a dispute for this swap.");
+    return;
   }
 
-  /* =====================================================
-     STATUS CLASS
-  ===================================================== */
+  if (disputeLoading === id) {
+    return;
+  }
 
-  function getStatusClass(status) {
+  setDisputeLoading(id);
+
+  try {
+    const reason = window.prompt(
+      "Enter dispute reason (e.g. Damaged Clothes, Parcel Not Delivered, Wrong Item):"
+    );
+
+    if (!reason || !reason.trim()) {
+      return;
+    }
+
+    const description = window.prompt(
+      "Describe your issue in detail:"
+    );
+
+    if (!description || !description.trim()) {
+      return;
+    }
+
+    const response = await apiFetch(
+      `${API_URL}/api/swap-requests/${id}/dispute`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          reason: reason.trim(),
+          description: description.trim()
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to raise dispute.");
+      return;
+    }
+
+    setRaisedDisputes(function (previous) {
+      if (previous.includes(id)) {
+        return previous;
+      }
+
+      return [...previous, id];
+    });
+
+    alert(
+      "Your dispute has been raised successfully. Admin has been notified."
+    );
+
+  } catch (error) {
+    console.error("Raise dispute error:", error);
+    alert("Something went wrong while raising dispute.");
+  } finally {
+    setDisputeLoading(null);
+  }
+}
+
+     function getStatusClass(status) {
     if (status === "Accepted") {
       return "swap-status accepted";
     }
@@ -855,10 +1005,6 @@ if (
 
     return "swap-status pending";
   }
-
-  /* =====================================================
-     AGREEMENT BOX
-  ===================================================== */
 
   function createAgreementBox(
     request,
@@ -901,18 +1047,21 @@ if (
 
 const requesterCompleted =
   request.requesterCompleted === true;
+const currentEmail = (
+  localStorage.getItem("clothswapUserEmail") ||
+  localStorage.getItem("clothswapEmail") ||
+  ""
+).trim().toLowerCase();
 
-const isOwner =
-  request.ownerEmail
-    ? request.ownerEmail.toLowerCase() ===
-      currentUserEmail.toLowerCase()
-    : request.owner === currentUser;
 
-const isRequester =
-  request.requesterEmail
-    ? request.requesterEmail.toLowerCase() ===
-      currentUserEmail.toLowerCase()
-    : request.requester === currentUser;
+const isOwner = request.ownerEmail
+  ? String(request.ownerEmail).trim().toLowerCase() === currentEmail
+  : request.owner === currentUser;
+
+const isRequester = request.requesterEmail
+  ? String(request.requesterEmail).trim().toLowerCase() === currentEmail
+  : request.requester === currentUser;
+
 
 const completionStatus =
   ownerCompleted && requesterCompleted
@@ -989,11 +1138,10 @@ const alreadyCompleted =
             : "Waiting"
         )
       ),
+isOwner &&
+agreementStatus === "Confirmed" &&
+exchangeMethod === "Not Selected"
 
-      /* ================= EXCHANGE METHOD ================= */
-
-      agreementStatus === "Confirmed" &&
-      exchangeMethod === "Not Selected"
         ? React.createElement(
             "div",
             {
@@ -1032,12 +1180,12 @@ const alreadyCompleted =
                   className:
                     "swap-exchange-option courier-option",
 
-                  onClick: function () {
-                    navigate(
-                      "/courier-delivery?requestId=" +
-                        request._id
-                    );
-                  }
+                 onClick: function () {
+  selectExchangeMethod(
+    request._id,
+    "Courier"
+  );
+}
                 },
                 "🚚 Courier Delivery"
               ),
@@ -1061,7 +1209,6 @@ const alreadyCompleted =
           )
         : null,
 
-      /* ================= LOCAL EXCHANGE FORM ================= */
 
       showLocalExchangeForm
         ? React.createElement(
@@ -1163,41 +1310,223 @@ const alreadyCompleted =
               }
             ),
 
-            React.createElement(
-              "input",
-              {
-                type: "time",
+           
+React.createElement(
+  "div",
+  {
+    className: "meeting-time-picker"
+  },
 
-                value:
-                  localExchangeData.meetingTime,
+  React.createElement(
+    "label",
+    {
+      className: "meeting-time-label"
+    },
+    "⏰ Meeting Time"
+  ),
 
-                onChange: function (event) {
-                  setLocalExchangeForm(
-                    function (previous) {
-                      return {
-                        ...previous,
-                        [request._id]: {
-                          ...previous[
-                            request._id
-                          ],
-                          meetingTime:
-                            event.target.value
-                        }
-                      };
-                    }
-                  );
-                },
+  React.createElement(
+    "div",
+    {
+      className: "meeting-time-options"
+    },
 
-                style: {
-                  width: "100%",
-                  padding: "10px",
-                  marginBottom: "10px",
-                  borderRadius: "8px",
-                  border:
-                    "1px solid #ccc"
-                }
+    React.createElement(
+      "select",
+      {
+        value:
+          (localExchangeData.meetingTime || "").match(/^(\d{1,2}):/)
+            ? String(
+                Number(
+                  (localExchangeData.meetingTime || "").match(/^(\d{1,2}):/)[1]
+                )
+              ).padStart(2, "0")
+            : "",
+
+        onChange: function (event) {
+          const hour = event.target.value;
+
+          setLocalExchangeForm(function (previous) {
+            const oldTime =
+              previous[request._id]?.meetingTime || "";
+
+            const parts = oldTime.match(
+              /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i
+            );
+
+            const minute = parts ? parts[2] : "00";
+            const period = parts && parts[3]
+              ? parts[3].toUpperCase()
+              : "AM";
+
+            return {
+              ...previous,
+              [request._id]: {
+                ...previous[request._id],
+                meetingTime: hour
+                  ? hour + ":" + minute + " " + period
+                  : ""
               }
-            ),
+            };
+          });
+        },
+
+        style: {
+          flex: 1,
+          minWidth: "0",
+          padding: "12px",
+          borderRadius: "10px",
+          border: "1px solid #dfc4e4",
+          background: "#fff",
+          color: "#65466d",
+          fontSize: "15px",
+          fontWeight: "600"
+        }
+      },
+
+      React.createElement("option", { value: "" }, "Hour"),
+
+      ...Array.from(
+        { length: 12 },
+        function (_, index) {
+          const hour = String(index + 1).padStart(2, "0");
+
+          return React.createElement(
+            "option",
+            {
+              key: hour,
+              value: hour
+            },
+            hour
+          );
+        }
+      )
+    ),
+
+    React.createElement(
+      "select",
+      {
+        value:
+          (localExchangeData.meetingTime || "").match(/:(\d{2})/)
+            ? (localExchangeData.meetingTime || "").match(/:(\d{2})/)[1]
+            : "00",
+
+        onChange: function (event) {
+          const minute = event.target.value;
+
+          setLocalExchangeForm(function (previous) {
+            const oldTime =
+              previous[request._id]?.meetingTime || "";
+
+            const parts = oldTime.match(
+              /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i
+            );
+
+            const hour = parts
+              ? String(Number(parts[1])).padStart(2, "0")
+              : "08";
+
+            const period = parts && parts[3]
+              ? parts[3].toUpperCase()
+              : "AM";
+
+            return {
+              ...previous,
+              [request._id]: {
+                ...previous[request._id],
+                meetingTime:
+                  hour + ":" + minute + " " + period
+              }
+            };
+          });
+        },
+
+        style: {
+          flex: 1,
+          minWidth: "0",
+          padding: "12px",
+          borderRadius: "10px",
+          border: "1px solid #dfc4e4",
+          background: "#fff",
+          color: "#65466d",
+          fontSize: "15px",
+          fontWeight: "600"
+        }
+      },
+
+      React.createElement("option", { value: "00" }, "00"),
+      React.createElement("option", { value: "15" }, "15"),
+      React.createElement("option", { value: "30" }, "30"),
+      React.createElement("option", { value: "45" }, "45")
+    ),
+
+    React.createElement(
+      "select",
+      {
+        value:
+          (localExchangeData.meetingTime || "").match(/(AM|PM)$/i)
+            ? (localExchangeData.meetingTime || "").match(/(AM|PM)$/i)[1].toUpperCase()
+            : "AM",
+
+        onChange: function (event) {
+          const period = event.target.value;
+
+          setLocalExchangeForm(function (previous) {
+            const oldTime =
+              previous[request._id]?.meetingTime || "";
+
+            const parts = oldTime.match(/^(\d{1,2}):(\d{2})/);
+
+            const hour = parts
+              ? String(Number(parts[1])).padStart(2, "0")
+              : "08";
+
+            const minute = parts ? parts[2] : "00";
+
+            return {
+              ...previous,
+              [request._id]: {
+                ...previous[request._id],
+                meetingTime:
+                  hour + ":" + minute + " " + period
+              }
+            };
+          });
+        },
+
+        style: {
+          flex: 0.8,
+          minWidth: "0",
+          padding: "12px",
+          borderRadius: "10px",
+          border: "1px solid #dfc4e4",
+          background: "#fff",
+          color: "#65466d",
+          fontSize: "15px",
+          fontWeight: "700"
+        }
+      },
+
+      React.createElement("option", { value: "AM" }, "AM"),
+      React.createElement("option", { value: "PM" }, "PM")
+    )
+  ),
+
+  React.createElement(
+    "div",
+    {
+      className: "meeting-time-preview",
+      style: {
+        marginTop: "9px",
+        color: "#88518e",
+        fontSize: "14px",
+        fontWeight: "600"
+      }
+    },
+    "⏰ Selected Time: ",
+    localExchangeData.meetingTime || "Select time"
+  )
+),
 
             React.createElement(
               "textarea",
@@ -1263,8 +1592,126 @@ const alreadyCompleted =
             )
           )
         : null,
+      request.exchangeMethod === "Local Exchange" &&
+      request.meetingLocation &&
+      request.meetingDate &&
+      request.meetingTime
+        ? React.createElement(
+            "div",
+            {
+              className: "swap-exchange-method-box"
+            },
 
-      /* ================= COMPLETION ================= */
+            React.createElement(
+              "div",
+              {
+                className: "swap-exchange-method-title"
+              },
+              "🤝 Local Exchange Meeting Details"
+            ),
+
+            React.createElement(
+              "p",
+              {
+                className: "swap-exchange-method-text"
+              },
+              "Meeting details confirmed for your hand-to-hand exchange."
+            ),
+
+            React.createElement(
+              "div",
+              {
+                className: "swap-request-details-grid"
+              },
+
+              React.createElement(
+                "div",
+                {
+                  className: "swap-detail-item"
+                },
+
+                React.createElement(
+                  "span",
+                  {
+                    className: "swap-detail-label"
+                  },
+                  "📍 Meeting Location"
+                ),
+
+                React.createElement(
+                  "strong",
+                  null,
+                  request.meetingLocation
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className: "swap-detail-item"
+                },
+
+                React.createElement(
+                  "span",
+                  {
+                    className: "swap-detail-label"
+                  },
+                  "📅 Meeting Date"
+                ),
+
+                React.createElement(
+                  "strong",
+                  null,
+                  request.meetingDate
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className: "swap-detail-item"
+                },
+
+                React.createElement(
+                  "span",
+                  {
+                    className: "swap-detail-label"
+                  },
+                  "⏰ Meeting Time"
+                ),
+
+                React.createElement(
+                  "strong",
+                  null,
+                  request.meetingTime
+                )
+              )
+            ),
+
+            request.meetingNotes
+              ? React.createElement(
+                  "div",
+                  {
+                    className: "swap-request-message"
+                  },
+
+                  React.createElement(
+                    "span",
+                    {
+                      className: "swap-detail-label"
+                    },
+                    "📝 Meeting Notes"
+                  ),
+
+                  React.createElement(
+                    "p",
+                    null,
+                    request.meetingNotes
+                  )
+                )
+              : null
+          )
+        : null,
 
       agreementStatus === "Confirmed" ||
       agreementStatus === "Completed"
@@ -1389,9 +1836,6 @@ const alreadyCompleted =
     );
   }
 
-  /* =====================================================
-     LOADING
-  ===================================================== */
 
   if (loading) {
     return React.createElement(
@@ -1419,9 +1863,7 @@ const alreadyCompleted =
     );
   }
 
-  /* =====================================================
-     EMPTY
-  ===================================================== */
+ 
 
   if (requests.length === 0) {
     return React.createElement(
@@ -1500,10 +1942,6 @@ const alreadyCompleted =
     );
   }
 
-  /* =====================================================
-     REQUEST CARDS
-  ===================================================== */
-
   const requestCards = requests.map(
     function (request) {
      const isOwner =
@@ -1518,8 +1956,33 @@ const isRequester =
       currentUserEmail.toLowerCase()
     : request.requester === currentUser;
 
-      const isParticipant =
-        isOwner || isRequester;
+      
+const isParticipant =
+  isOwner || isRequester;
+
+const shipment = shipments[String(request._id)] || null;
+
+const isCourierCompleted =
+  request.exchangeMethod === "Courier" &&
+  (
+    shipment?.status === "Delivered" ||
+    request.completionStatus === "Completed"
+  );
+
+const isLocalExchangeCompleted =
+  request.exchangeMethod === "Local Exchange" &&
+  (
+    request.completionStatus === "Completed" ||
+    (
+      request.ownerCompleted === true &&
+      request.requesterCompleted === true
+    )
+  );
+
+const isSwapCompleted =
+  isCourierCompleted ||
+  isLocalExchangeCompleted ||
+  request.completionStatus === "Completed";
 
       const ownerAgreed =
         request.ownerAgreed === true;
@@ -1538,7 +2001,6 @@ const isRequester =
 
       const actionButtons = [];
 
-      /* ================= OWNER ACTIONS ================= */
 
       if (
         isOwner &&
@@ -1585,7 +2047,6 @@ const isRequester =
         );
       }
 
-      /* ================= AGREE ================= */
 
       if (
         isParticipant &&
@@ -1621,7 +2082,6 @@ const isRequester =
         );
       }
 
-      /* ================= ALREADY AGREED ================= */
 
       if (
         isParticipant &&
@@ -1646,10 +2106,9 @@ const isRequester =
         );
       }
 
-      /* ================= CHAT ================= */
 
-      if (isParticipant) {
-        actionButtons.push(
+if (isParticipant && !isSwapCompleted) {
+          actionButtons.push(
           React.createElement(
             Link,
             {
@@ -1667,36 +2126,88 @@ const isRequester =
           )
         );
       }
+if (
+  isParticipant &&
+  (
+    request.status === "Accepted" ||
+    isSwapCompleted
+  ) &&
+  disputesLoaded &&
+  !raisedDisputes.includes(String(request._id))
+) {
+  actionButtons.push(
+    React.createElement(
+      "button",
+      {
+        key: "raise-dispute",
 
-      /* ================= DELETE ================= */
+        className:
+          "reject-btn swap-action-button",
 
-      if (isParticipant) {
-        actionButtons.push(
-          React.createElement(
-            "button",
-            {
-              key: "delete",
+        disabled:
+          disputeLoading === request._id,
 
-              className:
-                "reject-btn swap-action-button",
+        onClick: function () {
+          raiseDispute(request);
+        }
+      },
 
-              onClick: function () {
-                deleteRequest(
-                  request._id
-                );
-              }
-            },
+      disputeLoading === request._id
+        ? "Submitting..."
+        : "⚠️ Raise Dispute"
+    )
+  );
+}
 
-            "🗑 Delete"
-          )
-        );
-      }
+if (
+  isParticipant &&
+  (
+    request.status === "Accepted" ||
+    isSwapCompleted
+  ) &&
+  disputesLoaded &&
+  raisedDisputes.includes(String(request._id))
+)
+{
+  actionButtons.push(
+    React.createElement(
+      "button",
+      {
+        key: "dispute-raised",
+        className: "swap-action-button",
+        disabled: true
+      },
+      "✓ Dispute Raised"
+    )
+  );
+}
 
-      const agreementBox =
-        createAgreementBox(
-          request,
-          isParticipant
-        );
+if (isParticipant) {
+  actionButtons.push(
+    React.createElement(
+      "button",
+      {
+        key: "delete",
+
+        className:
+          "reject-btn swap-action-button",
+
+        onClick: function () {
+          deleteRequest(
+            request._id
+          );
+        }
+      },
+
+      "🗑 Delete"
+    )
+  );
+}
+
+const agreementBox = isSwapCompleted ? null : createAgreementBox(
+      request,
+      isParticipant
+    );
 
       return React.createElement(
         "div",
@@ -1707,7 +2218,6 @@ const isRequester =
           key: request._id
         },
 
-        /* ================= CARD TOP ================= */
 
         React.createElement(
           "div",
@@ -1716,7 +2226,6 @@ const isRequester =
               "swap-request-card-main"
           },
 
-          /* ================= IMAGE ================= */
 
           React.createElement(
             "div",
@@ -1742,7 +2251,6 @@ const isRequester =
             )
           ),
 
-          /* ================= INFORMATION ================= */
 
           React.createElement(
             "div",
@@ -1773,17 +2281,15 @@ const isRequester =
                 "span",
                 {
                   className:
-                    getStatusClass(
-                      request.status
-                    )
+                    getStatusClass(isSwapCompleted ? "Completed" : request.status)
                 },
 
-                request.status ||
-                  "Pending"
+              isSwapCompleted
+  ? "Completed"
+  : request.status || "Pending"
               )
             ),
 
-            /* ================= DETAILS ================= */
 
             React.createElement(
               "div",
@@ -1844,50 +2350,21 @@ const isRequester =
                 )
               )
             ),
-                        /* ================= COURIER STATUS ================= */
 
-            shipments[request._id]
-              ? React.createElement(
-                  "div",
-                  {
-                    className:
-                      "swap-request-message",
-                    style: {
-                      marginTop: "15px"
-                    }
-                  },
-
-                  React.createElement(
-                    "span",
-                    {
-                      className:
-                        "swap-detail-label"
-                    },
-                    "🚚 Courier Status"
-                  ),
-
-                  React.createElement(
-                    "p",
-                    null,
-                    "Current Status: " +
-                      (
-                        shipments[request._id].status ||
-                        "Courier Requested"
-                      )
-                  ),
-
-                  React.createElement(
-                    "p",
-                    null,
-                    "Tracking ID: " +
-                      (
-                        shipments[request._id].trackingId ||
-                        "Not available"
-                      )
-                  )
-                )
-              : null,
-
+          request.exchangeMethod === "Courier" && !isSwapCompleted
+  ? React.createElement(CourierTracking, {
+      request: request,
+      shipment: shipments[request._id] || null,
+      onShipmentUpdate: function (updatedShipment) {
+        setShipments(function (previous) {
+          return {
+            ...previous,
+            [request._id]: updatedShipment
+          };
+        });
+      }
+    })
+  : null,
             /* ================= MESSAGE ================= */
 
             request.message

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import API_URL from "../api";
 
 function CourierDelivery() {
   const [pickupAddress, setPickupAddress] = useState("");
@@ -9,69 +10,78 @@ function CourierDelivery() {
   const [pickupDate, setPickupDate] = useState("");
   const [shipment, setShipment] = useState(null);
   const [arranging, setArranging] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [verifyingOtp, setVerifyingOtp] =
-  useState(false);
+useEffect(() => {
+  async function loadExistingShipment() {
+    const params = new URLSearchParams(window.location.search);
+    const requestId = params.get("requestId");
 
-  /*
-  ============================================================
-  RECEIVER OTP
-  ============================================================
-  */
-
-  async function getReceiverOtp() {
-    if (!shipment) {
-      return;
-    }
+    if (!requestId) return;
 
     try {
-      const currentUser =
-        localStorage.getItem("clothSwapUserName") ||
-        localStorage.getItem("clothswapUserName") ||
-        "";
-
-      if (!currentUser) {
-        alert("Please login first.");
-        return;
-      }
-
       const response = await fetch(
-        "http://localhost:5000/api/shipments/" +
-          shipment._id +
-          "/receiver-otp?user=" +
-          encodeURIComponent(currentUser)
+        `${API_URL}/api/shipments/${requestId}`
       );
 
       const data = await response.json();
 
-      if (!response.ok) {
-        alert(
-          data.message ||
-            "OTP is not available yet."
-        );
-        return;
+      if (response.ok && data.shipment) {
+        setShipment(data.shipment);
       }
-
-      setOtp(data.otp);
     } catch (error) {
-      console.error(
-        "Get Receiver OTP Error:",
-        error
-      );
-
-      alert(
-        "Something went wrong while getting OTP."
-      );
+      console.error("Load Shipment Error:", error);
     }
   }
 
-  /*
-  ============================================================
-  CHECK OTP WHEN PARCEL ARRIVES
-  ============================================================
-  */
+  loadExistingShipment();
+}, []);
 
-  useEffect(function () {
+  const [otp, setOtp] = useState("");
+  const [verifyingOtp, setVerifyingOtp] =
+  useState(false);
+
+async function getReceiverOtp() {
+  if (!shipment) {
+    return;
+  }
+
+  try {
+    const token =
+      localStorage.getItem("clothswapToken")
+
+    if (!token) {
+      alert("Please login again. Login token not found.");
+      return;
+    }
+
+    const response = await fetch(
+      `${API_URL}/api/shipments/${shipment._id}/receiver-otp`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(
+        data.message || "OTP is not available yet."
+      );
+      return;
+    }
+
+    setOtp(String(data.otp));
+  } catch (error) {
+    console.error("Get Receiver OTP Error:", error);
+
+    alert(
+      "Something went wrong while getting OTP."
+    );
+  }
+}
+ useEffect(function () {
     if (
       shipment &&
       shipment.status === "Arrived"
@@ -94,17 +104,28 @@ function CourierDelivery() {
     setVerifyingOtp(true);
 
     const response = await fetch(
-      "http://localhost:5000/api/shipments/" +
-        shipment._id +
-        "/verify-otp",
+     `${API_URL}/api/shipments/` +
+  shipment._id +
+  "/verify-otp",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+       
+headers: {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${
+    localStorage.getItem("token") ||
+    localStorage.getItem("authToken") ||
+    localStorage.getItem("jwtToken") ||
+    ""
+  }`
+},
+
+       
         body: JSON.stringify({
-          otp: otp
+          otp: otp,
+          trackingId: shipment.trackingId
         })
+
       }
     );
 
@@ -121,7 +142,6 @@ function CourierDelivery() {
     setShipment(data.shipment);
     setOtp("");
 
-    /* ================= DELIVERY CONFIRMED NOTIFICATION ================= */
 
     const deliveryUserEmail =
       localStorage.getItem("clothswapUserEmail") ||
@@ -134,8 +154,8 @@ function CourierDelivery() {
       "ClothSwap User";
 
     const requestResponse = await fetch(
-      "http://localhost:5000/api/swap-requests/" +
-        data.shipment.swapRequestId
+      `${API_URL}/api/swap-requests/` +
+  data.shipment.swapRequestId
     );
 
     const requestData =
@@ -154,8 +174,7 @@ function CourierDelivery() {
 
     if (deliveryRecipientEmail) {
       await fetch(
-        "http://localhost:5000/api/notifications",
-        {
+`${API_URL}/api/notifications`,        {
           method: "POST",
           headers: {
             "Content-Type":
@@ -216,12 +235,6 @@ function CourierDelivery() {
   }
 }
 
-  /*
-  ============================================================
-  ARRANGE COURIER
-  ============================================================
-  */
-
   async function arrangeCourier() {
     if (
       !pickupAddress.trim() ||
@@ -252,15 +265,10 @@ function CourierDelivery() {
         setArranging(false);
         return;
       }
-
-      /*
-      ================= GET SWAP REQUEST =================
-      */
-
       const requestResponse =
   await fetch(
-    "http://localhost:5000/api/swap-requests/" +
-      requestId
+   `${API_URL}/api/swap-requests/` +
+  requestId
   );
 
 const requestData =
@@ -285,9 +293,7 @@ if (!request || !request._id) {
   );
   setArranging(false);
   return;
-}      /*
-      ================= CONFIRM SWAP =================
-      */
+}      
 
       if (
         request.status !== "Accepted" ||
@@ -301,14 +307,9 @@ if (!request || !request._id) {
         setArranging(false);
         return;
       }
-
-      /*
-      ================= CREATE SHIPMENT =================
-      */
-
       const shipmentResponse =
         await fetch(
-          "http://localhost:5000/api/shipments/",
+          `${API_URL}/api/shipments/`,
           {
             method: "POST",
 
@@ -372,12 +373,7 @@ if (!request || !request._id) {
       setShipment(
         shipmentData.shipment
       );
-
-      /*
-      ================= COURIER NOTIFICATION =================
-      */
-
-      const courierUserEmail =
+const courierUserEmail =
         localStorage.getItem("clothswapUserEmail") ||
         localStorage.getItem("clothswapEmail") ||
         "";
@@ -396,7 +392,7 @@ if (!request || !request._id) {
 
       if (recipientEmail) {
         await fetch(
-          "http://localhost:5000/api/notifications",
+          `${API_URL}/api/notifications`,
           {
             method: "POST",
             headers: {
@@ -473,11 +469,7 @@ if (!request || !request._id) {
     }
   }
 
-  /*
-  ============================================================
-  UPDATE SHIPMENT STATUS
-  ============================================================
-  */
+ 
 
   async function updateShipmentStatus(
     status
@@ -491,9 +483,9 @@ if (!request || !request._id) {
 
       const response =
         await fetch(
-          "http://localhost:5000/api/shipments/" +
-            shipment._id +
-            "/status",
+         `${API_URL}/api/shipments/` +
+  shipment._id +
+  "/status",
           {
             method: "PUT",
 
@@ -522,12 +514,7 @@ if (!request || !request._id) {
       }
 
       setShipment(data.shipment);
-
-      /*
-      ================= SHIPMENT STATUS NOTIFICATION =================
-      */
-
-      const statusUserEmail =
+const statusUserEmail =
         localStorage.getItem("clothswapUserEmail") ||
         localStorage.getItem("clothswapEmail") ||
         "";
@@ -539,8 +526,8 @@ if (!request || !request._id) {
 
       const requestResponse =
         await fetch(
-          "http://localhost:5000/api/swap-requests/" +
-            data.shipment.swapRequestId
+          `${API_URL}/api/swap-requests/` +
+  data.shipment.swapRequestId
         );
 
       const requestData =
@@ -560,7 +547,7 @@ if (!request || !request._id) {
       if (statusRecipientEmail) {
 
         await fetch(
-          "http://localhost:5000/api/notifications",
+          `${API_URL}/api/notifications`,
           {
             method: "POST",
 

@@ -1,6 +1,41 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API_URL from "../api";
+import { State, City } from "country-state-city";
+
+const inputStyle = {
+  width: "100%",
+  padding: "14px 16px",
+  borderRadius: "13px",
+  border: "1px solid #e7dce9",
+  background: "#fff",
+  color: "#393142",
+  fontSize: "15px",
+  outline: "none",
+  boxSizing: "border-box"
+};
+
+const labelStyle = {
+  display: "block",
+  fontWeight: "700",
+  color: "#493653",
+  marginBottom: "9px",
+  fontSize: "14px"
+};
+
+const sectionHeadingStyle = {
+  color: "#69436f",
+  fontSize: "19px",
+  fontWeight: "800",
+  margin: "0 0 7px"
+};
+
+const sectionDescriptionStyle = {
+  color: "#928397",
+  fontSize: "13px",
+  margin: "0 0 20px"
+};
 
 function ListClothes() {
   const navigate = useNavigate();
@@ -10,6 +45,7 @@ function ListClothes() {
 
   const [formData, setFormData] = useState({
     title: "",
+    brand: "",
     category: "",
     size: "",
     condition: "",
@@ -18,6 +54,50 @@ function ListClothes() {
     owner: "",
     description: "",
     image: ""
+  });
+
+  const [selectedStateCode, setSelectedStateCode] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  useEffect(function () {
+  const savedLocation =
+    localStorage.getItem("clothswapUserLocation") || "";
+
+  if (!savedLocation) return;
+
+  const parts = savedLocation.split(",").map(function (item) {
+    return item.trim();
+  });
+
+  const savedCity = parts[0];
+  const savedState = parts[1];
+
+  const state = State.getStatesOfCountry("IN").find(
+    function (item) {
+      return item.name.toLowerCase() ===
+        (savedState || "").toLowerCase();
+    }
+  );
+
+  if (state) {
+    setSelectedStateCode(state.isoCode);
+    setSelectedCity(savedCity);
+
+    setFormData(function (previous) {
+      return {
+        ...previous,
+        location: savedLocation
+      };
+    });
+  }
+}, []);
+  const [citySearch, setCitySearch] = useState("");
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const indiaStates = State.getStatesOfCountry("IN");
+  const indiaCities = selectedStateCode
+    ? City.getCitiesOfState("IN", selectedStateCode)
+    : [];
+  const filteredIndiaCities = indiaCities.filter(function (city) {
+    return city.name.toLowerCase().includes(citySearch.toLowerCase());
   });
 
   const [loading, setLoading] = useState(false);
@@ -116,8 +196,6 @@ function ListClothes() {
 
     reader.readAsDataURL(file);
   }
-
-  /* ================= CHOOSE PHOTO ================= */
 
   function handleFileChange(event) {
     const file = event.target.files[0];
@@ -287,6 +365,26 @@ function ListClothes() {
       return;
     }
 
+    if (!formData.brand.trim()) {
+      setError("Please enter brand name.");
+      return;
+    }
+
+    if (!formData.price || Number(formData.price) <= 0) {
+      setError("Please enter a valid price.");
+      return;
+    }
+
+    if (!formData.location) {
+      setError("Please select your location.");
+      return;
+    }
+
+    if (!formData.owner.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
     if (!formData.category) {
       setError("Please select a category.");
       return;
@@ -310,25 +408,39 @@ function ListClothes() {
     setLoading(true);
 
     try {
+      console.log("BRAND BEING SENT:", formData.brand);
+
       const response = await fetch(
-        "http://localhost:5000/api/clothes",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-         body: JSON.stringify({
-  ...formData,
-  ownerEmail:
-    localStorage.getItem("clothswapUserEmail") ||
-    localStorage.getItem("clothswapEmail") ||
-    ""
-})
+  `${API_URL}/api/clothes`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("clothswapToken")}`
+    },
+          body: JSON.stringify({
+            ...formData,
+            ownerEmail:
+              localStorage.getItem("clothswapUserEmail") ||
+              localStorage.getItem("clothswapEmail") ||
+              ""
+          })
         }
       );
 
-      const data = await response.json();
+const responseText = await response.text();
 
+let data;
+
+try {
+  data = JSON.parse(responseText);
+} catch (parseError) {
+  console.error("Non-JSON server response:", responseText);
+
+  throw new Error(
+    "Server returned HTML instead of JSON. Check POST /api/clothes route."
+  );
+}
       if (!response.ok || !data.success) {
         throw new Error(
           data.message || "Failed to list clothing."
@@ -341,6 +453,7 @@ function ListClothes() {
 
       setFormData({
         title: "",
+        brand: "",
         category: "",
         size: "",
         condition: "",
@@ -350,16 +463,19 @@ function ListClothes() {
         description: "",
         image: ""
       });
-    } catch (submitError) {
-      console.log(
-        "Clothing upload error:",
-        submitError
-      );
 
-      setError(
-        "❌ Cannot connect to server. Make sure backend is running."
-      );
-    } finally {
+      setSelectedStateCode("");
+      setSelectedCity("");
+      setCitySearch("");
+
+    }  catch (submitError) {
+  console.error("Clothing upload error:", submitError);
+
+  setError(
+    submitError.message || "Something went wrong while listing clothing."
+  );
+}
+ finally {
       setLoading(false);
     }
   }
@@ -372,8 +488,7 @@ function ListClothes() {
       {
         style: {
           minHeight: "100vh",
-          background:
-            "linear-gradient(135deg, #1f1635, #4b286d, #8e44ad)",
+          background: "linear-gradient(135deg,#1f1635,#4b286d,#8e44ad)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -391,8 +506,7 @@ function ListClothes() {
             backdropFilter: "blur(20px)",
             borderRadius: "28px",
             padding: "25px",
-            boxShadow:
-              "0 25px 70px rgba(0,0,0,0.35)"
+            boxShadow: "0 25px 70px rgba(0,0,0,0.35)"
           }
         },
 
@@ -446,19 +560,15 @@ function ListClothes() {
                 padding: "14px 30px",
                 borderRadius: "50px",
                 border: "none",
-                background:
-                  "linear-gradient(135deg,#ff6b9d,#c44569)",
+                background: "linear-gradient(135deg,#ff6b9d,#c44569)",
                 color: "white",
                 fontSize: "16px",
                 fontWeight: "700",
                 cursor: "pointer",
-                boxShadow:
-                  "0 8px 25px rgba(196,69,105,0.4)"
+                boxShadow: "0 8px 25px rgba(196,69,105,0.4)"
               }
             },
-            cameraReady
-              ? "📸 Capture Photo"
-              : "Opening Camera..."
+            cameraReady ? "📸 Capture Photo" : "Opening Camera..."
           ),
 
           React.createElement(
@@ -484,16 +594,15 @@ function ListClothes() {
     );
   }
 
-  /* ================= MAIN PAGE ================= */
+  /* ================= MAIN FORM ================= */
 
   return React.createElement(
     "div",
     {
       style: {
         minHeight: "100vh",
-        background:
-          "linear-gradient(135deg,#fff7fb 0%,#f4efff 50%,#eef8ff 100%)",
-        padding: "55px 15px"
+        background: "linear-gradient(135deg,#fff7fb 0%,#f4efff 50%,#eef8ff 100%)",
+        padding: "45px 15px"
       }
     },
 
@@ -501,7 +610,7 @@ function ListClothes() {
       "div",
       {
         style: {
-          maxWidth: "850px",
+          maxWidth: "900px",
           margin: "0 auto"
         }
       },
@@ -513,7 +622,7 @@ function ListClothes() {
         {
           style: {
             textAlign: "center",
-            marginBottom: "35px"
+            marginBottom: "32px"
           }
         },
 
@@ -524,15 +633,12 @@ function ListClothes() {
               display: "inline-block",
               padding: "9px 20px",
               borderRadius: "50px",
-              background:
-                "linear-gradient(135deg,#ff6b9d,#8e44ad)",
+              background: "linear-gradient(135deg,#ff6b9d,#8e44ad)",
               color: "white",
-              fontSize: "13px",
-              fontWeight: "700",
+              fontSize: "12px",
+              fontWeight: "800",
               letterSpacing: "1px",
-              marginBottom: "15px",
-              boxShadow:
-                "0 8px 25px rgba(142,68,173,0.25)"
+              marginBottom: "15px"
             }
           },
           "♻️ CLOTHSWAP MARKETPLACE"
@@ -542,101 +648,87 @@ function ListClothes() {
           "h1",
           {
             style: {
-              fontSize: "42px",
+              fontSize: "clamp(30px,5vw,43px)",
               fontWeight: "800",
               margin: "0",
-              background:
-                "linear-gradient(135deg,#c44569,#6c3483)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent"
+              color: "#69436f"
             }
           },
-          "List Your Clothes"
+          "List Your Clothing"
         ),
 
         React.createElement(
           "p",
           {
             style: {
-              color: "#6c6c7a",
-              fontSize: "17px",
+              color: "#81738a",
+              fontSize: "15px",
               marginTop: "10px"
             }
           },
-          "Give your pre-loved clothes a beautiful new home."
+          "Give your pre-loved fashion a beautiful new home ♡"
         )
       ),
 
-      /* FORM CARD */
+      /* FORM */
 
       React.createElement(
         "form",
         {
           onSubmit: handleSubmit,
           style: {
-            background: "rgba(255,255,255,0.9)",
-            borderRadius: "30px",
-            padding: "38px",
-            boxShadow:
-              "0 20px 60px rgba(80,50,100,0.12)",
-            border:
-              "1px solid rgba(255,255,255,0.8)"
+            background: "rgba(255,255,255,0.96)",
+            borderRadius: "25px",
+            padding: "clamp(18px,4vw,38px)",
+            boxShadow: "0 18px 55px rgba(105,65,120,0.12)",
+            border: "1px solid #f0e5f2"
           }
         },
-
-        /* NAME */
-
-        React.createElement(
+      React.createElement(
           "div",
-          { style: { marginBottom: "22px" } },
+          { style: { marginBottom: "28px" } },
+
+          React.createElement("h3", { style: sectionHeadingStyle }, " Basic Information"),
+
+          React.createElement("p", { style: sectionDescriptionStyle }, "Tell us what you want to exchange."),
 
           React.createElement(
-            "label",
-            {
-              style: {
-                fontWeight: "700",
-                color: "#3d3150",
-                marginBottom: "8px",
-                display: "block"
-              }
-            },
-            " Clothing Name *"
+            "div",
+            { style: { marginBottom: "20px" } },
+
+            React.createElement("label", { style: labelStyle }, "Clothing Name *"),
+
+            React.createElement("input", {
+              type: "text",
+              name: "title",
+              value: formData.title,
+              onChange: handleChange,
+              placeholder: "e.g. Floral Summer Dress",
+              style: inputStyle
+            })
           ),
 
-          React.createElement("input", {
-            type: "text",
-            name: "title",
-            value: formData.title,
-            onChange: handleChange,
-            placeholder: "e.g. Floral Summer Dress",
-            style: inputStyle
-          })
-        ),
+          React.createElement(
+            "div",
+            { style: { marginBottom: "20px" } },
 
-        /* TWO COLUMNS */
+            React.createElement("label", { style: labelStyle }, "Brand *"),
 
-        React.createElement(
-          "div",
-          {
-            style: {
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit,minmax(220px,1fr))",
-              gap: "20px"
-            }
-          },
-
-          /* CATEGORY */
+            React.createElement("input", {
+              type: "text",
+              name: "brand",
+              value: formData.brand,
+              onChange: handleChange,
+              placeholder: "e.g. Zara, H&M, Zudio, Nike",
+              style: inputStyle
+            })
+          ),
 
           React.createElement(
             "div",
             null,
 
-            React.createElement(
-              "label",
-              { style: labelStyle },
-              " Category *"
-            ),
+            React.createElement("label", { style: labelStyle }, "Category *"),
 
             React.createElement(
               "select",
@@ -647,406 +739,451 @@ function ListClothes() {
                 style: inputStyle
               },
 
-              React.createElement(
-                "option",
-                { value: "" },
-                "Select Category"
-              ),
-              React.createElement(
-                "option",
-                { value: "Dresses" },
-                "Dresses"
-              ),
-              React.createElement(
-                "option",
-                { value: "Shirts" },
-                "Shirts"
-              ),
-              React.createElement(
-                "option",
-                { value: "Jeans" },
-                "Jeans"
-              ),
-              React.createElement(
-                "option",
-                { value: "Jackets" },
-                "Jackets"
-              ),
-              React.createElement(
-                "option",
-                { value: "Hoodies" },
-                "Hoodies"
-              )
-            )
-          ),
-
-          /* SIZE */
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "label",
-              { style: labelStyle },
-              " Size *"
-            ),
-
-            React.createElement(
-              "select",
-              {
-                name: "size",
-                value: formData.size,
-                onChange: handleChange,
-                style: inputStyle
-              },
-
-              React.createElement(
-                "option",
-                { value: "" },
-                "Select Size"
-              ),
-              React.createElement(
-                "option",
-                { value: "S" },
-                "S"
-              ),
-              React.createElement(
-                "option",
-                { value: "M" },
-                "M"
-              ),
-              React.createElement(
-                "option",
-                { value: "L" },
-                "L"
-              ),
-              React.createElement(
-                "option",
-                { value: "XL" },
-                "XL"
-              ),
-              React.createElement(
-                "option",
-                { value: "XXL" },
-                "XXL"
-              )
-            )
-          ),
-
-          /* CONDITION */
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "label",
-              { style: labelStyle },
-              " Condition *"
-            ),
-
-            React.createElement(
-              "select",
-              {
-                name: "condition",
-                value: formData.condition,
-                onChange: handleChange,
-                style: inputStyle
-              },
-
-              React.createElement(
-                "option",
-                { value: "" },
-                "Select Condition"
-              ),
-              React.createElement(
-                "option",
-                { value: "Like New" },
-                "Like New"
-              ),
-              React.createElement(
-                "option",
-                { value: "Excellent" },
-                "Excellent"
-              ),
-              React.createElement(
-                "option",
-                { value: "Good" },
-                "Good"
-              )
-            )
-          ),
-
-          /* LOCATION */
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "label",
-              { style: labelStyle },
-              " Location"
-            ),
-
-            React.createElement(
-              "select",
-              {
-                name: "location",
-                value: formData.location,
-                onChange: handleChange,
-                style: inputStyle
-              },
-
-              React.createElement(
-                "option",
-                { value: "" },
-                "Select Location"
-              ),
-              React.createElement(
-                "option",
-                { value: "Ahmedabad" },
-                "Ahmedabad"
-              ),
-              React.createElement(
-                "option",
-                { value: "Mumbai" },
-                "Mumbai"
-              ),
-              React.createElement(
-                "option",
-                { value: "Vadodara" },
-                "Vadodara"
-              ),
-              React.createElement(
-                "option",
-                { value: "Surat" },
-                "Surat"
-              ),
-              React.createElement(
-                "option",
-                { value: "Rajkot" },
-                "Rajkot"
-              )
-            )
-          ),
-
-          /* PRICE */
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "label",
-              { style: labelStyle },
-              " Price (₹)"
-            ),
-
-            React.createElement("input", {
-              type: "number",
-              name: "price",
-              value: formData.price,
-              onChange: handleChange,
-              placeholder: "Enter price",
-              style: inputStyle
-            })
-          ),
-
-          /* OWNER */
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "label",
-              { style: labelStyle },
-              " Your Name"
-            ),
-
-            React.createElement("input", {
-              type: "text",
-              name: "owner",
-              value: formData.owner,
-              onChange: handleChange,
-              placeholder: "Enter your name",
-              style: inputStyle
-            })
-          )
-        ),
-
-        /* DESCRIPTION */
-
-        React.createElement(
-          "div",
-          {
-            style: {
-              marginTop: "22px",
-              marginBottom: "25px"
-            }
-          },
-
-          React.createElement(
-            "label",
-            { style: labelStyle },
-            "Description"
-          ),
-
-          React.createElement(
-            "textarea",
-            {
-              name: "description",
-              rows: 5,
-              value: formData.description,
-              onChange: handleChange,
-              placeholder:
-                "Tell people something about your clothing...",
-              style: {
-                ...inputStyle,
-                resize: "vertical"
-              }
-            }
-          )
-        ),
-
-        /* IMAGE */
-
-        React.createElement(
-          "div",
-          {
-            style: {
-              marginBottom: "28px",
-              padding: "25px",
-              borderRadius: "22px",
-              background:
-                "linear-gradient(135deg,#fff1f6,#f5efff)",
-              border:
-                "1px dashed rgba(142,68,173,0.35)"
-            }
-          },
-
-          React.createElement(
-            "label",
-            { style: labelStyle },
-            "📸 Clothing Photo *"
-          ),
-
-          React.createElement(
-            "p",
-            {
-              style: {
-                color: "#777",
-                fontSize: "14px",
-                marginBottom: "18px"
-              }
-            },
-            "Choose a photo from your device or take a new photo."
-          ),
-
-          React.createElement(
-            "div",
-            {
-              style: {
-                display: "flex",
-                gap: "12px",
-                flexWrap: "wrap"
-              }
-            },
-
-            /* CHOOSE */
-
-            React.createElement(
-              "label",
-              {
-                style: {
-                  padding: "13px 22px",
-                  borderRadius: "50px",
-                  background: "white",
-                  color: "#6c3483",
-                  border:
-                    "1px solid rgba(108,52,131,0.25)",
-                  fontWeight: "700",
-                  cursor: "pointer"
-                }
-              },
-
-              "📁 Choose Photo",
-
-              React.createElement("input", {
-                type: "file",
-                accept: "image/*",
-                onChange: handleFileChange,
-                style: {
-                  display: "none"
-                }
+              ...["", "Dresses", "Shirts", "Jeans", "Jackets", "Hoodies"].map(function (item) {
+                return React.createElement(
+                  "option",
+                  { key: item, value: item },
+                  item || "Select Category"
+                );
               })
-            ),
+            )
+          )
+        ),
+        React.createElement(
+          "div",
+          {
+            style: {
+              borderTop: "1px solid #f0e7f2",
+              paddingTop: "25px",
+              marginBottom: "28px"
+            }
+          },
 
-            /* CAMERA */
+          React.createElement("h3", { style: sectionHeadingStyle }, "  Clothing Details"),
+
+          React.createElement("p", { style: sectionDescriptionStyle }, "Add size and condition details."),
+
+          React.createElement(
+            "div",
+            {
+              style: {
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+                gap: "20px"
+              }
+            },
 
             React.createElement(
-              "button",
-              {
-                type: "button",
-                onClick: openCamera,
-                style: {
-                  padding: "13px 22px",
-                  borderRadius: "50px",
-                  border: "none",
-                  background:
-                    "linear-gradient(135deg,#ff6b9d,#8e44ad)",
-                  color: "white",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                  boxShadow:
-                    "0 7px 20px rgba(142,68,173,0.25)"
-                }
-              },
-              "📷 Take Photo"
+              "div",
+              null,
+
+              React.createElement("label", { style: labelStyle }, "Size *"),
+
+              React.createElement(
+                "select",
+                {
+                  name: "size",
+                  value: formData.size,
+                  onChange: handleChange,
+                  style: inputStyle
+                },
+
+                ...["", "S", "M", "L", "XL", "XXL"].map(function (item) {
+                  return React.createElement(
+                    "option",
+                    { key: item, value: item },
+                    item || "Select Size"
+                  );
+                })
+              )
+            ),
+
+            React.createElement(
+              "div",
+              null,
+
+              React.createElement("label", { style: labelStyle }, "Condition *"),
+
+              React.createElement(
+                "select",
+                {
+                  name: "condition",
+                  value: formData.condition,
+                  onChange: handleChange,
+                  style: inputStyle
+                },
+
+                ...["", "Like New", "Excellent", "Good"].map(function (item) {
+                  return React.createElement(
+                    "option",
+                    { key: item, value: item },
+                    item || "Select Condition"
+                  );
+                })
+              )
             )
-          ),
+          )
+        ),
+        React.createElement(
+          "div",
+          {
+            style: {
+              borderTop: "1px solid #f0e7f2",
+              paddingTop: "25px",
+              marginBottom: "28px"
+            }
+          },
 
-          /* PREVIEW */
+          React.createElement("h3", { style: sectionHeadingStyle }, "  Location & Pricing"),
 
-          formData.image &&
+          React.createElement("p", { style: sectionDescriptionStyle }, "Where are you listing your clothing from?"),
+
+          React.createElement(
+            "div",
+            {
+              style: {
+                background: "#fcf7fc",
+                border: "1px solid #f0e4f1",
+                borderRadius: "16px",
+                padding: "17px",
+                marginBottom: "20px"
+              }
+            },
+
+            React.createElement("label", { style: labelStyle }, "Country"),
+
             React.createElement(
               "div",
               {
                 style: {
-                  marginTop: "25px"
+                  ...inputStyle,
+                  background: "#f4edf6",
+                  color: "#765a7e"
+                }
+              },
+              "🇮🇳  India"
+            ),
+
+            React.createElement(
+              "div",
+              { style: { marginTop: "16px" } },
+
+              React.createElement("label", { style: labelStyle }, "State *"),
+
+              React.createElement(
+                "select",
+                {
+                  value: selectedStateCode,
+                  onChange: function (event) {
+                    setSelectedStateCode(event.target.value);
+                    setSelectedCity("");
+                    setCitySearch("");
+
+                    setFormData(function (previous) {
+                      return {
+                        ...previous,
+                        location: ""
+                      };
+                    });
+                  },
+                  style: inputStyle
+                },
+
+                React.createElement("option", { value: "" }, "Select State"),
+
+                ...indiaStates.map(function (state) {
+                  return React.createElement(
+                    "option",
+                    {
+                      key: state.isoCode,
+                      value: state.isoCode
+                    },
+                    state.name
+                  );
+                })
+              )
+            ),
+
+            React.createElement(
+  "div",
+  { style: { marginTop: "16px" } },
+
+  React.createElement(
+    "label",
+    { style: labelStyle },
+    "City *"
+  ),
+
+  React.createElement(
+    "select",
+    {
+      value: selectedCity,
+      disabled: !selectedStateCode,
+      required: true,
+      style: inputStyle,
+      onChange: function (event) {
+        const city = event.target.value;
+
+        setSelectedCity(city);
+
+        const stateName = indiaStates.find(function (state) {
+          return state.isoCode === selectedStateCode;
+        })?.name || "";
+
+        setFormData(function (prev) {
+          return {
+            ...prev,
+            location: city
+              ? city + ", " + stateName + ", India"
+              : ""
+          };
+        });
+      }
+    },
+
+    React.createElement(
+      "option",
+      { value: "" },
+      "Select City"
+    ),
+
+        indiaCities.map(function (city) {
+      return React.createElement(
+        "option",
+        { key: city.name, value: city.name },
+        city.name
+      );
+    })
+  )
+)
+          ),
+
+          React.createElement(
+            "div",
+            {
+              style: {
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+                gap: "20px"
+              }
+            },
+            React.createElement(
+              "div",
+              null,
+
+              React.createElement("label", { style: labelStyle }, "Price (₹) *"),
+
+              React.createElement("input", {
+                type: "number",
+                name: "price",
+                value: formData.price,
+                onChange: handleChange,
+                placeholder: "Enter price",
+                min: "1",
+                style: inputStyle
+              })
+            ),
+
+            React.createElement(
+              "div",
+              null,
+
+              React.createElement("label", { style: labelStyle }, "Your Name *"),
+
+              React.createElement("input", {
+                type: "text",
+                name: "owner",
+                value: formData.owner,
+                onChange: handleChange,
+                placeholder: "Enter your name",
+                style: inputStyle
+              })
+            )
+          )
+        ),
+        React.createElement(
+          "div",
+          {
+            style: {
+              borderTop: "1px solid #f0e7f2",
+              paddingTop: "25px",
+              marginBottom: "28px"
+            }
+          },
+
+          React.createElement("h3", { style: sectionHeadingStyle }, "  About Your Clothing"),
+
+          React.createElement("p", { style: sectionDescriptionStyle }, "Share a few details about your item."),
+
+          React.createElement("textarea", {
+            name: "description",
+            rows: 4,
+            value: formData.description,
+            onChange: handleChange,
+            placeholder: "Describe the fabric, style, colour and other details...",
+            style: {
+              ...inputStyle,
+              resize: "vertical",
+              minHeight: "110px"
+            }
+          })
+        ),
+        React.createElement(
+          "div",
+          {
+            style: {
+              borderTop: "1px solid #f0e7f2",
+              paddingTop: "25px",
+              marginBottom: "25px"
+            }
+          },
+
+          React.createElement("h3", { style: sectionHeadingStyle }, " Clothing Photos"),
+
+          React.createElement("p", { style: sectionDescriptionStyle }, "Add a clear photo to help others see your clothing."),
+
+          React.createElement(
+            "div",
+            {
+              style: {
+                background: "linear-gradient(135deg,#fff4f8,#f5efff)",
+                border: "2px dashed #d9b8d9",
+                borderRadius: "20px",
+                padding: "25px",
+                textAlign: "center"
+              }
+            },
+
+            React.createElement(
+              "div",
+              { style: { fontSize: "38px", marginBottom: "8px" } },
+              "📸"
+            ),
+
+            React.createElement(
+              "p",
+              {
+                style: {
+                  color: "#76527d",
+                  fontWeight: "700",
+                  margin: "0 0 18px"
+                }
+              },
+              "Upload your clothing photo"
+            ),
+
+            React.createElement(
+              "div",
+              {
+                style: {
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "12px",
+                  flexWrap: "wrap"
                 }
               },
 
               React.createElement(
-                "p",
+                "label",
                 {
                   style: {
+                    padding: "12px 22px",
+                    borderRadius: "30px",
+                    background: "white",
+                    color: "#854c83",
+                    border: "1px solid #e4cce3",
                     fontWeight: "700",
-                    color: "#4b3869"
+                    cursor: "pointer"
                   }
                 },
-                "✨ Photo Preview"
+
+                "📁 Choose Photo",
+
+                React.createElement("input", {
+                  type: "file",
+                  accept: "image/*",
+                  onChange: handleFileChange,
+                  style: { display: "none" }
+                })
               ),
 
-              React.createElement("img", {
-                src: formData.image,
-                alt: "Clothing Preview",
-                style: {
-                  width: "220px",
-                  height: "260px",
-                  objectFit: "cover",
-                  borderRadius: "18px",
-                  display: "block",
-                  boxShadow:
-                    "0 12px 30px rgba(80,50,100,0.18)"
-                }
-              })
-            )
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  onClick: openCamera,
+                  style: {
+                    padding: "12px 22px",
+                    borderRadius: "30px",
+                    border: "none",
+                    background: "linear-gradient(135deg,#e76aa5,#9161bd)",
+                    color: "white",
+                    fontWeight: "700",
+                    cursor: "pointer"
+                  }
+                },
+                "📷 Take Photo"
+              )
+            ),
+
+            formData.image &&
+              React.createElement(
+                "div",
+                { style: { marginTop: "22px" } },
+
+                React.createElement(
+                  "p",
+                  {
+                    style: {
+                      fontWeight: "700",
+                      color: "#69466f"
+                    }
+                  },
+                  "✨ Photo Preview"
+                ),
+
+                React.createElement("img", {
+                  src: formData.image,
+                  alt: "Clothing Preview",
+                  style: {
+                    width: "100%",
+                    maxWidth: "230px",
+                    height: "250px",
+                    objectFit: "cover",
+                    borderRadius: "16px",
+                    boxShadow: "0 8px 25px rgba(80,50,100,0.15)"
+                  }
+                }),
+
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: function () {
+                      setFormData(function (previous) {
+                        return {
+                          ...previous,
+                          image: ""
+                        };
+                      });
+                    },
+                    style: {
+                      display: "block",
+                      margin: "12px auto 0",
+                      border: "none",
+                      background: "transparent",
+                      color: "#c44569",
+                      fontWeight: "700",
+                      cursor: "pointer"
+                    }
+                  },
+                  "✕ Remove Photo"
+                )
+              )
+          )
         ),
 
-        /* MESSAGE */
+        /* SUCCESS MESSAGE */
 
         message &&
           React.createElement(
@@ -1054,7 +1191,7 @@ function ListClothes() {
             {
               style: {
                 padding: "15px",
-                borderRadius: "14px",
+                borderRadius: "13px",
                 background: "#e9fff3",
                 color: "#18794e",
                 fontWeight: "600",
@@ -1064,13 +1201,15 @@ function ListClothes() {
             message
           ),
 
+        /* ERROR MESSAGE */
+
         error &&
           React.createElement(
             "div",
             {
               style: {
                 padding: "15px",
-                borderRadius: "14px",
+                borderRadius: "13px",
                 background: "#fff0f0",
                 color: "#c0392b",
                 fontWeight: "600",
@@ -1080,7 +1219,7 @@ function ListClothes() {
             error
           ),
 
-        /* SUBMIT */
+        /* SUBMIT BUTTON */
 
         React.createElement(
           "button",
@@ -1091,25 +1230,19 @@ function ListClothes() {
               width: "100%",
               padding: "17px",
               border: "none",
-              borderRadius: "50px",
-              background:
-                "linear-gradient(135deg,#c44569,#8e44ad)",
+              borderRadius: "40px",
+              background: "linear-gradient(135deg,#d85d98,#8954b5)",
               color: "white",
               fontSize: "17px",
               fontWeight: "800",
-              cursor: loading
-                ? "not-allowed"
-                : "pointer",
-              boxShadow:
-                "0 12px 30px rgba(142,68,173,0.3)"
+              cursor: loading ? "not-allowed" : "pointer",
+              boxShadow: "0 10px 25px rgba(142,68,173,0.25)"
             }
           },
-          loading
-            ? "⏳ Listing..."
-            : "✨ List My Clothes"
+          loading ? "⏳ Listing..." : "✨ List My Clothing"
         ),
 
-        /* BROWSE */
+        /* BROWSE BUTTON */
 
         message &&
           React.createElement(
@@ -1123,11 +1256,10 @@ function ListClothes() {
                 width: "100%",
                 marginTop: "12px",
                 padding: "14px",
-                borderRadius: "50px",
+                borderRadius: "40px",
                 background: "white",
-                color: "#6c3483",
-                border:
-                  "1px solid rgba(108,52,131,0.3)",
+                color: "#80518f",
+                border: "1px solid #dfcce6",
                 fontWeight: "700",
                 cursor: "pointer"
               }
@@ -1139,26 +1271,4 @@ function ListClothes() {
   );
 }
 
-/* ================= STYLES ================= */
-
-const inputStyle = {
-  width: "100%",
-  padding: "13px 16px",
-  borderRadius: "14px",
-  border: "1px solid #e1d8ea",
-  background: "#fff",
-  color: "#393142",
-  fontSize: "15px",
-  outline: "none",
-  boxSizing: "border-box"
-};
-  
-const labelStyle = {
-  display: "block",
-  fontWeight: "700",
-  color: "#3d3150",
-  marginBottom: "8px"
-};
-
 export default ListClothes;
-

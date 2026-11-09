@@ -7,7 +7,6 @@ const defaultMessage = {
 };
 
 function AIChat() {
-  /* ================= MESSAGES ================= */
 
   const [messages, setMessages] = useState(function () {
     try {
@@ -36,21 +35,17 @@ function AIChat() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
 
-  /* ================= CAMERA ================= */
 
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState("");
 
-  /* ================= REFS ================= */
 
   const galleryInputRef = useRef(null);
   const videoRef = useRef(null);
   const cameraStreamRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  /* =========================================================
-     SAVE CHAT TO LOCAL STORAGE
-     ========================================================= */
+  
 
   useEffect(function () {
     try {
@@ -63,9 +58,7 @@ function AIChat() {
     }
   }, [messages]);
 
-  /* =========================================================
-     AUTO SCROLL CHAT
-     ========================================================= */
+  
 
   useEffect(
     function () {
@@ -79,10 +72,7 @@ function AIChat() {
     [messages, isTyping]
   );
 
-  /* =========================================================
-     AI REPLY
-     ========================================================= */
-
+  
   const getAIReply = function (question) {
     const text = question.toLowerCase();
 
@@ -305,9 +295,7 @@ function AIChat() {
     );
   };
 
-  /* =========================================================
-     CAMERA STOP
-     ========================================================= */
+
 
   const stopCamera = function () {
     if (cameraStreamRef.current) {
@@ -328,10 +316,7 @@ function AIChat() {
     setCameraError("");
   };
 
-  /* =========================================================
-     OPEN CAMERA
-     ========================================================= */
-
+  
   const openCamera = async function () {
     setCameraError("");
 
@@ -387,9 +372,7 @@ function AIChat() {
     }
   };
 
-  /* =========================================================
-     CAMERA VIDEO START
-     ========================================================= */
+  
 
   useEffect(
     function () {
@@ -414,9 +397,7 @@ function AIChat() {
     [cameraOpen]
   );
 
-  /* =========================================================
-     CAPTURE CAMERA PHOTO
-     ========================================================= */
+  
 
   const capturePhoto = function () {
     if (
@@ -467,10 +448,7 @@ function AIChat() {
     stopCamera();
   };
 
-  /* =========================================================
-     GALLERY IMAGE
-     ========================================================= */
-
+  
   const handleImageChange = function (event) {
     const file =
       event.target.files &&
@@ -504,17 +482,13 @@ function AIChat() {
     event.target.value = "";
   };
 
-  /* =========================================================
-     REMOVE SELECTED IMAGE
-     ========================================================= */
+
 
   const removeSelectedImage = function () {
     setSelectedImage(null);
   };
 
-  /* =========================================================
-     SEND MESSAGE
-     ========================================================= */
+
 
   const sendMessage = function () {
     const cleanText = input.trim();
@@ -562,9 +536,7 @@ function AIChat() {
     }, 700);
   };
 
-  /* =========================================================
-     KEYBOARD
-     ========================================================= */
+ 
 
   const handleKeyDown = function (event) {
     if (
@@ -576,9 +548,7 @@ function AIChat() {
     }
   };
 
-  /* =========================================================
-     CLEAR CHAT
-     ========================================================= */
+
 
   const clearChat = function () {
     stopCamera();
@@ -602,17 +572,13 @@ function AIChat() {
     }
   };
 
-  /* =========================================================
-     SUGGESTION
-     ========================================================= */
+  
 
   const useSuggestion = function (question) {
     setInput(question);
   };
 
-  /* =========================================================
-     COMPONENT CLEANUP
-     ========================================================= */
+
 
   useEffect(function () {
     return function () {
@@ -628,9 +594,7 @@ function AIChat() {
     };
   }, []);
 
-  /* =========================================================
-     UI
-     ========================================================= */
+  
 
   return React.createElement(
     "div",
@@ -644,7 +608,6 @@ function AIChat() {
         className: "clothswap-ai-main"
       },
 
-      /* HEADER */
 
       React.createElement(
         "div",
@@ -698,7 +661,6 @@ function AIChat() {
         )
       ),
 
-      /* SUGGESTIONS */
 
       React.createElement(
         "div",
@@ -760,7 +722,6 @@ function AIChat() {
         )
       ),
 
-      /* CHAT BOX */
 
       React.createElement(
         "div",
@@ -769,7 +730,6 @@ function AIChat() {
             "clothswap-ai-chat-box"
         },
 
-        /* MESSAGES */
 
         React.createElement(
           "div",
@@ -887,7 +847,6 @@ function AIChat() {
           })
         ),
 
-        /* SELECTED IMAGE PREVIEW */
 
         selectedImage &&
           React.createElement(
@@ -940,7 +899,6 @@ function AIChat() {
             )
           ),
 
-        /* INPUT AREA */
 
         React.createElement(
           "div",
@@ -949,7 +907,6 @@ function AIChat() {
               "clothswap-ai-input-area"
           },
 
-          /* ATTACH BUTTONS */
 
           React.createElement(
             "div",
@@ -958,7 +915,6 @@ function AIChat() {
                 "clothswap-ai-attach-buttons"
             },
 
-            /* GALLERY */
 
             React.createElement(
               "button",
@@ -979,7 +935,6 @@ function AIChat() {
               "📎"
             ),
 
-            /* CAMERA */
 
             React.createElement(
               "button",
@@ -995,7 +950,6 @@ function AIChat() {
             )
           ),
 
-          /* HIDDEN GALLERY INPUT */
 
           React.createElement(
             "input",
@@ -1011,7 +965,6 @@ function AIChat() {
             }
           ),
 
-          /* TEXT INPUT */
 
           React.createElement(
             "textarea",
@@ -1032,7 +985,6 @@ function AIChat() {
             }
           ),
 
-          /* SEND */
 
           React.createElement(
             "button",
@@ -1050,7 +1002,6 @@ function AIChat() {
           )
         ),
 
-        /* FOOTER */
 
         React.createElement(
           "div",
@@ -1063,9 +1014,7 @@ function AIChat() {
       )
     ),
 
-    /* =====================================================
-       CAMERA MODAL
-       ===================================================== */
+
 
     cameraOpen &&
       React.createElement(

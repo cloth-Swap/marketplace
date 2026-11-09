@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
+import API_URL from "../api";
 function BrowseClothes() {
   const navigate = useNavigate();
 
@@ -21,7 +21,6 @@ function BrowseClothes() {
   const [swapSendingId, setSwapSendingId] = useState("");
   const [deleteSendingId, setDeleteSendingId] = useState("");
 
-  /* ================= CURRENT USER ================= */
 
   const currentUser =
     localStorage.getItem("clothSwapUserName") ||
@@ -31,7 +30,6 @@ function BrowseClothes() {
   const isLoggedIn =
     localStorage.getItem("clothswapLoggedIn") === "true";
 
-  /* ================= LOAD WISHLIST ================= */
 
   useEffect(function () {
     try {
@@ -47,10 +45,9 @@ function BrowseClothes() {
     }
   }, []);
 
-  /* ================= FETCH CLOTHES ================= */
 
   useEffect(function () {
-    fetch("http://localhost:5000/api/clothes")
+    fetch(`${API_URL}/api/clothes`)
       .then(function (response) {
         return response.json();
       })
@@ -71,7 +68,6 @@ function BrowseClothes() {
       });
   }, []);
 
-  /* ================= TOAST ================= */
 
   function showMessage(type, message) {
     setSwapMessageType(type);
@@ -82,7 +78,6 @@ function BrowseClothes() {
     }, 3500);
   }
 
-  /* ================= FILTER ================= */
 
   const filteredClothes = clothes.filter(function (item) {
     const itemName =
@@ -178,8 +173,6 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
 
   return 0;
 });
-  /* ================= CLEAR FILTERS ================= */
-
   function clearFilters() {
   setSearch("");
   setCategory("All");
@@ -188,7 +181,6 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
   setLocation("All");
   setSortBy("recommended");
 }
-  /* ================= WISHLIST ================= */
 
   function isInWishlist(itemId) {
     return wishlist.some(function (item) {
@@ -251,98 +243,113 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
     );
   }
 
-  /* ================= REQUEST SWAP ================= */
 
-  function requestSwap(item) {
-    if (!isLoggedIn || !currentUser) {
-      showMessage(
-        "error",
-        "Please login before requesting a swap."
-      );
 
-      setTimeout(function () {
-        navigate("/login");
-      }, 900);
+  
+function requestSwap(item) {
+  if (!isLoggedIn || !currentUser) {
+    showMessage(
+      "error",
+      "Please login before requesting a swap."
+    );
 
-      return;
-    }
+    setTimeout(function () {
+      navigate("/login");
+    }, 900);
 
-    const requester = currentUser;
-    const clothingId = item._id || item.id;
-
-    if (!clothingId) {
-      showMessage(
-        "error",
-        "Unable to send swap request."
-      );
-
-      return;
-    }
-
-    if (
-      String(item.owner || "").toLowerCase() ===
-      String(requester).toLowerCase()
-    ) {
-      showMessage(
-        "error",
-        "You cannot request your own clothing."
-      );
-
-      return;
-    }
-
-    setSwapSendingId(String(clothingId));
-
-    fetch("http://localhost:5000/api/swap-requests", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        clothingId: clothingId,
-        requester: requester,
-        requesterEmail:
-  localStorage.getItem("clothswapUserEmail") ||
-  localStorage.getItem("clothswapEmail") ||
-  "",
-        message:
-          "I would like to swap for this clothing item."
-      })
-    })
-      .then(function (response) {
-        return response.json();
-      })
-      .then(function (data) {
-        if (data.success) {
-          showMessage(
-            "success",
-            "Your request has been sent to the clothing owner."
-          );
-        } else {
-          showMessage(
-            "error",
-            data.message ||
-              "Unable to send swap request."
-          );
-        }
-      })
-      .catch(function (error) {
-        console.log(
-          "Swap request error:",
-          error
-        );
-
-        showMessage(
-          "error",
-          "Something went wrong. Please make sure the backend is running."
-        );
-      })
-      .finally(function () {
-        setSwapSendingId("");
-      });
+    return;
   }
 
-  /* ================= DELETE CLOTHING ================= */
+  const token =
+    localStorage.getItem("clothswapToken") ||
+    localStorage.getItem("clothSwapToken");
+
+  if (!token) {
+    showMessage(
+      "error",
+      "Your login session has expired. Please login again."
+    );
+
+    setTimeout(function () {
+      navigate("/login");
+    }, 900);
+
+    return;
+  }
+
+  const requester = currentUser;
+  const clothingId = item._id || item.id;
+
+  if (!clothingId) {
+    showMessage(
+      "error",
+      "Unable to send swap request."
+    );
+    return;
+  }
+
+  if (
+    String(item.owner || "").toLowerCase() ===
+    String(requester).toLowerCase()
+  ) {
+    showMessage(
+      "error",
+      "You cannot request your own clothing."
+    );
+    return;
+  }
+
+  setSwapSendingId(String(clothingId));
+
+  fetch(`${API_URL}/api/swap-requests`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify({
+      clothingId: clothingId,
+      requester: requester,
+      requesterEmail:
+        localStorage.getItem("clothswapUserEmail") ||
+        localStorage.getItem("clothswapEmail") ||
+        "",
+      message:
+        "I would like to swap for this clothing item."
+    })
+  })
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (data) {
+      if (data.success) {
+        showMessage(
+          "success",
+          "Your request has been sent to the clothing owner."
+        );
+      } else {
+        showMessage(
+          "error",
+          data.message ||
+            "Unable to send swap request."
+        );
+      }
+    })
+    .catch(function (error) {
+      console.log("Swap request error:", error);
+
+      showMessage(
+        "error",
+        "Something went wrong. Please make sure the backend is running."
+      );
+    })
+    .finally(function () {
+      setSwapSendingId("");
+    });
+}
+
+
 
   function deleteClothing(item) {
     if (!isLoggedIn || !currentUser) {
@@ -395,8 +402,8 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
     setDeleteSendingId(String(itemId));
 
     fetch(
-      "http://localhost:5000/api/clothes/" +
-        itemId,
+  `${API_URL}/api/clothes/` +
+    itemId,
       {
         method: "DELETE",
         headers: {
@@ -1175,7 +1182,7 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
     {
       className: "clothing-category"
     },
-    itemCategory
+    itemName
   ),
 
   React.createElement(
@@ -1187,21 +1194,26 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
     itemSize
   )
 ),
-                    React.createElement(
-                      "h3",
-                      null,
-                      itemName
-                    ),
+// BRAND NAME
+React.createElement(
+  "p",
+  {
+    className: "clothing-brand"
+  },
+  "🏷️ ",
+  item.brand || "Unbranded"
+),
 
-                    React.createElement(
-                      "p",
-                      {
-                        className:
-                          "clothing-brand"
-                      },
-                      "👤 ",
-                      itemOwner
-                    ),
+// OWNER NAME
+React.createElement(
+  "p",
+  {
+    className:
+      "clothing-brand"
+  },
+  "👤 ",
+  itemOwner
+),
 
                     React.createElement(
   "div",

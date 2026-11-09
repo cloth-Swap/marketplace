@@ -1,0 +1,427 @@
+/* COURIER ARRANGEMENT FORM */
+
+.cs-courier-form-card,
+.cs-tracking-card {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid #eadcf4;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff, #fcf7ff);
+  box-shadow: 0 8px 25px rgba(112, 75, 145, 0.08);
+}
+
+.cs-courier-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.cs-courier-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: #f3e8fa;
+  font-size: 23px;
+}
+
+.cs-courier-heading h3,
+.cs-tracking-topline h3 {
+  margin: 0;
+  color: #39264d;
+  font-size: 20px;
+}
+
+.cs-courier-heading p {
+  margin: 4px 0 0;
+  color: #81758b;
+  font-size: 13px;
+}
+
+.cs-courier-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cs-courier-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #51415f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cs-courier-field-wide {
+  grid-column: 1 / -1;
+}
+
+.cs-courier-field textarea,
+.cs-courier-field input,
+.cs-courier-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid #e4d7ed;
+  border-radius: 10px;
+  background: #fff;
+  color: #3d3049;
+  outline: none;
+  font: inherit;
+  font-weight: 400;
+}
+
+.cs-courier-field textarea:focus,
+.cs-courier-field input:focus,
+.cs-courier-field select:focus {
+  border-color: #b77bd0;
+  box-shadow: 0 0 0 3px rgba(183, 123, 208, 0.12);
+}
+
+.cs-courier-field textarea {
+  min-height: 65px;
+  resize: vertical;
+}
+
+.cs-courier-secure-note {
+  margin: 16px 0;
+  padding: 12px;
+  border-radius: 10px;
+  color: #68477e;
+  background: #f5edfb;
+  font-size: 12px;
+}
+
+.cs-courier-primary-btn {
+  padding: 11px 19px;
+  border: 0;
+  border-radius: 10px;
+  color: #fff;
+  background: linear-gradient(120deg, #bd75d1, #8960bb);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cs-courier-primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* TRACKING HEADER */
+
+.cs-tracking-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.cs-tracking-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #a05ab8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.cs-tracking-status-badge {
+  padding: 8px 13px;
+  border-radius: 30px;
+  color: #75439a;
+  background: #f1e5fa;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* TRACKING ID / COURIER / DATE */
+
+.cs-tracking-id-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 15px;
+  border: 1px solid #eee2f5;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cs-tracking-id-row > div {
+  min-width: 0;
+}
+
+.cs-tracking-id-row span {
+  display: block;
+  margin-bottom: 5px;
+  color: #927e9e;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.cs-tracking-id-row strong {
+  display: block;
+  color: #493257;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.cs-tracking-id-row button {
+  padding: 8px 12px;
+  border: 1px solid #dfc9eb;
+  border-radius: 8px;
+  color: #75439a;
+  background: #faf5fd;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* CONNECTED TRACKING CIRCLES */
+
+.cs-tracking-progress {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0;
+  margin: 27px 0 23px;
+  padding: 0;
+}
+
+.cs-tracking-progress-line {
+  position: absolute;
+  z-index: 0;
+  top: 15px;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  border-radius: 5px;
+  background: #e8ddec;
+  overflow: hidden;
+}
+
+.cs-tracking-progress-fill {
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #bd75d1, #8960bb);
+  transition: width 0.4s ease;
+}
+
+.cs-tracking-step {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #a99daf;
+  text-align: center;
+}
+
+.cs-tracking-step-dot {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+  border: 2px solid #e5d9eb;
+  border-radius: 50%;
+  color: #a99daf;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  transition: all 0.3s ease;
+}
+
+.cs-tracking-step.is-complete .cs-tracking-step-dot,
+.cs-tracking-step.is-current .cs-tracking-step-dot {
+  border-color: #9b65bd;
+  color: #fff;
+  background: #9b65bd;
+  box-shadow: 0 3px 9px rgba(155, 101, 189, 0.2);
+}
+
+.cs-tracking-step small {
+  max-width: 100%;
+  color: #93859b;
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.cs-tracking-step.is-complete small,
+.cs-tracking-step.is-current small {
+  color: #75439a;
+  font-weight: 800;
+}
+
+/* SHIPMENT DETAILS - HORIZONTAL */
+
+.cs-shipment-details-section {
+  margin-top: 17px;
+  padding: 15px;
+  border: 1px solid #eee2f5;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.cs-shipment-details-section h4 {
+  margin: 0 0 13px;
+  color: #493257;
+  font-size: 15px;
+}
+
+.cs-shipment-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cs-shipment-details-grid > div {
+  min-width: 0;
+  padding-right: 10px;
+  border-right: 1px solid #f0e7f4;
+}
+
+.cs-shipment-details-grid > div:last-child {
+  border-right: 0;
+}
+
+.cs-shipment-details-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: #927e9e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cs-shipment-details-grid strong {
+  display: block;
+  color: #493257;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* OTP */
+
+.cs-otp-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #e7d7f0;
+  border-radius: 12px;
+  background: #faf5fd;
+}
+
+.cs-otp-panel span {
+  display: block;
+  color: #927e9e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.cs-otp-panel strong {
+  display: block;
+  margin: 10px 0;
+  color: #75439a;
+  font-size: 27px;
+  letter-spacing: 7px;
+}
+
+.cs-otp-panel p {
+  color: #65576f;
+  font-size: 12px;
+}
+
+.cs-otp-panel button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(120deg, #bd75d1, #8960bb);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cs-otp-panel button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cs-delivery-done {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 10px;
+  color: #26794b;
+  background: #eaf8f0;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 700px) {
+  .cs-courier-form-card,
+  .cs-tracking-card {
+    padding: 15px;
+  }
+
+  .cs-tracking-topline {
+    align-items: flex-start;
+  }
+
+  .cs-tracking-id-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cs-shipment-details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+
+  .cs-shipment-details-grid > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .cs-tracking-progress {
+    min-width: 470px;
+  }
+
+  .cs-tracking-card {
+    overflow-x: auto;
+  }
+
+  .cs-tracking-progress-line {
+    left: 10%;
+    right: 10%;
+  }
+
+  .cs-tracking-step small {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 420px) {
+  .cs-courier-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cs-courier-field-wide {
+    grid-column: auto;
+  }
+
+  .cs-tracking-topline {
+    flex-direction: column;
+  }
+}

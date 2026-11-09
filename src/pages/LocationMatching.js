@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import API_URL from "../api";
 
 function LocationMatching() {
   const [clothes, setClothes] = useState([]);
@@ -12,7 +13,7 @@ function LocationMatching() {
   }, []);
 
   function loadClothes() {
-    fetch("http://localhost:5000/api/clothes")
+    fetch(`${API_URL}/api/clothes`)
       .then(function (response) {
         return response.json();
       })
@@ -71,8 +72,6 @@ function LocationMatching() {
       "div",
       { className: "location-matching-container" },
 
-      /* ================= HEADER ================= */
-
       React.createElement(
         "div",
         { className: "location-matching-header" },
@@ -101,7 +100,6 @@ function LocationMatching() {
         )
       ),
 
-      /* ================= FILTER CARD ================= */
 
       React.createElement(
         "div",
@@ -128,7 +126,6 @@ function LocationMatching() {
           "div",
           { className: "location-filter-grid" },
 
-          /* LOCATION */
 
           React.createElement(
             "div",
@@ -162,7 +159,6 @@ function LocationMatching() {
             )
           ),
 
-          /* CATEGORY */
 
           React.createElement(
             "div",
@@ -198,7 +194,6 @@ function LocationMatching() {
         )
       ),
 
-      /* ================= RESULTS ================= */
 
       React.createElement(
         "div",

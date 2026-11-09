@@ -1,0 +1,1015 @@
+/* =========================================================
+   CLOTHSWAP ADMIN DASHBOARD
+   Complete responsive stylesheet
+   ========================================================= */
+
+:root {
+  --cs-purple: #8054a0;
+  --cs-purple-dark: #56376d;
+  --cs-purple-light: #f2eafa;
+  --cs-pink: #e83e9d;
+  --cs-text: #29223a;
+  --cs-muted: #81788d;
+  --cs-border: #eadff1;
+  --cs-surface: #ffffff;
+  --cs-bg: #f7f4fb;
+  --cs-shadow: 0 10px 30px rgba(76, 45, 98, .08);
+}
+
+.cs-ceo-layout,
+.cs-ceo-layout * {
+  box-sizing: border-box;
+}
+
+.cs-ceo-layout {
+  min-height: 100vh;
+  display: flex;
+  background: var(--cs-bg);
+  color: var(--cs-text);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.cs-ceo-sidebar {
+  width: 260px;
+  flex: 0 0 260px;
+  min-height: 100vh;
+  padding: 26px 17px 20px;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #fff 0%, #fbf7ff 100%);
+  border-right: 1px solid var(--cs-border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 5;
+}
+
+.cs-ceo-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 12px 30px;
+  color: var(--cs-purple-dark);
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -.6px;
+}
+
+.cs-ceo-brand-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: white;
+  font-size: 25px;
+  background: linear-gradient(135deg, #8b43dc, #ec36a0);
+  box-shadow: 0 7px 16px rgba(151, 67, 202, .22);
+}
+
+.cs-ceo-menu-caption {
+  padding: 0 13px 11px;
+  color: #a49aaf;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.7px;
+}
+
+.cs-ceo-menu {
+  display: grid;
+  gap: 7px;
+}
+
+.cs-ceo-menu-item {
+  width: 100%;
+  min-height: 45px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 11px 13px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #71677e;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.cs-ceo-menu-item:hover {
+  color: var(--cs-purple-dark);
+  background: #f4edf9;
+  transform: translateX(2px);
+}
+
+.cs-ceo-menu-item.active {
+  color: #fff;
+  background: linear-gradient(110deg, #8054a0, #b04bd1);
+  box-shadow: 0 7px 17px rgba(128, 84, 160, .2);
+}
+
+.cs-ceo-menu-icon {
+  width: 23px;
+  flex: 0 0 23px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.cs-ceo-sidebar-bottom {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--cs-border);
+}
+
+.cs-ceo-logout {
+  color: #d14b72;
+}
+
+.cs-ceo-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cs-ceo-topbar {
+  min-height: 82px;
+  padding: 17px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: rgba(255,255,255,.78);
+  border-bottom: 1px solid var(--cs-border);
+}
+
+.cs-ceo-topbar-title h1 {
+  margin: 0;
+  color: #30223e;
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -.5px;
+}
+
+.cs-ceo-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.cs-ceo-online {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #23986a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cs-ceo-online span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #20c783;
+  box-shadow: 0 0 0 4px #e5f8ef;
+}
+
+.cs-ceo-admin-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 100px;
+}
+
+.cs-ceo-admin-profile strong,
+.cs-ceo-admin-profile small {
+  display: block;
+}
+
+.cs-ceo-admin-profile strong {
+  font-size: 12px;
+}
+
+.cs-ceo-admin-profile small {
+  margin-top: 3px;
+  color: var(--cs-muted);
+  font-size: 10px;
+}
+
+.cs-ceo-avatar {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  background: linear-gradient(135deg, #8b43dc, #ec36a0);
+}
+
+.cs-ceo-toolbar {
+  padding: 15px 30px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.cs-ceo-period-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+.cs-ceo-period-controls select,
+.cs-ceo-period-controls input,
+.cs-ceo-card-heading select,
+.cs-ceo-search-input {
+  min-height: 39px;
+  padding: 8px 12px;
+  border: 1px solid var(--cs-border);
+  border-radius: 10px;
+  outline: none;
+  background: #fff;
+  color: var(--cs-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.cs-ceo-period-controls select:focus,
+.cs-ceo-period-controls input:focus,
+.cs-ceo-search-input:focus,
+.cs-ceo-card-heading select:focus {
+  border-color: #b68bd0;
+  box-shadow: 0 0 0 3px #f1e7f8;
+}
+
+.cs-ceo-content {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 27px 30px 35px;
+  flex: 1;
+}
+
+.cs-ceo-welcome-row {
+  margin-bottom: 23px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.cs-ceo-eyebrow {
+  color: #a17ab8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.cs-ceo-welcome-row h2 {
+  margin: 7px 0 5px;
+  color: #30223e;
+  font-size: 25px;
+  line-height: 1.25;
+  letter-spacing: -.5px;
+}
+
+.cs-ceo-welcome-row p {
+  margin: 0;
+  color: var(--cs-muted);
+  font-size: 13px;
+}
+
+.cs-ceo-primary-btn,
+.cs-ceo-outline-btn,
+.cs-ceo-delete-btn {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: .2s ease;
+}
+
+.cs-ceo-primary-btn {
+  color: #fff;
+  background: linear-gradient(110deg, #8144d7, #e52a9e);
+  box-shadow: 0 6px 14px rgba(166, 54, 190, .16);
+}
+
+.cs-ceo-primary-btn:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.cs-ceo-outline-btn {
+  color: var(--cs-purple-dark);
+  border-color: #e3d4ee;
+  background: #fff;
+}
+
+.cs-ceo-outline-btn:hover {
+  border-color: #b88bd1;
+  background: #faf6fd;
+}
+
+.cs-ceo-delete-btn {
+  color: #c23e62;
+  border-color: #f3d4de;
+  background: #fff7f9;
+}
+
+.cs-ceo-primary-btn:disabled,
+.cs-ceo-outline-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cs-ceo-stats-grid {
+  margin-bottom: 23px;
+  display: grid;
+  grid-template-columns: repeat( auto-fit, minmax(175px, 1fr) );
+  gap: 16px;
+}
+
+.cs-ceo-stat-card {
+  min-width: 0;
+  padding: 19px;
+  border: 1px solid #eee5f3;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--cs-shadow);
+}
+
+.cs-ceo-stat-icon {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.cs-ceo-stat-icon.purple { color: #8054a0; background: #f1e8f8; }
+.cs-ceo-stat-icon.blue { color: #3979bd; background: #e9f2fc; }
+.cs-ceo-stat-icon.green { color: #26956e; background: #e7f7f0; }
+.cs-ceo-stat-icon.orange { color: #c47a2d; background: #fff2e4; }
+.cs-ceo-stat-icon.pink { color: #d64d91; background: #fceaf3; }
+
+.cs-ceo-stat-card p {
+  margin: 0 0 8px;
+  color: #82788d;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cs-ceo-stat-card strong {
+  display: block;
+  color: #30223e;
+  font-size: 25px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.cs-ceo-stat-card small {
+  display: block;
+  margin-top: 8px;
+  color: #aaa1b3;
+  font-size: 10px;
+}
+
+.cs-ceo-charts-grid {
+  margin-bottom: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 17px;
+}
+
+.cs-ceo-card {
+  min-width: 0;
+  margin-bottom: 20px;
+  padding: 21px;
+  border: 1px solid #eee5f3;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--cs-shadow);
+}
+
+.cs-ceo-card h3 {
+  margin: 0 0 17px;
+  color: #49345c;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.cs-ceo-chart-card {
+  min-height: 245px;
+}
+
+.cs-ceo-bars {
+  height: 170px;
+  padding: 12px 4px 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 12px;
+  border-bottom: 1px solid #eee6f3;
+}
+
+.cs-ceo-bar-column {
+  height: 100%;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cs-ceo-bar-column > span {
+  color: #79678a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cs-ceo-bar-track {
+  width: min(34px, 75%);
+  height: 115px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  border-radius: 8px 8px 3px 3px;
+  background: #f3edf8;
+}
+
+.cs-ceo-bar-fill {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, #d23eae, #8054c6);
+}
+
+.cs-ceo-bar-column small {
+  max-width: 100%;
+  overflow: hidden;
+  color: #8e8499;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-ceo-card > p {
+  color: var(--cs-muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.cs-ceo-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #eee6f2;
+  border-radius: 12px;
+}
+
+.cs-ceo-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 12px;
+}
+
+.cs-ceo-table th {
+  padding: 13px 14px;
+  color: #fff;
+  background: #8054a0;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.cs-ceo-table td {
+  padding: 12px 14px;
+  color: #5d5368;
+  border-bottom: 1px solid #f0eaf4;
+  vertical-align: middle;
+}
+
+.cs-ceo-table tbody tr:nth-child(even) {
+  background: #fbf8fd;
+}
+
+.cs-ceo-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.cs-ceo-table tbody tr:hover {
+  background: #f7f0fb;
+}
+
+.cs-ceo-table td .cs-ceo-outline-btn,
+.cs-ceo-table td .cs-ceo-delete-btn {
+  min-height: 30px;
+  margin: 2px 4px 2px 0;
+  padding: 6px 9px;
+  font-size: 10px;
+}
+
+.cs-ceo-card-heading {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cs-ceo-card-heading h3 {
+  margin: 0;
+}
+
+.cs-ceo-activity-heading {
+  justify-content: flex-end;
+}
+
+.cs-ceo-search-input {
+  width: min(300px, 100%);
+}
+
+.cs-ceo-user-details {
+  margin-top: 20px;
+  padding: 22px;
+}
+
+.cs-ceo-user-details p {
+  overflow-wrap: anywhere;
+}
+
+.cs-ceo-message {
+  margin: 10px 0;
+  padding: 13px 15px;
+  border: 1px solid var(--cs-border);
+  border-radius: 12px;
+  background: #fcf9ff;
+}
+
+.cs-ceo-message p {
+  margin: 7px 0;
+  color: #51465d;
+}
+
+.cs-ceo-message small {
+  color: #9a90a4;
+}
+
+.cs-ceo-error {
+  margin-bottom: 18px;
+  padding: 12px 15px;
+  border: 1px solid #f2cbd6;
+  border-radius: 10px;
+  color: #a52f52;
+  background: #fff3f6;
+  font-size: 13px;
+}
+
+.cs-ceo-loading {
+  margin-bottom: 15px;
+  padding: 12px;
+  color: var(--cs-purple);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cs-ceo-footer {
+  padding: 18px 30px;
+  border-top: 1px solid var(--cs-border);
+  color: #9a91a4;
+  text-align: center;
+  font-size: 11px;
+}
+
+/* Reports & Analytics page */
+.cs-report-export-options {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+}
+
+.cs-ceo-content > .cs-ceo-card:has(.cs-report-export-options) {
+  background: linear-gradient(135deg, #fff 0%, #fcf8ff 100%);
+}
+
+/* Report preview: separate polished document layout */
+.cs-report-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 4px auto 24px;
+  padding: 42px 46px;
+  color: #30223e;
+  background: #fff;
+  border: 1px solid #eee4f3;
+  border-radius: 18px;
+  box-shadow: 0 14px 42px rgba(65, 39, 83, .10);
+}
+
+.cs-report-header {
+  padding-bottom: 25px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  border-bottom: 2px solid #eee5f4;
+}
+
+.cs-report-header > div:first-child > span {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #9365b1;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 2px;
+}
+
+.cs-report-header h1 {
+  margin: 0;
+  color: #30223e;
+  font-size: clamp(25px, 3vw, 36px);
+  line-height: 1.2;
+  letter-spacing: -.8px;
+}
+
+.cs-report-header p {
+  margin: 10px 0 0;
+  color: #8b8195;
+  font-size: 12px;
+}
+
+.cs-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cs-report-actions .cs-ceo-primary-btn,
+.cs-report-actions .cs-ceo-outline-btn {
+  min-height: 37px;
+}
+
+.cs-report-summary,
+.cs-report-section {
+  margin-top: 30px;
+}
+
+.cs-report-summary h2,
+.cs-report-section h2 {
+  margin: 0 0 17px;
+  color: #65447f;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.cs-report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cs-report-stat {
+  min-height: 125px;
+  padding: 17px 18px;
+  border: 1px solid #eee3f4;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fff, #faf6fd);
+  break-inside: avoid;
+}
+
+.cs-report-stat > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 11px;
+  border-radius: 10px;
+  color: #8054a0;
+  background: #f0e7f7;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.cs-report-stat p {
+  margin: 0 0 7px;
+  color: #82788e;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.cs-report-stat strong {
+  color: #38264a;
+  font-size: 23px;
+  font-weight: 850;
+}
+
+.cs-report-stat-2 > span { color: #2e9a72; background: #e7f7f0; }
+.cs-report-stat-3 > span { color: #3979bd; background: #eaf2fc; }
+.cs-report-stat-4 > span { color: #c17a31; background: #fff2e5; }
+.cs-report-stat-5 > span { color: #d34e91; background: #fceaf3; }
+
+.cs-report-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.cs-report-metrics > div {
+  padding: 19px 20px;
+  border: 1px solid #eee3f4;
+  border-radius: 13px;
+  background: #fbf8fd;
+}
+
+.cs-report-metrics span {
+  display: block;
+  margin-bottom: 8px;
+  color: #82788e;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.cs-report-metrics strong {
+  color: #8054a0;
+  font-size: 27px;
+  font-weight: 850;
+}
+
+.cs-report-section .cs-ceo-table {
+  min-width: 0;
+}
+
+.cs-report-section .cs-ceo-table th {
+  background: #8054a0;
+}
+
+.cs-report-section .cs-ceo-table td {
+  overflow-wrap: anywhere;
+}
+
+.cs-report-footer {
+  margin-top: 34px;
+  padding-top: 17px;
+  border-top: 1px solid #eee5f3;
+  color: #9b91a5;
+  text-align: center;
+  font-size: 11px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .cs-ceo-sidebar {
+    width: 225px;
+    flex-basis: 225px;
+  }
+  .cs-ceo-charts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cs-report-page {
+    padding: 30px;
+  }
+}
+
+@media (max-width: 760px) {
+  .cs-ceo-layout {
+    display: block;
+  }
+  .cs-ceo-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 14px;
+    border-right: 0;
+    border-bottom: 1px solid var(--cs-border);
+  }
+  .cs-ceo-brand {
+    padding: 0 5px 14px;
+  }
+  .cs-ceo-menu-caption,
+  .cs-ceo-sidebar-bottom {
+    display: none;
+  }
+  .cs-ceo-menu {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .cs-ceo-menu-item {
+    width: auto;
+    min-width: max-content;
+    min-height: 39px;
+    padding: 9px 12px;
+  }
+  .cs-ceo-topbar {
+    padding: 15px 18px;
+    align-items: flex-start;
+  }
+  .cs-ceo-topbar-title h1 {
+    font-size: 18px;
+  }
+  .cs-ceo-topbar-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .cs-ceo-online {
+    display: none;
+  }
+  .cs-ceo-toolbar {
+    padding: 14px 18px 0;
+  }
+  .cs-ceo-content {
+    padding: 22px 18px 28px;
+  }
+  .cs-ceo-welcome-row {
+    align-items: flex-start;
+  }
+  .cs-ceo-welcome-row h2 {
+    font-size: 21px;
+  }
+  .cs-ceo-charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .cs-report-page {
+    padding: 22px 17px;
+    border-radius: 12px;
+  }
+  .cs-report-header {
+    display: block;
+  }
+  .cs-report-actions {
+    margin-top: 18px;
+    justify-content: flex-start;
+  }
+  .cs-report-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .cs-ceo-topbar {
+    display: block;
+  }
+  .cs-ceo-topbar-actions {
+    margin-top: 13px;
+    justify-content: flex-start;
+  }
+  .cs-ceo-admin-profile {
+    min-width: 0;
+  }
+  .cs-ceo-welcome-row {
+    display: block;
+  }
+  .cs-ceo-welcome-row > button {
+    margin-top: 13px;
+  }
+  .cs-ceo-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .cs-ceo-stat-card {
+    padding: 14px;
+  }
+  .cs-ceo-stat-card strong {
+    font-size: 21px;
+  }
+  .cs-report-grid,
+  .cs-report-metrics {
+    grid-template-columns: 1fr;
+  }
+  .cs-report-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cs-report-actions button {
+    width: 100%;
+  }
+}
+
+/* Print only the report document, not dashboard navigation */
+@page {
+  size: A4 landscape;
+  margin: 12mm;
+}
+
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .cs-ceo-sidebar,
+  .cs-ceo-topbar,
+  .cs-ceo-toolbar,
+  .cs-ceo-footer,
+  .cs-report-actions,
+  .cs-ceo-error,
+  .cs-ceo-loading {
+    display: none !important;
+  }
+
+  .cs-ceo-layout,
+  .cs-ceo-main,
+  .cs-ceo-content {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  .cs-report-page {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .cs-report-header,
+  .cs-report-summary,
+  .cs-report-section,
+  .cs-report-stat,
+  .cs-report-metrics > div {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .cs-report-page .cs-ceo-table-wrap {
+    overflow: visible !important;
+    border: 0 !important;
+  }
+
+  .cs-report-page .cs-ceo-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 9px !important;
+  }
+
+  .cs-report-page .cs-ceo-table th {
+    color: #fff !important;
+    background: #8054a0 !important;
+  }
+
+  .cs-report-page .cs-ceo-table th,
+  .cs-report-page .cs-ceo-table td {
+    padding: 6px !important;
+    border: 1px solid #d8c5e8 !important;
+  }
+
+  .cs-report-footer {
+    margin-top: 20px !important;
+  }
+}
+/* CEO Dashboard Sidebar - Dynamic Height */
+.cs-ceo-layout {
+  display: flex;
+  align-items: stretch;
+  height: auto !important;
+  min-height: 100vh;
+}
+
+.cs-ceo-sidebar {
+  position: relative !important;
+  top: auto !important;
+  height: auto !important;
+  min-height: 100%;
+  align-self: stretch;
+  overflow-y: visible !important;
+}

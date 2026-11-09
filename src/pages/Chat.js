@@ -1,9 +1,52 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import API_URL from "../api";
+const CHAT_WARNING =
+  "This chat is only for ClothSwap-related communication.";
 
+function isClothSwapRelatedMessage(message) {
+  const text = String(message || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const blockedPatterns = [
+    /\bi\s+love\s+you\b/,
+    /\blove\s+u\b/,
+    /\bi\s+like\s+you\b/,
+    /\b(date|dating)\s+you\b/,
+    /\bdate\s+me\b/,
+    /\bgo\s+on\s+a\s+date\b/,
+    /\bgirlfriend\b/,
+    /\bboyfriend\b/,
+    /\bkiss\b/,
+    /\bflirt(?:ing)?\b/,
+    /\bromance\b/,
+    /\bsweetheart\b/,
+    /\bdarling\b/,
+    /\bcrush\s+on\s+you\b/,
+    /\bare\s+you\s+single\b/,
+    /\bselfie\b/,
+    /\byour\s+phone\s+number\b/,
+    /\byour\s+instagram\b/,
+    /\byour\s+whatsapp\b/,
+    /\byour\s+snapchat\b/
+  ];
+
+  if (blockedPatterns.some(function (pattern) {
+    return pattern.test(text);
+  })) {
+    return false;
+  }
+
+  const allowedTopics =
+    /\b(cloth|clothes|clothing|kapda|kapde|dress|shirt|t-shirt|jeans|kurti|top|jacket|trouser|shoes|item|listing|photo|picture|pic|size|colour|color|condition|quality|brand|swap|swapping|exchange|offer|request|value|price|courier|delivery|deliver|parcel|shipment|shipping|tracking|dispatch|pickup|pick up|hand to hand|local exchange|meeting|meet|location|address|place|date|time|tomorrow|today|otp|received|send|share|available|packing|pack)\b/i;
+
+  const shortReplies =
+  /^(ok|okay|okey|ohk|okk|yes|no|yep|nope|sure|fine|alright|all right|right|hmm|hm|hmmm|acha|accha|achha|saru|saras|barabar|thik|thik che|theek hai|ha|haa|han|haan|na|naa|kem cho|majama|maja ma|good|nice|great|hello|hi|hey|bye|good morning|good afternoon|good evening|good night|thanks|thank you|thankyou|thank u|thnx|welcome|you're welcome|ur welcome|please|pls|noted|got it|understood|done|perfect|no problem|its okay|it's okay|koi baat nahi|koi problem nahi|sorry|my bad|haha|hehe|lol|😂|👍|🙏)[.!?, ]*$/i;  return allowedTopics.test(text) || shortReplies.test(text);
+}
 function Chat() {
   const [searchParams] = useSearchParams();
-
   const requestId = searchParams.get("requestId");
 
   const [request, setRequest] = useState(null);
@@ -13,14 +56,93 @@ function Chat() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
-  /* ================= CURRENT USER ================= */
-
+  const sendingRef = useRef(false);
   const currentUser =
     localStorage.getItem("clothSwapUserName") ||
     localStorage.getItem("clothswapUserName") ||
     "";
 
-  /* ================= LOAD CHAT ================= */
+  function mergeMessages(previous, incoming) {
+    const messageMap = new Map();
+
+    [...previous, ...incoming].forEach(function (message) {
+      if (!message) return;
+
+      // Saved messages are identified by their MongoDB ID.
+      if (message._id) {
+        messageMap.set(String(message._id), message);
+      }
+    });
+
+    return Array.from(messageMap.values()).sort(function (a, b) {
+      return (
+        new Date(a.createdAt || 0) -
+        new Date(b.createdAt || 0)
+      );
+    });
+  }
+
+  async function loadChatData(showLoading = true) {
+    try {
+      if (!requestId) {
+        setError("Swap request ID is missing.");
+        return;
+      }
+
+      if (showLoading) setLoading(true);
+
+      const requestResponse = await fetch(
+        `${API_URL}/api/swap-requests/${requestId}`
+      );
+
+      if (!requestResponse.ok) {
+        throw new Error("Failed to load swap request.");
+      }
+
+      const requestData = await requestResponse.json();
+
+      const actualRequest =
+        requestData?.request ||
+        requestData?.swapRequest ||
+        requestData?.data ||
+        requestData;
+
+      setRequest(actualRequest);
+
+      const messageResponse = await fetch(
+        `${API_URL}/api/messages/${requestId}`,
+        { cache: "no-store" }
+      );
+
+      if (!messageResponse.ok) {
+        throw new Error("Failed to load messages.");
+      }
+
+      const messageData = await messageResponse.json();
+
+      const actualMessages = Array.isArray(messageData)
+        ? messageData
+        : Array.isArray(messageData.messages)
+        ? messageData.messages
+        : Array.isArray(messageData.data)
+        ? messageData.data
+        : [];
+
+      setMessages(function (previousMessages) {
+        return mergeMessages(previousMessages, actualMessages);
+      });
+
+      if (showLoading) setError("");
+    } catch (err) {
+      console.error("Chat loading error:", err);
+
+      if (showLoading) {
+        setError(err.message || "Unable to load chat.");
+      }
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  }
 
   useEffect(function () {
     if (!requestId) {
@@ -29,301 +151,127 @@ function Chat() {
       return;
     }
 
-    loadChatData();
+    loadChatData(true);
+
+    const refreshInterval = setInterval(function () {
+      loadChatData(false);
+    }, 3000);
+
+    return function () {
+      clearInterval(refreshInterval);
+    };
   }, [requestId]);
 
-  /* ================= LOAD REQUEST + MESSAGES ================= */
-
-  async function loadChatData() {
-    try {
-      setLoading(true);
-      setError("");
-
-      /* ================= REQUEST ================= */
-
-      const requestResponse = await fetch(
-        "http://localhost:5000/api/swap-requests/" +
-          requestId
-      );
-
-      if (!requestResponse.ok) {
-        throw new Error(
-          "Failed to load swap request."
-        );
-      }
-
-      const requestData =
-        await requestResponse.json();
-
-      console.log(
-        "CHAT REQUEST DATA:",
-        requestData
-      );
-
-      /*
-        Backend response safely handle:
-        direct object
-        OR { request: object }
-        OR { swapRequest: object }
-        OR { data: object }
-      */
-
-      const actualRequest =
-        requestData &&
-        requestData.request
-          ? requestData.request
-          : requestData &&
-            requestData.swapRequest
-          ? requestData.swapRequest
-          : requestData &&
-            requestData.data
-          ? requestData.data
-          : requestData;
-
-      setRequest(actualRequest);
-
-      /* ================= MESSAGES ================= */
-
-      const messageResponse = await fetch(
-        "http://localhost:5000/api/messages/" +
-          requestId
-      );
-
-      if (messageResponse.ok) {
-        const messageData =
-          await messageResponse.json();
-
-        console.log(
-          "CHAT MESSAGE DATA:",
-          messageData
-        );
-
-        let actualMessages = [];
-
-        if (Array.isArray(messageData)) {
-          actualMessages = messageData;
-        } else if (
-          messageData &&
-          Array.isArray(messageData.messages)
-        ) {
-          actualMessages =
-            messageData.messages;
-        } else if (
-          messageData &&
-          Array.isArray(messageData.data)
-        ) {
-          actualMessages =
-            messageData.data;
-        }
-
-        setMessages(actualMessages);
-      } else {
-        setMessages([]);
-      }
-    } catch (error) {
-      console.error(
-        "Chat loading error:",
-        error
-      );
-
-      setError(
-        error.message ||
-          "Unable to load chat."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  /* ================= SEND MESSAGE ================= */
-
   async function handleSendMessage(event) {
-  event.preventDefault();
+    event.preventDefault();
 
-  const text = messageText.trim();
+    const textToSend = messageText.trim();
 
-  if (!text) {
-    return;
-  }
+    if (!textToSend) return;
+    if (!isClothSwapRelatedMessage(textToSend)) {
+  setError(CHAT_WARNING);
+  return;
+}
 
-  if (!requestId) {
-    setError("Swap request ID is missing.");
-    return;
-  }
+    if (!requestId || !currentUser) {
+      setError("Please login and open a valid swap chat.");
+      return;
+    }
 
-  if (!currentUser) {
-    setError("Please login before sending a message.");
-    return;
-  }
+    if (sendingRef.current) return;
 
-  try {
+    sendingRef.current = true;
     setSending(true);
     setError("");
+    setMessageText("");
 
-    const response = await fetch(
-      "http://localhost:5000/api/messages",
-      {
+    try {
+      console.log("SENDING MESSAGE REQUEST");
+      const response = await fetch(`${API_URL}/api/messages`, {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json"
         },
+        
+body: JSON.stringify({
+  swapRequestId: requestId,
+  sender: currentUser,
+  text: textToSend,
+  chatNotificationsEnabled: true
+})
 
-        body: JSON.stringify({
-          swapRequestId: requestId,
-          sender: currentUser,
-          text: text
-        })
+      });
+
+      const data = await response.json();
+      console.log("MESSAGE RESPONSE RECEIVED", response.status, data);
+
+      if (!response.ok || data.success === false) {
+        throw new Error(data.message || "Message send failed.");
       }
-    );
 
-    const data = await response.json();
+      const savedMessage = data.savedMessage;
 
-    console.log("SEND MESSAGE RESPONSE:", data);
+      if (!savedMessage || !savedMessage._id) {
+        throw new Error("Server did not return the saved message.");
+      }
 
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Failed to send message."
-      );
-    }
+      setMessages(function (previousMessages) {
+        return mergeMessages(previousMessages, [savedMessage]);
+      });
 
-    /*
-      Backend different response formats handle
-    */
+      setMessageText("");
+    } catch (err) {
+      console.error("Send message error:", err);
 
-    const newMessage =
-      data.savedMessage ||
-      data.newMessage ||
-      data.messageData ||
-      data.data ||
-      (
-        data &&
-        typeof data.message === "object"
-          ? data.message
-          : null
-      );
-
-    /*
-      If backend returns only success message,
-      create the message locally using current user.
-    */
-
-    const finalMessage =
-      newMessage &&
-      typeof newMessage === "object"
-        ? newMessage
-        : {
-            _id:
-              "local-" +
-              Date.now(),
-
-            sender: currentUser,
-
-            text: text,
-
-            createdAt:
-              new Date().toISOString()
-          };
-
-    console.log(
-      "FINAL CHAT MESSAGE:",
-      finalMessage
-    );
-
-    setMessages(function (
-      previousMessages
-    ) {
-      return [
-        ...previousMessages,
-        finalMessage
-      ];
-    });
-
-    setMessageText("");
-  } catch (error) {
-    console.error(
-      "Send message error:",
-      error
-    );
-
-    setError(
-      error.message ||
-        "Unable to send message."
-    );
-  } finally {
-    setSending(false);
-  }
+      setMessageText(function (currentText) {
+  return currentText || textToSend;
+});
+     if (err.message === CHAT_WARNING) {
+  setError(CHAT_WARNING);
+} else {
+  setError(
+    (err.message || "Unable to send message.") +
+      " Please try sending this message again."
+  );
 }
-  /* ================= LOADING ================= */
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
+    }
+  }
+
 
   if (loading) {
     return React.createElement(
       "div",
-      {
-        className: "chat-page"
-      },
-
+      { className: "chat-page" },
       React.createElement(
         "div",
-        {
-          className:
-            "container py-5 text-center"
-        },
-
+        { className: "container py-5 text-center" },
         React.createElement(
           "div",
-          {
-            className:
-              "chat-loading"
-          },
+          { className: "chat-loading" },
           "Loading chat..."
         )
       )
     );
   }
 
-  /* ================= ERROR ================= */
-
   if (error && !request) {
     return React.createElement(
       "div",
-      {
-        className: "chat-page"
-      },
-
+      { className: "chat-page" },
       React.createElement(
         "div",
-        {
-          className:
-            "container py-5"
-        },
-
+        { className: "container py-5" },
         React.createElement(
           "div",
-          {
-            className:
-              "chat-error-card"
-          },
-
-          React.createElement(
-            "h2",
-            null,
-            "Unable to open chat"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            error
-          ),
-
+          { className: "chat-error-card" },
+          React.createElement("h2", null, "Unable to open chat"),
+          React.createElement("p", null, error),
           React.createElement(
             Link,
-            {
-              to: "/swap-requests",
-              className:
-                "chat-back-btn"
-            },
+            { to: "/swap-requests", className: "chat-back-btn" },
             "← Back to Swap Requests"
           )
         )
@@ -331,111 +279,59 @@ function Chat() {
     );
   }
 
-  /* ================= SAFE REQUEST VALUES ================= */
-
   const ownerName =
-    request &&
-    typeof request.owner === "string" &&
-    request.owner.trim()
+    typeof request?.owner === "string" && request.owner.trim()
       ? request.owner
       : "Unknown";
 
   const requesterName =
-    request &&
-    typeof request.requester === "string" &&
-    request.requester.trim()
+    typeof request?.requester === "string" && request.requester.trim()
       ? request.requester
       : "Unknown";
 
   const clothingTitle =
-    request &&
-    typeof request.clothingTitle === "string" &&
+    typeof request?.clothingTitle === "string" &&
     request.clothingTitle.trim()
       ? request.clothingTitle
       : "Clothing Item";
 
   const clothingImage =
-    request &&
-    typeof request.clothingImage === "string"
+    typeof request?.clothingImage === "string"
       ? request.clothingImage
       : "";
 
-  const requestStatus =
-    request &&
-    request.status
-      ? request.status
-      : "Pending";
-
-  /* ================= OTHER USER ================= */
+  const requestStatus = request?.status || "Pending";
 
   let otherUser = "User";
 
-  if (
-    currentUser &&
-    ownerName !== "Unknown" &&
-    requesterName !== "Unknown"
-  ) {
-    if (ownerName === currentUser) {
-      otherUser = requesterName;
-    } else if (
-      requesterName === currentUser
-    ) {
-      otherUser = ownerName;
-    } else {
-      otherUser = ownerName;
-    }
-  } else if (
-    ownerName !== "Unknown"
-  ) {
+  if (ownerName === currentUser) {
+    otherUser = requesterName;
+  } else if (requesterName === currentUser) {
     otherUser = ownerName;
-  } else if (
-    requesterName !== "Unknown"
-  ) {
+  } else if (ownerName !== "Unknown") {
+    otherUser = ownerName;
+  } else if (requesterName !== "Unknown") {
     otherUser = requesterName;
   }
 
-  const safeOtherUser =
-    otherUser || "User";
-
-  /* ================= PAGE ================= */
+  const safeOtherUser = otherUser || "User";
 
   return React.createElement(
     "div",
-    {
-      className: "chat-page"
-    },
-
+    { className: "chat-page" },
     React.createElement(
       "div",
-      {
-        className: "container"
-      },
-
-      /* ================= HEADER ================= */
+      { className: "container" },
 
       React.createElement(
         "div",
-        {
-          className:
-            "chat-page-header"
-        },
-
+        { className: "chat-page-header" },
         React.createElement(
           Link,
-          {
-            to: "/swap-requests",
-            className:
-              "chat-back-link"
-          },
+          { to: "/swap-requests", className: "chat-back-link" },
           "← Back to Swap Requests"
         ),
-
-        React.createElement(
-          "h1",
-          null,
-          "Chat / Negotiate"
-        ),
-
+        React.createElement("h1", null, "Chat / Negotiate"),
         React.createElement(
           "p",
           null,
@@ -443,320 +339,169 @@ function Chat() {
         )
       ),
 
-      /* ================= MAIN CARD ================= */
-
       React.createElement(
         "div",
-        {
-          className:
-            "chat-main-card"
-        },
-
-        /* ================= CLOTHING INFO ================= */
+        { className: "chat-main-card" },
 
         React.createElement(
           "div",
-          {
-            className:
-              "chat-item-section"
-          },
+          { className: "chat-item-section" },
 
           React.createElement(
             "div",
-            {
-              className:
-                "chat-item-image-wrapper"
-            },
-
+            { className: "chat-item-image-wrapper" },
             clothingImage
-              ? React.createElement(
-                  "img",
-                  {
-                    src:
-                      clothingImage,
-                    alt:
-                      clothingTitle,
-                    className:
-                      "chat-item-image",
-                    onError:
-                      function (event) {
-                        event.target.style.display =
-                          "none";
-                      }
+              ? React.createElement("img", {
+                  src: clothingImage,
+                  alt: clothingTitle,
+                  className: "chat-item-image",
+                  onError: function (event) {
+                    event.target.style.display = "none";
                   }
-                )
+                })
               : React.createElement(
                   "div",
-                  {
-                    className:
-                      "chat-item-placeholder"
-                  },
+                  { className: "chat-item-placeholder" },
                   "👕"
                 )
           ),
 
           React.createElement(
             "div",
-            {
-              className:
-                "chat-item-info"
-            },
-
-            React.createElement(
-              "h2",
-              null,
-              clothingTitle
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Owner: ",
-              ownerName
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Requester: ",
-              requesterName
-            ),
-
+            { className: "chat-item-info" },
+            React.createElement("h2", null, clothingTitle),
+            React.createElement("p", null, "Owner: ", ownerName),
+            React.createElement("p", null, "Requester: ", requesterName),
             React.createElement(
               "span",
-              {
-                className:
-                  "chat-status-badge"
-              },
+              { className: "chat-status-badge" },
               requestStatus
             )
           )
         ),
 
-        /* ================= CHAT USER ================= */
-
         React.createElement(
           "div",
-          {
-            className:
-              "chat-user-section"
-          },
-
+          { className: "chat-user-section" },
           React.createElement(
             "div",
-            {
-              className:
-                "chat-user-avatar"
-            },
-            safeOtherUser
-              .charAt(0)
-              .toUpperCase()
+            { className: "chat-user-avatar" },
+            safeOtherUser.charAt(0).toUpperCase()
           ),
-
           React.createElement(
             "div",
-            {
-              className:
-                "chat-user-info"
-            },
-
-            React.createElement(
-              "h2",
-              null,
-              safeOtherUser
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Negotiating with you"
-            )
+            { className: "chat-user-info" },
+            React.createElement("h2", null, safeOtherUser),
+            React.createElement("p", null, "Negotiating with you")
           )
         ),
-
-        /* ================= ERROR ================= */
 
         error &&
           React.createElement(
             "div",
-            {
-              className:
-                "chat-inline-error"
-            },
+            { className: "chat-inline-error" },
             error
           ),
 
-        /* ================= MESSAGES ================= */
-
         React.createElement(
           "div",
-          {
-            className:
-              "chat-messages"
-          },
+          { className: "chat-messages" },
 
           messages.length === 0
             ? React.createElement(
                 "div",
-                {
-                  className:
-                    "chat-empty"
-                },
-
+                { className: "chat-empty" },
                 React.createElement(
                   "div",
-                  {
-                    className:
-                      "chat-empty-icon"
-                  },
+                  { className: "chat-empty-icon" },
                   "💬"
                 ),
-
-                React.createElement(
-                  "h3",
-                  null,
-                  "Start the conversation"
-                ),
-
+                React.createElement("h3", null, "Start the conversation"),
                 React.createElement(
                   "p",
                   null,
                   "Discuss the clothing condition, swap value, pickup or delivery details."
                 )
               )
-
-            : messages.map(function (
-                message,
-                index
-              ) {
+            : messages.map(function (message, index) {
                 const sender =
-                  message &&
                   typeof message.sender === "string" &&
                   message.sender.trim()
                     ? message.sender
                     : "User";
 
                 const text =
-                  message &&
                   typeof message.text === "string"
                     ? message.text
                     : "";
 
-                const isMine =
-                  currentUser &&
-                  sender === currentUser;
+                const isMine = currentUser && sender === currentUser;
 
                 return React.createElement(
                   "div",
                   {
-                    key:
-                      message._id ||
-                      index,
-
-                    className:
-                      isMine
-                        ? "chat-message-row mine"
-                        : "chat-message-row"
+                    key: message._id || index,
+                    className: isMine
+                      ? "chat-message-row mine"
+                      : "chat-message-row"
                   },
-
                   React.createElement(
                     "div",
                     {
-                      className:
-                        isMine
-                          ? "chat-message-bubble mine"
-                          : "chat-message-bubble"
+                      className: isMine
+                        ? "chat-message-bubble mine"
+                        : "chat-message-bubble"
                     },
-
                     React.createElement(
                       "div",
-                      {
-                        className:
-                          "chat-message-sender"
-                      },
+                      { className: "chat-message-sender" },
                       sender
                     ),
-
                     React.createElement(
                       "div",
-                      {
-                        className:
-                          "chat-message-text"
-                      },
+                      { className: "chat-message-text" },
                       text
                     ),
-
                     message.createdAt &&
                       React.createElement(
                         "div",
-                        {
-                          className:
-                            "chat-message-time"
-                        },
-
-                        new Date(
-                          message.createdAt
-                        ).toLocaleString()
+                        { className: "chat-message-time" },
+                        new Date(message.createdAt).toLocaleString()
                       )
                   )
                 );
               })
         ),
 
-        /* ================= SEND FORM ================= */
-
         React.createElement(
           "form",
           {
-            className:
-              "chat-input-area",
-            onSubmit:
-              handleSendMessage
+            className: "chat-input-area",
+            onSubmit: handleSendMessage
           },
 
-          React.createElement(
-            "textarea",
-            {
-              value:
-                messageText,
-
-              onChange:
-                function (event) {
-                  setMessageText(
-                    event.target.value
-                  );
-                },
-
-              placeholder:
-                currentUser
-                  ? "Write a message about the swap..."
-                  : "Please login to send a message...",
-
-              rows: 3,
-
-              disabled:
-                sending ||
-                !currentUser
-            }
-          ),
+          React.createElement("textarea", {
+            value: messageText,
+           onChange: function (event) {
+  setMessageText(event.target.value);
+  setError("");
+},
+            placeholder: currentUser
+              ? "Write a message about the swap..."
+              : "Please login to send a message...",
+            rows: 3,
+            disabled: !currentUser || sending
+          }),
 
           React.createElement(
             "button",
             {
               type: "submit",
-
-              className:
-                "chat-send-btn",
-
+              className: "chat-send-btn",
               disabled:
-                sending ||
-                !currentUser ||
-                !messageText.trim()
+                !currentUser || !messageText.trim() || sending
             },
-
-            sending
-              ? "Sending..."
-              : "Send Message →"
+            sending ? "Sending..." : "Send Message →"
           )
         )
       )

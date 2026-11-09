@@ -1,4 +1,4 @@
-  const mongoose = require("mongoose");
+const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
@@ -17,10 +17,10 @@ const userSchema = new mongoose.Schema(
     },
 
     password: {
-  type: String,
-  required: true,
-  trim: true
-},
+      type: String,
+      required: true,
+      trim: true
+    },
 
     location: {
       type: String,
@@ -38,7 +38,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["Active", "Blocked"],
       default: "Active"
-    }
+    },
+
+    lastActivityAt: {
+      type: Date,
+      default: null
+    },
+    acceptedTermsVersion: {
+  type: String,
+  default: ""
+},
+
+acceptedTermsAt: {
+  type: Date,
+  default: null
+},
   },
   {
     timestamps: true

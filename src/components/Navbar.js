@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
+import API_URL, { apiFetch } from "../api";
 function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -11,7 +11,6 @@ function Navbar() {
   const [userName, setUserName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
 
-// SEARCH
   const searchPages = [
     {
       name: "Home",
@@ -176,7 +175,6 @@ function Navbar() {
     setShowSearchResults(true);
   }
 
-// LOGIN STATUS
   function updateLoginStatus() {
     const loggedIn =
       localStorage.getItem("clothswapLoggedIn") ===
@@ -190,8 +188,6 @@ function Navbar() {
     setIsLoggedIn(loggedIn);
     setUserName(savedName);
   }
-
-  // WISHLIST
 
   function updateWishlistCount() {
     const savedWishlist =
@@ -245,11 +241,11 @@ function Navbar() {
     }
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/notifications/${encodeURIComponent(
-          email
-        )}`
-      );
+     const response = await apiFetch(
+  `${API_URL}/api/notifications/${encodeURIComponent(
+    email
+  )}`
+);
 
       const data = await response.json();
 
@@ -418,7 +414,6 @@ function Navbar() {
           "Swap"
         )
       ),
-// MOBILE BUTTON
 React.createElement(
   "button",
   {
@@ -660,7 +655,6 @@ React.createElement(
               )
           ),
 
-// NOTIFICATION ICON
           React.createElement(
             Link,
             {
@@ -697,8 +691,6 @@ React.createElement(
                 notificationCount
               )
           ),
-
-          // WISHLIST ICON
 
           React.createElement(
             Link,
@@ -739,15 +731,13 @@ React.createElement(
               )
           ),
 
-          // USER AREA
 
           isLoggedIn
             ? React.createElement(
                 React.Fragment,
                 null,
 
-                /* Pink circle is ONLY user indicator.
-                   It does NOT logout. */
+               
 
                 React.createElement(
                   "span",

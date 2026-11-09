@@ -1,5 +1,7 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import API_URL from "../api";
 
 function ItemDetails() {
   const { id } = useParams();
@@ -13,6 +15,12 @@ function ItemDetails() {
   const [swapMessage, setSwapMessage] = useState("");
   const [swapMessageType, setSwapMessageType] = useState("success");
   const [swapSending, setSwapSending] = useState(false);
+
+  const [reportSending, setReportSending] = useState(false);
+  const [reportChecking, setReportChecking] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+  const [showReportForm, setShowReportForm] = useState(false);
 
   useEffect(() => {
     loadItem();
@@ -30,12 +38,13 @@ function ItemDetails() {
     try {
       const wishlist = JSON.parse(saved);
 
-      const found = wishlist.some(
-        (wishlistItem) =>
-          String(wishlistItem._id || wishlistItem.id) === String(id)
+      setIsWishlisted(
+        Array.isArray(wishlist) &&
+        wishlist.some(
+          (wishlistItem) =>
+            String(wishlistItem._id || wishlistItem.id) === String(id)
+        )
       );
-
-      setIsWishlisted(found);
     } catch (error) {
       setIsWishlisted(false);
     }
@@ -46,16 +55,13 @@ function ItemDetails() {
     setError("");
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/clothes"
-      );
+      const response = await fetch(`${API_URL}/api/clothes`);
 
       if (!response.ok) {
         throw new Error("Unable to load clothes.");
       }
 
       const data = await response.json();
-
       const clothes = data.clothes || data || [];
 
       const selectedItem = clothes.find(
@@ -70,7 +76,6 @@ function ItemDetails() {
       }
     } catch (err) {
       console.error(err);
-
       setError(
         "Cannot connect to server. Make sure backend is running."
       );
@@ -80,37 +85,29 @@ function ItemDetails() {
   }
 
   function addToWishlist() {
-    if (!item) {
-      return;
-    }
-
-    const saved = localStorage.getItem("clothSwapWishlist");
+    if (!item) return;
 
     let wishlist = [];
 
-    if (saved) {
-      try {
-        wishlist = JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem("clothSwapWishlist");
+      wishlist = saved ? JSON.parse(saved) : [];
 
-        if (!Array.isArray(wishlist)) {
-          wishlist = [];
-        }
-      } catch (error) {
+      if (!Array.isArray(wishlist)) {
         wishlist = [];
       }
+    } catch (error) {
+      wishlist = [];
     }
 
     const itemId = item._id || item.id;
 
     const alreadyExists = wishlist.some(
       (wishlistItem) =>
-        String(wishlistItem._id || wishlistItem.id) ===
-        String(itemId)
+        String(wishlistItem._id || wishlistItem.id) === String(itemId)
     );
 
-    if (alreadyExists) {
-      return;
-    }
+    if (alreadyExists) return;
 
     wishlist.push(item);
 
@@ -120,33 +117,20 @@ function ItemDetails() {
     );
 
     setIsWishlisted(true);
-
-    window.dispatchEvent(
-      new Event("wishlistUpdated")
-    );
+    window.dispatchEvent(new Event("wishlistUpdated"));
   }
 
   function removeFromWishlist() {
-    if (!item) {
-      return;
-    }
-
-    const saved = localStorage.getItem("clothSwapWishlist");
-
-    if (!saved) {
-      setIsWishlisted(false);
-      return;
-    }
+    if (!item) return;
 
     try {
-      const wishlist = JSON.parse(saved);
-
+      const saved = localStorage.getItem("clothSwapWishlist");
+      const wishlist = saved ? JSON.parse(saved) : [];
       const itemId = item._id || item.id;
 
       const updatedWishlist = wishlist.filter(
         (wishlistItem) =>
-          String(wishlistItem._id || wishlistItem.id) !==
-          String(itemId)
+          String(wishlistItem._id || wishlistItem.id) !== String(itemId)
       );
 
       localStorage.setItem(
@@ -155,10 +139,7 @@ function ItemDetails() {
       );
 
       setIsWishlisted(false);
-
-      window.dispatchEvent(
-        new Event("wishlistUpdated")
-      );
+      window.dispatchEvent(new Event("wishlistUpdated"));
     } catch (error) {
       console.error(error);
     }
@@ -172,218 +153,262 @@ function ItemDetails() {
     }
   }
 
-  /* ================================
-     REQUEST SWAP
-  ================================= */
+  function showMessage(message, type) {
+    setSwapMessageType(type);
+    setSwapMessage(message);
+
+    setTimeout(function () {
+      setSwapMessage("");
+    }, 3500);
+  }
+
+  /* REQUEST SWAP */
 
   async function requestSwap() {
-    if (!item) {
-      return;
-    }
+    if (!item || swapSending) return;
 
-    if (swapSending) {
+    const token = localStorage.getItem("clothswapToken");
+
+    if (!token || !localStorage.getItem("clothswapLoggedIn")) {
+      navigate("/login");
       return;
     }
 
     const requester =
       localStorage.getItem("clothSwapUserName") ||
+      localStorage.getItem("clothswapUserName") ||
       "ClothSwap User";
+
+    const requesterEmail =
+      localStorage.getItem("clothswapUserEmail") ||
+      localStorage.getItem("clothswapEmail") ||
+      "";
+
+    const ownerEmail = item.ownerEmail || "";
+
+    const isOwnClothing = ownerEmail
+      ? ownerEmail.toLowerCase() === requesterEmail.toLowerCase()
+      : String(item.owner || "").trim().toLowerCase() ===
+        requester.trim().toLowerCase();
+
+    if (isOwnClothing) {
+      showMessage("You cannot request your own clothing.", "error");
+      return;
+    }
 
     const clothingId = item._id || item.id;
 
     if (!clothingId) {
-      setSwapMessageType("error");
-      setSwapMessage(
-        "Unable to send swap request."
-      );
-
-      setTimeout(function () {
-        setSwapMessage("");
-      }, 3500);
-
+      showMessage("Unable to send swap request.", "error");
       return;
     }
 
-   const owner =
-  item.owner ||
-  "ClothSwap User";
-
-const requesterEmail =
-  localStorage.getItem("clothswapUserEmail") ||
-  localStorage.getItem("clothswapEmail") ||
-  "";
-
-/* Prevent requesting own clothing */
-
-const isOwnClothing =
-  item.ownerEmail
-    ? item.ownerEmail.toLowerCase() ===
-      requesterEmail.toLowerCase()
-    : String(owner).trim().toLowerCase() ===
-      String(requester).trim().toLowerCase();
-
-if (isOwnClothing) {
-  setSwapMessageType("error");
-
-  setSwapMessage(
-    "You cannot request your own clothing."
-  );
-
-  setTimeout(function () {
-    setSwapMessage("");
-  }, 3500);
-
-  return;
-}
-
-setSwapSending(true);
+    setSwapSending(true);
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/swap-requests",
+        `${API_URL}/api/swap-requests`,
         {
           method: "POST",
-
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
           },
-
           body: JSON.stringify({
-            clothingId: clothingId,
-            requester: requester,
-            requesterEmail:
-  localStorage.getItem("clothswapUserEmail") ||
-  localStorage.getItem("clothswapEmail") ||
-  "",
-            message:
-              "I would like to swap for this clothing item."
+            clothingId,
+            requester,
+            requesterEmail,
+            message: "I would like to swap for this clothing item."
           })
         }
       );
 
       const data = await response.json();
 
-      if (data.success) {
-        setSwapMessageType("success");
-
-        setSwapMessage(
-          "♻️ Swap Request Sent Successfully!"
+      if (response.ok && data.success) {
+        showMessage(
+          "♻️ Swap Request Sent Successfully!",
+          "success"
         );
       } else {
-        setSwapMessageType("error");
-
-        setSwapMessage(
-          data.message ||
-            "Unable to send swap request."
+        showMessage(
+          data.message || "Unable to send swap request.",
+          "error"
         );
       }
     } catch (error) {
-      console.error(
-        "Swap request error:",
-        error
-      );
-
-      setSwapMessageType("error");
-
-      setSwapMessage(
-        "Something went wrong. Please make sure the backend is running."
+      console.error("Swap request error:", error);
+      showMessage(
+        "Something went wrong. Please make sure the backend is running.",
+        "error"
       );
     } finally {
       setSwapSending(false);
-
-      setTimeout(function () {
-        setSwapMessage("");
-      }, 3500);
     }
   }
 
-  /* ================================
-     LOADING
-  ================================= */
+  /* REPORT LISTING */
+  async function handleReportClick() {
+  const token = localStorage.getItem("clothswapToken");
+
+  if (!token || !localStorage.getItem("clothswapLoggedIn")) {
+    navigate("/login");
+    return;
+  }
+
+  if (reportChecking) return;
+
+  setReportChecking(true);
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/clothes/${id}/report/check`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      if (data.alreadyReported) {
+        setShowReportForm(false);
+        showMessage(
+          "You have already reported this listing.",
+          "error"
+        );
+        return;
+      }
+
+      setShowReportForm(true);
+    } else {
+      showMessage(
+        data.message || "Unable to check report status.",
+        "error"
+      );
+    }
+  } catch (error) {
+    console.error("Report check error:", error);
+    showMessage("Unable to check report status.", "error");
+  } finally {
+    setReportChecking(false);
+  }
+}
+
+  async function submitReport() {
+    const token = localStorage.getItem("clothswapToken");
+
+    if (!token || !localStorage.getItem("clothswapLoggedIn")) {
+      navigate("/login");
+      return;
+    }
+
+    if (!reportReason) {
+      showMessage("Please select a reason for reporting.", "error");
+      return;
+    }
+
+    if (reportSending) return;
+
+    setReportSending(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/clothes/${id}/report`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            reason: reportReason,
+            description: reportDescription
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showMessage(
+          data.message || "Report submitted successfully.",
+          "success"
+        );
+
+        setReportReason("");
+        setReportDescription("");
+        setShowReportForm(false);
+      } else {
+        showMessage(
+          data.message || "Unable to submit report.",
+          "error"
+        );
+      }
+    } catch (error) {
+      console.error("Report listing error:", error);
+      showMessage(
+        "Something went wrong while submitting the report.",
+        "error"
+      );
+    } finally {
+      setReportSending(false);
+    }
+  }
+
+  /* LOADING */
 
   if (loading) {
     return React.createElement(
       "div",
-      {
-        className:
-          "container py-5 item-details-loading"
-      },
-
+      { className: "container py-5 item-details-loading" },
       React.createElement(
         "div",
-        {
-          className:
-            "text-center py-5"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "spinner-border",
-            role: "status"
-          }
-        ),
-
+        { className: "text-center py-5" },
+        React.createElement("div", {
+          className: "spinner-border",
+          role: "status"
+        }),
         React.createElement(
           "p",
-          {
-            className:
-              "mt-3"
-          },
+          { className: "mt-3" },
           "Loading item..."
         )
       )
     );
   }
 
-  /* ================================
-     ERROR
-  ================================= */
+  /* ERROR */
 
   if (error || !item) {
     return React.createElement(
       "div",
-      {
-        className:
-          "container py-5 item-details-error"
-      },
-
+      { className: "container py-5 item-details-error" },
       React.createElement(
         "div",
-        {
-          className:
-            "text-center py-5"
-        },
-
+        { className: "text-center py-5" },
         React.createElement(
           "div",
-          {
-            className:
-              "item-error-icon"
-          },
+          { className: "item-error-icon" },
           "!"
         ),
-
         React.createElement(
           "h2",
           null,
           error || "Item not found"
         ),
-
         React.createElement(
           "p",
           null,
           "We couldn't find this clothing item."
         ),
-
         React.createElement(
           "button",
           {
-            className:
-              "item-back-btn",
-            onClick: () =>
-              navigate("/browse")
+            className: "item-back-btn",
+            onClick: () => navigate("/browse")
           },
           "← Back to Browse"
         )
@@ -391,58 +416,25 @@ setSwapSending(true);
     );
   }
 
-  const title =
-    item.title ||
-    item.name ||
-    "Clothing Item";
-
+  const title = item.title || item.name || "Clothing Item";
   const image =
     item.image ||
     "https://via.placeholder.com/800x900?text=ClothSwap";
-
-  const category =
-    item.category ||
-    "Fashion";
-
-  const size =
-    item.size ||
-    "N/A";
-
-  const condition =
-    item.condition ||
-    "Good";
-
-  const location =
-    item.location ||
-    "Location not available";
-
-  const owner =
-    item.owner ||
-    "ClothSwap User";
-
-  const price =
-    item.price ||
-    item.value ||
-    0;
-
+  const category = item.category || "Fashion";
+  const size = item.size || "N/A";
+  const condition = item.condition || "Good";
+  const location = item.location || "Location not available";
+  const owner = item.owner || "ClothSwap User";
+  const price = item.price || item.value || 0;
   const description =
-    item.description ||
-    "No description available for this item.";
-
-  const status =
-    item.status ||
-    "Available";
+    item.description || "No description available for this item.";
+  const status = item.status || "Available";
 
   return React.createElement(
     "div",
-    {
-      className:
-        "item-details-page"
-    },
+    { className: "item-details-page" },
 
-    /* ================================
-       SWAP TOAST
-    ================================= */
+    /* TOAST */
 
     swapMessage &&
       React.createElement(
@@ -453,170 +445,100 @@ setSwapSending(true);
               ? "swap-toast success"
               : "swap-toast error"
         },
-
         React.createElement(
           "div",
-          {
-            className:
-              "swap-toast-icon"
-          },
-          swapMessageType === "success"
-            ? "✓"
-            : "!"
+          { className: "swap-toast-icon" },
+          swapMessageType === "success" ? "✓" : "!"
         ),
-
         React.createElement(
           "div",
-          {
-            className:
-              "swap-toast-content"
-          },
-
+          { className: "swap-toast-content" },
           React.createElement(
             "strong",
             null,
-            swapMessageType === "success"
-              ? "Success"
-              : "Oops!"
+            swapMessageType === "success" ? "Success" : "Oops!"
           ),
-
-          React.createElement(
-            "span",
-            null,
-            swapMessage
-          )
+          React.createElement("span", null, swapMessage)
         )
       ),
 
     React.createElement(
       "div",
-      {
-        className:
-          "container py-5"
-      },
+      { className: "container py-5" },
 
       /* BACK */
 
       React.createElement(
         "button",
         {
-          className:
-            "item-back-link",
-          onClick: () =>
-            navigate("/browse")
+          className: "item-back-link",
+          onClick: () => navigate("/browse")
         },
         "← Back to Browse"
       ),
 
       React.createElement(
         "div",
-        {
-          className:
-            "row g-5 align-items-start mt-2"
-        },
+        { className: "row g-5 align-items-start mt-2" },
 
-        /* ================================
-           IMAGE
-        ================================= */
+        /* IMAGE */
 
         React.createElement(
           "div",
-          {
-            className:
-              "col-lg-6"
-          },
-
+          { className: "col-lg-6" },
           React.createElement(
             "div",
-            {
-              className:
-                "item-details-image-box"
-            },
-
-            React.createElement(
-              "img",
-              {
-                src: image,
-                alt: title,
-                className:
-                  "item-details-image",
-
-                onError: (e) => {
-                  e.target.src =
-                    "https://via.placeholder.com/800x900?text=ClothSwap";
-                }
+            { className: "item-details-image-box" },
+            React.createElement("img", {
+              src: image,
+              alt: title,
+              className: "item-details-image",
+              onError: (e) => {
+                e.target.src =
+                  "https://via.placeholder.com/800x900?text=ClothSwap";
               }
-            ),
-
+            }),
             React.createElement(
               "span",
-              {
-                className:
-                  "item-status-badge"
-              },
+              { className: "item-status-badge" },
               status
             )
           )
         ),
 
-        /* ================================
-           DETAILS
-        ================================= */
+        /* DETAILS */
 
         React.createElement(
           "div",
-          {
-            className:
-              "col-lg-6"
-          },
-
+          { className: "col-lg-6" },
           React.createElement(
             "div",
-            {
-              className:
-                "item-details-content"
-            },
+            { className: "item-details-content" },
 
             React.createElement(
               "div",
-              {
-                className:
-                  "item-details-label"
-              },
+              { className: "item-details-label" },
               "♻️ CLOTHSWAP MARKETPLACE"
             ),
 
             React.createElement(
               "div",
-              {
-                className:
-                  "item-details-category"
-              },
+              { className: "item-details-category" },
               category
             ),
 
-            React.createElement(
-              "h1",
-              null,
-              title
-            ),
+            React.createElement("h1", null, title),
 
             React.createElement(
               "div",
-              {
-                className:
-                  "item-details-price"
-              },
+              { className: "item-details-price" },
               "₹",
               price
             ),
 
             React.createElement(
               "p",
-              {
-                className:
-                  "item-details-description"
-              },
+              { className: "item-details-description" },
               description
             ),
 
@@ -624,84 +546,33 @@ setSwapSending(true);
 
             React.createElement(
               "div",
-              {
-                className:
-                  "item-details-info-grid"
-              },
+              { className: "item-details-info-grid" },
 
               React.createElement(
                 "div",
-                {
-                  className:
-                    "item-info-box"
-                },
-
-                React.createElement(
-                  "span",
-                  null,
-                  "Category"
-                ),
-
-                React.createElement(
-                  "strong",
-                  null,
-                  category
-                )
+                { className: "item-info-box" },
+                React.createElement("span", null, "Category"),
+                React.createElement("strong", null, category)
               ),
 
               React.createElement(
                 "div",
-                {
-                  className:
-                    "item-info-box"
-                },
-
-                React.createElement(
-                  "span",
-                  null,
-                  "Size"
-                ),
-
-                React.createElement(
-                  "strong",
-                  null,
-                  size
-                )
+                { className: "item-info-box" },
+                React.createElement("span", null, "Size"),
+                React.createElement("strong", null, size)
               ),
 
               React.createElement(
                 "div",
-                {
-                  className:
-                    "item-info-box"
-                },
-
-                React.createElement(
-                  "span",
-                  null,
-                  "Condition"
-                ),
-
-                React.createElement(
-                  "strong",
-                  null,
-                  condition
-                )
+                { className: "item-info-box" },
+                React.createElement("span", null, "Condition"),
+                React.createElement("strong", null, condition)
               ),
 
               React.createElement(
                 "div",
-                {
-                  className:
-                    "item-info-box"
-                },
-
-                React.createElement(
-                  "span",
-                  null,
-                  "Location"
-                ),
-
+                { className: "item-info-box" },
+                React.createElement("span", null, "Location"),
                 React.createElement(
                   "strong",
                   null,
@@ -715,96 +586,140 @@ setSwapSending(true);
 
             React.createElement(
               "div",
-              {
-                className:
-                  "item-owner-box"
-              },
-
+              { className: "item-owner-box" },
               React.createElement(
                 "div",
-                {
-                  className:
-                    "item-owner-icon"
-                },
+                { className: "item-owner-icon" },
                 "👤"
               ),
-
               React.createElement(
                 "div",
                 null,
-
-                React.createElement(
-                  "small",
-                  null,
-                  "Listed by"
-                ),
-
-                React.createElement(
-                  "strong",
-                  null,
-                  owner
-                )
+                React.createElement("small", null, "Listed by"),
+                React.createElement("strong", null, owner)
               )
             ),
 
-            /* ACTIONS */
+            /* ACTION BUTTONS */
 
             React.createElement(
               "div",
-              {
-                className:
-                  "item-details-actions"
-              },
-
-              /* WISHLIST */
+              { className: "item-details-actions" },
 
               React.createElement(
                 "button",
                 {
-                  className:
-                    isWishlisted
-                      ? "wishlist-action-btn wishlisted"
-                      : "wishlist-action-btn",
-
-                  onClick:
-                    handleWishlist
+                  className: isWishlisted
+                    ? "wishlist-action-btn wishlisted"
+                    : "wishlist-action-btn",
+                  onClick: handleWishlist
                 },
-
-                React.createElement(
-                  "i",
-                  {
-                    className:
-                      isWishlisted
-                        ? "bi bi-heart-fill"
-                        : "bi bi-heart"
-                  }
-                ),
-
+                React.createElement("i", {
+                  className: isWishlisted
+                    ? "bi bi-heart-fill"
+                    : "bi bi-heart"
+                }),
                 isWishlisted
                   ? " Remove from Wishlist"
                   : " Add to Wishlist"
               ),
 
-              /* REQUEST SWAP */
+              React.createElement(
+                "button",
+                {
+                  className: "swap-request-btn",
+                  onClick: requestSwap,
+                  disabled: swapSending
+                },
+                swapSending ? "⏳ Sending..." : "♻️ Request Swap"
+              ),
 
               React.createElement(
                 "button",
                 {
-                  className:
-                    "swap-request-btn",
-
-                  onClick:
-                    requestSwap,
-
-                  disabled:
-                    swapSending
+                  className: "report-listing-btn",
+                  type: "button",
+                 onClick: handleReportClick,
+disabled: reportChecking
                 },
-
-                swapSending
-                  ? "⏳ Sending..."
-                  : "♻️ Request Swap"
+                "🚩 Report Listing"
               )
-            )
+            ),
+
+            /* REPORT FORM */
+
+            showReportForm &&
+              React.createElement(
+                "div",
+                { className: "report-listing-form" },
+
+                React.createElement(
+                  "h3",
+                  null,
+                  "🚩 Report this Listing"
+                ),
+
+                React.createElement(
+                  "select",
+                  {
+                    className: "form-select mb-3",
+                    value: reportReason,
+                    onChange: (e) => setReportReason(e.target.value)
+                  },
+                  React.createElement(
+                    "option",
+                    { value: "" },
+                    "Select a reason"
+                  ),
+                  React.createElement(
+                    "option",
+                    { value: "Inappropriate Content" },
+                    "Inappropriate Content"
+                  ),
+                  React.createElement(
+                    "option",
+                    { value: "Fake Listing" },
+                    "Fake Listing"
+                  ),
+                  React.createElement(
+                    "option",
+                    { value: "Misleading Information" },
+                    "Misleading Information"
+                  ),
+                  React.createElement(
+                    "option",
+                    { value: "Prohibited Item" },
+                    "Prohibited Item"
+                  ),
+                  React.createElement(
+                    "option",
+                    { value: "Other" },
+                    "Other"
+                  )
+                ),
+
+                React.createElement("textarea", {
+                  className: "form-control mb-3",
+                  placeholder: "Describe the issue (optional)...",
+                  rows: 3,
+                  value: reportDescription,
+                  onChange: (e) =>
+                    setReportDescription(e.target.value)
+                }),
+
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    className: "btn btn-outline-danger",
+                    onClick: submitReport,
+                    disabled: reportSending
+                  },
+                  reportSending
+                    ? "Submitting..."
+                    : "🚩 Submit Report"
+                )
+              )
           )
         )
       )

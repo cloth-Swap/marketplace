@@ -1,8 +1,46 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import API_URL, { apiFetch } from "../api";
 
 function Login() {
   const navigate = useNavigate();
+  async function checkTermsAndNavigate(nextPath) {
+  try {
+    const response = await apiFetch(
+      `${API_URL}/api/auth/terms-status`,
+      {
+        method: "GET"
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      setError(
+        data.message || "Unable to verify Terms & Conditions."
+      );
+      return;
+    }
+
+    if (data.accepted) {
+      navigate(nextPath);
+    } else {
+      navigate("/terms-conditions", {
+        state: {
+          requireAcceptance: true,
+          returnTo: nextPath
+        }
+      });
+    }
+
+  } catch (error) {
+    console.error("Terms Check Error:", error);
+
+    setError(
+      "Unable to verify Terms & Conditions. Please try again."
+    );
+  }
+}
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -11,275 +49,297 @@ function Login() {
   const [error, setError] = useState("");
   const googleButtonRef = React.useRef(null);
 
-const handleGoogleResponse = async function (response) {
-  try {
-    setError("");
+  const handleGoogleResponse = async function (response) {
+    try {
+      setError("");
 
-    if (!response || !response.credential) {
-      setError("Google sign in failed. Please try again.");
-      return;
-    }
-
-    const result = await fetch(
-      "http://localhost:5000/api/auth/google",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          credential: response.credential
-        })
+      if (!response || !response.credential) {
+        setError("Google sign in failed. Please try again.");
+        return;
       }
-    );
 
-    const data = await result.json();
-
-    if (!result.ok || !data.success || !data.user) {
-      setError(
-        data.message ||
-        "Google sign in failed. Please try again."
+      const result = await fetch(
+        `${API_URL}/api/auth/google`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            credential: response.credential
+          })
+        }
       );
-      return;
-    }
 
-    const googleUser = data.user;
-    localStorage.setItem(
-  "clothswapToken",
-  data.token
-);
+      const data = await result.json();
 
-    const googleName =
-      String(googleUser.name || "Google User").trim();
-
-    const googleEmail =
-      String(googleUser.email || "")
-        .trim()
-        .toLowerCase();
-
-    localStorage.setItem(
-      "clothswapLoggedIn",
-      "true"
-    );
-    localStorage.setItem(
-  "clothswapToken",
-  data.token
-);
-
-localStorage.setItem(
-  "clothswapIsAdmin",
-  googleUser.role === "Admin"
-    ? "true"
-    : "false"
-);
-
-    localStorage.setItem(
-      "clothswapUserName",
-      googleName
-    );
-
-    localStorage.setItem(
-      "clothSwapUserName",
-      googleName
-    );
-
-    localStorage.setItem(
-      "clothswapEmail",
-      googleEmail
-    );
-
-    localStorage.setItem(
-      "clothswapUserEmail",
-      googleEmail
-    );
-
-    navigate("/");
-
-  } catch (error) {
-    console.error(
-      "Google sign in error:",
-      error
-    );
-
-    setError(
-      "Unable to connect to Google sign in. Please try again."
-    );
-  }
-};
-
-useEffect(function () {
-  const initializeGoogle = function () {
-
-    if (
-      !window.google ||
-      !window.google.accounts ||
-      !googleButtonRef.current
-    ) {
-      return;
-    }
-
-    const clientId =
-      import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-    if (!clientId) {
-      setError(
-        "Google Client ID is missing. Please check the frontend .env file."
-      );
-      return;
-    }
-
-    googleButtonRef.current.innerHTML = "";
-
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: handleGoogleResponse,
-      auto_select: false
-    });
-
-    window.google.accounts.id.renderButton(
-      googleButtonRef.current,
-      {
-        theme: "outline",
-        size: "large",
-        width: 360,
-        text: "continue_with",
-        shape: "pill"
+      if (!result.ok || !data.success || !data.user) {
+        setError(
+          data.message ||
+          "Google sign in failed. Please try again."
+        );
+        return;
       }
-    );
+
+      const googleUser = data.user;
+
+      localStorage.setItem(
+        "clothswapToken",
+        data.token
+      );
+
+      const googleName =
+        String(googleUser.name || "Google User").trim();
+
+      const googleEmail =
+        String(googleUser.email || "")
+          .trim()
+          .toLowerCase();
+
+      localStorage.setItem(
+        "clothswapLoggedIn",
+        "true"
+      );
+
+      localStorage.setItem(
+        "clothswapToken",
+        data.token
+      );
+
+      localStorage.setItem(
+        "clothswapIsAdmin",
+        googleUser.role === "Admin"
+          ? "true"
+          : "false"
+      );
+
+      localStorage.setItem(
+        "clothswapUserName",
+        googleName
+      );
+
+      localStorage.setItem(
+        "clothSwapUserName",
+        googleName
+      );
+
+      localStorage.setItem(
+        "clothswapEmail",
+        googleEmail
+      );
+
+      localStorage.setItem(
+        "clothswapUserEmail",
+        googleEmail
+      );
+if (googleUser.location) {
+  localStorage.setItem(
+    "clothswapUserLocation",
+    googleUser.location
+  );
+}
+      await checkTermsAndNavigate("/");
+
+    } catch (error) {
+      console.error(
+        "Google sign in error:",
+        error
+      );
+
+      setError(
+        "Unable to connect to Google sign in. Please try again."
+      );
+    }
   };
 
-  if (
-    window.google &&
-    window.google.accounts
-  ) {
-    initializeGoogle();
-    return;
-  }
+  useEffect(function () {
+    const initializeGoogle = function () {
 
-  const existingScript =
-    document.querySelector(
-      'script[src="https://accounts.google.com/gsi/client"]'
-    );
-
-  if (existingScript) {
-    existingScript.addEventListener(
-      "load",
-      initializeGoogle
-    );
-    return;
-  }
-
-  const script =
-    document.createElement("script");
-
-  script.src =
-    "https://accounts.google.com/gsi/client";
-
-  script.async = true;
-  script.defer = true;
-  script.onload = initializeGoogle;
-
-  document.head.appendChild(script);
-
-}, []);
-
-  const handleLogin = async function (event) {
-  event.preventDefault();
-
-  setError("");
-
-  if (!username || !email || !password) {
-    setError("Please enter your username, email and password.");
-    return;
-  }
-  if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
-  setError("Please enter a valid Gmail address ending with @gmail.com.");
-  return;
-}
-
-  try {
-    const response = await fetch(
-      "http://localhost:5000/api/auth/login",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: username.trim(),
-          email: email.trim().toLowerCase(),
-          password: password
-        })
+      if (
+        !window.google ||
+        !window.google.accounts ||
+        !googleButtonRef.current
+      ) {
+        return;
       }
-    );
 
-    const data = await response.json();
+      const clientId =
+        import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-    if (!response.ok || !data.success) {
-      setError(
-        data.message ||
-        "Please register first or enter correct login details."
+      if (!clientId) {
+        setError(
+          "Google Client ID is missing. Please check the frontend .env file."
+        );
+        return;
+      }
+
+      googleButtonRef.current.innerHTML = "";
+      
+console.log("GOOGLE CLIENT ID LOADED:", clientId);
+console.log("GOOGLE ORIGIN:", window.location.origin);
+console.log("GOOGLE BUTTON READY:", !!googleButtonRef.current);
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleResponse,
+        auto_select: false
+      });
+
+      window.google.accounts.id.renderButton(
+        googleButtonRef.current,
+        {
+          theme: "outline",
+          size: "large",
+          width: 360,
+          text: "continue_with",
+          shape: "pill"
+        }
+      );
+    };
+
+    if (
+      window.google &&
+      window.google.accounts
+    ) {
+      initializeGoogle();
+      return;
+    }
+
+    const existingScript =
+      document.querySelector(
+        'script[src="https://accounts.google.com/gsi/client"]'
+      );
+
+    if (existingScript) {
+      existingScript.addEventListener(
+        "load",
+        initializeGoogle
       );
       return;
     }
 
-    localStorage.setItem(
-      "clothswapLoggedIn",
-      "true"
-    );
-    localStorage.setItem(
-  "clothswapToken",
-  data.token
-);
+    const script =
+      document.createElement("script");
 
-localStorage.setItem(
-  "clothswapIsAdmin",
-  data.user.role === "Admin"
-    ? "true"
-    : "false"
-);
+    script.src =
+      "https://accounts.google.com/gsi/client";
 
-    localStorage.setItem(
-      "clothswapUserName",
-      username.trim()
-    );
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeGoogle;
 
-    localStorage.setItem(
-      "clothSwapUserName",
-      username.trim()
-    );
+    document.head.appendChild(script);
 
-    const loginEmail =
-      email.trim().toLowerCase();
+  }, []);
 
-    localStorage.setItem(
-      "clothswapEmail",
-      loginEmail
-    );
+  const handleLogin = async function (event) {
+    event.preventDefault();
 
-    localStorage.setItem(
-      "clothswapUserEmail",
-      loginEmail
-    );
+    setError("");
 
-    if (data.user && data.user.location) {
-      localStorage.setItem(
-        "clothswapUserLocation",
-        data.user.location
+    if (!username || !email || !password) {
+      setError(
+        "Please enter your username, email and password."
       );
+      return;
     }
 
-    navigate("/dashboard");
+    if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
+      setError(
+        "Please enter a valid Gmail address ending with @gmail.com."
+      );
+      return;
+    }
 
-  } catch (error) {
-    console.error("Login error:", error);
+    try {
+      const response = await fetch(
+        `${API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: username.trim(),
+            email: email.trim().toLowerCase(),
+            password: password
+          })
+        }
+      );
 
-    setError(
-      "Unable to connect to server. Please try again."
-    );
-  }
-};
-   
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(
+          data.message ||
+          "Please register first or enter correct login details."
+        );
+        return;
+      }
+
+      localStorage.setItem(
+        "clothswapLoggedIn",
+        "true"
+      );
+
+      localStorage.setItem(
+        "clothswapToken",
+        data.token
+      );
+console.log("LOGIN USER ROLE:", data.user.role);
+      localStorage.setItem(
+        "clothswapIsAdmin",
+        data.user.role === "Admin"
+          ? "true"
+          : "false"
+      );
+
+      localStorage.setItem(
+        "clothswapUserName",
+        username.trim()
+      );
+
+      localStorage.setItem(
+        "clothSwapUserName",
+        username.trim()
+      );
+
+      const loginEmail =
+        email.trim().toLowerCase();
+
+      localStorage.setItem(
+        "clothswapEmail",
+        loginEmail
+      );
+
+      localStorage.setItem(
+        "clothswapUserEmail",
+        loginEmail
+      );
+
+      if (data.user && data.user.location) {
+        localStorage.setItem(
+          "clothswapUserLocation",
+          data.user.location
+        );
+      }
+
+      await checkTermsAndNavigate("/dashboard");
+
+    } catch (error) {
+      console.error(
+        "Login error:",
+        error
+      );
+
+      setError(
+        "Unable to connect to server. Please try again."
+      );
+    }
+  };
+
   const styles = `
     * {
       box-sizing: border-box;
@@ -329,24 +389,20 @@ localStorage.setItem(
       -webkit-backdrop-filter: blur(20px);
     }
 
-    /* =========================
-       LEFT IMAGE AREA
-    ========================= */
-
     .clothswap-login-visual {
-  position: relative;
-  min-height: 720px;
-  overflow: hidden;
-  background: #e9dfd8;
-}
+      position: relative;
+      min-height: 720px;
+      overflow: hidden;
+      background: #e9dfd8;
+    }
 
-.clothswap-login-visual img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-  object-position: 25% center;
-}
+    .clothswap-login-visual img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: 25% center;
+    }
 
     .clothswap-visual-overlay {
       position: absolute;
@@ -461,10 +517,6 @@ localStorage.setItem(
       color: #78518d;
       font-size: 16px;
     }
-
-    /* =========================
-       RIGHT FORM AREA
-    ========================= */
 
     .clothswap-login-form-area {
       position: relative;
@@ -704,10 +756,6 @@ localStorage.setItem(
       text-decoration: underline;
     }
 
-    /* =========================
-       TABLET
-    ========================= */
-
     @media (max-width: 1050px) {
       .clothswap-login-page {
         padding: 20px;
@@ -804,10 +852,6 @@ localStorage.setItem(
       }
     }
 
-    /* =========================
-       SMALL MOBILE
-    ========================= */
-
     @media (max-width: 480px) {
       .clothswap-login-visual {
         min-height: 320px;
@@ -883,10 +927,6 @@ localStorage.setItem(
       {
         className: "clothswap-login-container"
       },
-
-      /* =========================
-         LEFT VISUAL SECTION
-      ========================= */
 
       React.createElement(
         "div",
@@ -1034,10 +1074,6 @@ localStorage.setItem(
         )
       ),
 
-      /* =========================
-         RIGHT LOGIN SECTION
-      ========================= */
-
       React.createElement(
         "div",
         {
@@ -1051,18 +1087,18 @@ localStorage.setItem(
           },
 
           React.createElement(
-            "div",
-            {
-              className: "clothswap-welcome-label"
-            },
-            "Welcome Back"
-          ),
+  "div",
+  {
+    className: "clothswap-welcome-label"
+  },
+  "WELCOME TO CLOTHSWAP"
+),
 
-          React.createElement(
-            "h1",
-            null,
-            "Sign in to ClothSwap"
-          ),
+React.createElement(
+  "h1",
+  null,
+  "Welcome Back!"
+),
 
           React.createElement(
             "p",
@@ -1087,8 +1123,6 @@ localStorage.setItem(
             {
               onSubmit: handleLogin
             },
-
-            /* ================= USERNAME ================= */
 
             React.createElement(
               "div",
@@ -1121,8 +1155,6 @@ localStorage.setItem(
               })
             ),
 
-            /* ================= EMAIL ================= */
-
             React.createElement(
               "div",
               {
@@ -1154,8 +1186,6 @@ localStorage.setItem(
               })
             ),
 
-            /* ================= PASSWORD ================= */
-
             React.createElement(
               "div",
               {
@@ -1182,16 +1212,12 @@ localStorage.setItem(
                   type: showPassword
                     ? "text"
                     : "password",
-                    autoComplete: "new-password",
-
+                  autoComplete: "new-password",
                   className:
                     "clothswap-input clothswap-password-input",
-
                   placeholder:
                     "Enter your password",
-
                   value: password,
-
                   onChange: function (event) {
                     setPassword(
                       event.target.value
@@ -1205,7 +1231,6 @@ localStorage.setItem(
                     type: "button",
                     className:
                       "clothswap-password-toggle",
-
                     onClick: function () {
                       setShowPassword(
                         !showPassword
@@ -1221,8 +1246,6 @@ localStorage.setItem(
                 )
               )
             ),
-
-            /* ================= SIGN IN ================= */
 
             React.createElement(
               "button",
@@ -1258,13 +1281,15 @@ localStorage.setItem(
 
             React.createElement("span", null)
           ),
-React.createElement(
-  "div",
-  {
-    className: "clothswap-google-area",
-    ref: googleButtonRef
-  }
-),
+
+          React.createElement(
+            "div",
+            {
+              className: "clothswap-google-area",
+              ref: googleButtonRef
+            }
+          ),
+
           React.createElement(
             "p",
             {

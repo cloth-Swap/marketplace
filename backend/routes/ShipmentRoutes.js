@@ -2,8 +2,9 @@ const express = require("express");
 const Shipment = require("../models/Shipment");
 const SwapRequest = require("../models/SwapRequest");
 const Notification = require("../models/Notification");
-
+const jwt = require("jsonwebtoken");
 const router = express.Router();
+const User = require("../models/User");
 
 //  ARRANGE COURIER
 
@@ -40,12 +41,36 @@ router.post("/", async function (req, res) {
       100000 + Math.random() * 900000
     ).toString();
 
-// CREATE SHIPMENT
+    // GET THE ORIGINAL SWAP REQUEST
+    const swapRequest = await SwapRequest.findById(
+      swapRequestId
+    );
+
+    if (!swapRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Swap request not found"
+      });
+    }
+
+    // GET RECEIVER DETAILS FROM DATABASE
+    const receiverEmail = String(
+      swapRequest.requesterEmail || ""
+    ).trim().toLowerCase();
+
+    if (!receiverEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Receiver email not found in swap request"
+      });
+    }
+
+    // CREATE SHIPMENT
     const shipment = new Shipment({
       swapRequestId,
       sender,
       receiver,
-
+     receiverEmail,
       pickupAddress:
         pickupAddress || "",
 
@@ -183,79 +208,83 @@ router.get(
 
 
 //  RECEIVER OTP
-router.get(
-  "/:id/receiver-otp",
-  async function (req, res) {
-    try {
-      const {
-        user
-      } = req.query;
 
-      if (!user) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Logged-in user information is required"
-        });
-      }
+ // RECEIVER OTP - AUTHENTICATED RECEIVER ONLY
+router.get("/:id/receiver-otp", async function (req, res) {
+  try {
+    const authHeader = req.headers.authorization;
 
-      const shipment =
-        await Shipment.findById(
-          req.params.id
-        );
-
-      if (!shipment) {
-        return res.status(404).json({
-          success: false,
-          message:
-            "Shipment not found"
-        });
-      }
-
-// CHECK RECEIVER
-      if (
-        shipment.receiver !== user
-      ) {
-        return res.status(403).json({
-          success: false,
-          message:
-            "Only the receiver can access the delivery OTP"
-        });
-      }
-
-      // OTP ONLY AFTER ARRIVAL
-
-      if (
-        shipment.status !==
-        "Arrived"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "OTP will be available only after the parcel arrives"
-        });
-      }
-
-      res.json({
-        success: true,
-        otp:
-          shipment.otp
-      });
-
-    } catch (error) {
-      console.error(
-        "Receiver OTP Error:",
-        error
-      );
-
-      res.status(500).json({
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
         success: false,
-        message:
-          error.message
+        message: "Please login first"
       });
     }
+
+    let decoded;
+
+    try {
+      decoded = jwt.verify(
+        authHeader.split(" ")[1],
+        process.env.JWT_SECRET
+      );
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired login session"
+      });
+    }
+
+    const user = await User.findById(decoded.userId);
+
+    if (!user || !user.email) {
+      return res.status(401).json({
+        success: false,
+        message: "User account not found"
+      });
+    }
+
+    const shipment = await Shipment.findById(req.params.id);
+
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Shipment not found"
+      });
+    }
+
+    if (
+      !shipment.receiverEmail ||
+      shipment.receiverEmail.trim().toLowerCase() !==
+        user.email.trim().toLowerCase()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the assigned receiver can access this OTP"
+      });
+    }
+
+   if (shipment.status !== "Out for Delivery") {
+  return res.status(400).json({
+    success: false,
+    message: "OTP is available only when the parcel is out for delivery"
+  });
+}
+
+    return res.json({
+      success: true,
+      otp: shipment.otp
+    });
+  } catch (error) {
+    console.error("Receiver OTP Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve delivery OTP"
+    });
   }
-);
+});
+
 
 
 // GET SHIPMENT BY SWAP REQUEST
@@ -264,11 +293,9 @@ router.get(
   "/:swapRequestId",
   async function (req, res) {
     try {
-      const shipment =
-        await Shipment.findOne({
-          swapRequestId:
-            req.params.swapRequestId
-        });
+     const shipment = await Shipment.findOne({
+  swapRequestId: req.params.swapRequestId
+}).select("-otp");
 
       if (!shipment) {
         return res.status(404).json({
@@ -298,10 +325,6 @@ router.get(
     }
   }
 );
-
-
-// UPDATE SHIPMENT STATUS Automatic notification to BOTH users
-
 router.put(
   "/:id/status",
   async function (req, res) {
@@ -309,6 +332,14 @@ router.put(
       const {
         status
       } = req.body;
+
+// Parcel cannot be marked Arrived before OTP verification
+if (status === "Arrived") {
+  return res.status(403).json({
+    success: false,
+    message: "OTP must be verified before delivery can be marked Arrived."
+  });
+}
 
       const allowedStatuses = [
         "Courier Requested",
@@ -332,6 +363,18 @@ router.put(
         });
       }
 
+     
+      if (
+        status === "OTP Verified" ||
+        status === "Delivered"
+      ) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "OTP verification and delivery confirmation must use their dedicated routes."
+        });
+      }
+
 // FIND SHIPMENT
       const shipment =
         await Shipment.findById(
@@ -343,6 +386,55 @@ router.put(
           success: false,
           message:
             "Shipment not found"
+        });
+      }
+      // Prevent changes after delivery or cancellation
+      if (
+        shipment.status === "Delivered" ||
+        shipment.status === "Cancelled"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Shipment is already finalized and cannot be updated."
+        });
+      }
+
+      // Validate shipment status transitions
+      const allowedTransitions = {
+        "Courier Requested": [
+          "Pickup Scheduled",
+          "Cancelled"
+        ],
+        "Pickup Scheduled": [
+          "Picked Up",
+          "Cancelled"
+        ],
+        "Picked Up": [
+          "In Transit",
+          "Cancelled"
+        ],
+        "In Transit": [
+          "Out for Delivery",
+          "Cancelled"
+        ],
+        "Out for Delivery": [
+          "Arrived",
+          "Cancelled"
+        ],
+        "Arrived": [
+          "Cancelled"
+        ]
+      };
+
+      const nextStatuses =
+        allowedTransitions[shipment.status] || [];
+
+      if (!nextStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid shipment status transition."
         });
       }
 
@@ -477,271 +569,264 @@ router.put(
   }
 );
 
-
 // VERIFY OTP
-
 router.post(
   "/:id/verify-otp",
   async function (req, res) {
     try {
-      const {
-        otp,
-        trackingId
-      } = req.body;
+      // VERIFY LOGGED-IN USER
+      const authHeader = req.headers.authorization;
 
-      if (
-        !otp ||
-        !trackingId
-      ) {
-        return res.status(400).json({
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({
           success: false,
-          message:
-            "Tracking ID and OTP are required"
+          message: "Please login first"
         });
       }
 
-      // FIND SHIPMENT
+      let decoded;
 
-      const shipment =
-        await Shipment.findById(
-          req.params.id
+      try {
+        decoded = jwt.verify(
+          authHeader.split(" ")[1],
+          process.env.JWT_SECRET
         );
-
-      if (!shipment) {
-        return res.status(404).json({
+      } catch (error) {
+        return res.status(401).json({
           success: false,
-          message:
-            "Shipment not found"
+          message: "Invalid or expired login session"
         });
       }
 
-// CHECK TRACKING ID
-      if (
-        shipment.trackingId !==
-        trackingId
-      ) {
+      const { otp, trackingId } = req.body;
+
+      if (!otp || !trackingId) {
         return res.status(400).json({
           success: false,
-          message:
-            "Invalid Tracking ID"
+          message: "Tracking ID and OTP are required"
         });
       }
+const shipment = await Shipment.findById(req.params.id);
 
-      // CHECK ARRIVAL
 
-      if (
-        shipment.status !==
-        "Arrived"
-      ) {
+
+if (!shipment) {
+  return res.status(404).json({
+    success: false,
+    message: "Shipment not found"
+  });
+}
+
+const user = await User.findById(decoded.userId);
+
+if (!user || !user.email) {
+  return res.status(401).json({
+    success: false,
+    message: "User account not found"
+  });
+}
+
+if (
+  !shipment.receiverEmail ||
+  shipment.receiverEmail.trim().toLowerCase() !==
+    user.email.trim().toLowerCase()
+) {
+  return res.status(403).json({
+    success: false,
+    message: "Only the assigned receiver can verify this OTP"
+  });
+}
+
+if (shipment.trackingId !== trackingId) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid Tracking ID"
+  });
+}
+
+if (shipment.status !== "Out for Delivery") {
+  return res.status(400).json({
+    success: false,
+    message: "OTP verification is available only when the parcel is out for delivery"
+  });
+}
+
+
+      if (String(shipment.otp) !== String(otp)) {
         return res.status(400).json({
           success: false,
-          message:
-            "OTP verification is available only after the parcel arrives"
+          message: "Invalid OTP"
         });
       }
 
-      // CHECK OTP
-
-      if (
-        shipment.otp !== otp
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid OTP"
-        });
-      }
-
-      // VERIFY OTP
-
-      shipment.otpVerified =
-        true;
-
-      shipment.status =
-        "OTP Verified";
+     shipment.otpVerified = true;
+shipment.status = "Arrived";
 
       await shipment.save();
 
-      res.json({
+      return res.json({
         success: true,
-        message:
-          "OTP verified successfully. Parcel can now be handed over to the receiver.",
-        shipment:
-          shipment
+        message: "OTP verified successfully. Parcel can now be handed over to the receiver.",
+        shipment: shipment
       });
 
     } catch (error) {
-      console.error(
-        "Delivery Boy OTP Verification Error:",
-        error
-      );
+      console.error("Delivery Boy OTP Verification Error:", error);
 
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message:
-          error.message
+        message: error.message
       });
     }
   }
 );
 
 
-// CONFIRM DELIVERY
 
-router.put(
-  "/:id/deliver",
-  async function (req, res) {
+// SECURE DELIVERY CONFIRMATION
+
+// SECURE DELIVERY CONFIRMATION
+
+router.put("/:id/deliver", async function (req, res) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Please login first"
+      });
+    }
+
+    let decoded;
+
     try {
-      const shipment =
-        await Shipment.findById(
-          req.params.id
-        );
-
-      if (!shipment) {
-        return res.status(404).json({
-          success: false,
-          message:
-            "Shipment not found"
-        });
-      }
-
-      // OTP MUST BE VERIFIED
-
-      if (
-        !shipment.otpVerified
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Please verify OTP first"
-        });
-      }
-
-      // DELIVERY CONFIRMED
-
-      shipment.deliveryConfirmed =
-        true;
-
-      shipment.status =
-        "Delivered";
-
-      shipment.deliveredAt =
-        new Date();
-
-      // SENDER NOTIFICATION
-
-      shipment.senderNotification =
-        "✅ Your parcel has been received by " +
-        shipment.receiver +
-        ".";
-
-      shipment.senderNotified =
-        true;
-
-      await shipment.save();
-
-      res.json({
-        success: true,
-        message:
-          "Delivery confirmed successfully",
-        shipment:
-          shipment
-      });
-
-    } catch (error) {
-      console.error(
-        "Delivery Confirmation Error:",
-        error
+      decoded = jwt.verify(
+        authHeader.split(" ")[1],
+        process.env.JWT_SECRET
       );
-
-      res.status(500).json({
+    } catch (error) {
+      return res.status(401).json({
         success: false,
-        message:
-          error.message
+        message: "Invalid or expired login session"
       });
     }
-  }
-);
 
+    const user = await User.findById(decoded.userId);
 
-    // DELIVERY CONFIRM  Alternate endpoint used by frontend
-
-router.put(
-  "/:id/delivery-confirm",
-  async function (req, res) {
-    try {
-      const shipment =
-        await Shipment.findById(
-          req.params.id
-        );
-
-      if (!shipment) {
-        return res.status(404).json({
-          success: false,
-          message:
-            "Shipment not found"
-        });
-      }
-
-      // OTP MUST BE VERIFIED
-
-      if (
-        !shipment.otpVerified
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Please verify OTP first"
-        });
-      }
-
-      // DELIVERY CONFIRMED
-
-      shipment.deliveryConfirmed =
-        true;
-
-      shipment.status =
-        "Delivered";
-
-      shipment.deliveredAt =
-        new Date();
-
-      // SENDER NOTIFICATION
-
-      shipment.senderNotification =
-        "✅ Your parcel has been received by " +
-        shipment.receiver +
-        ".";
-
-      shipment.senderNotified =
-        true;
-
-      await shipment.save();
-
-      res.json({
-        success: true,
-        message:
-          "Delivery confirmed successfully",
-        shipment:
-          shipment
-      });
-
-    } catch (error) {
-      console.error(
-        "Delivery Confirm Error:",
-        error
-      );
-
-      res.status(500).json({
+    if (!user || !user.email) {
+      return res.status(401).json({
         success: false,
-        message:
-          error.message
+        message: "User account not found"
       });
     }
+
+    const shipment = await Shipment.findById(req.params.id);
+
+    if (!shipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Shipment not found"
+      });
+    }
+
+    // Only assigned receiver can confirm
+    if (
+      !shipment.receiverEmail ||
+      shipment.receiverEmail.trim().toLowerCase() !==
+        user.email.trim().toLowerCase()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the assigned receiver can confirm delivery"
+      });
+    }
+
+    // OTP must be verified first
+    if (
+      !shipment.otpVerified ||
+      shipment.status !== "Arrived"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please verify OTP before confirming delivery"
+      });
+    }
+
+    if (shipment.deliveryConfirmed || shipment.status === "Delivered") {
+      return res.status(400).json({
+        success: false,
+        message: "Delivery is already confirmed"
+      });
+    }
+
+    shipment.deliveryConfirmed = true;
+    shipment.status = "Delivered";
+    shipment.deliveredAt = new Date();
+
+    shipment.senderNotification =
+      "✅ Your parcel has been received by " +
+      shipment.receiver +
+      ".";
+
+    shipment.senderNotified = true;
+
+    await shipment.save();
+
+          // AUTOMATICALLY COMPLETE COURIER SWAP
+    const swapRequest = await SwapRequest.findById(
+      shipment.swapRequestId
+    );
+
+    if (swapRequest) {
+      swapRequest.ownerCompleted = true;
+      swapRequest.requesterCompleted = true;
+      swapRequest.completionStatus = "Completed";
+
+      await swapRequest.save();
+
+      // NOTIFY BOTH USERS
+      const emails = [
+        swapRequest.ownerEmail,
+        swapRequest.requesterEmail
+      ].filter(Boolean);
+
+      const uniqueEmails = [
+        ...new Set(
+          emails.map(email =>
+            String(email).trim().toLowerCase()
+          )
+        )
+      ];
+
+      for (const email of uniqueEmails) {
+        await Notification.create({
+          recipient: email,
+          sender: "ClothSwap",
+          senderName: "ClothSwap Courier",
+          type: "shipment_status",
+          title: "Swap Completed",
+          message:
+            "Your clothing swap has been completed successfully. Your parcel has been delivered.",
+          relatedId: String(shipment.swapRequestId),
+          isRead: false
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: "Delivery confirmed and swap completed successfully",
+      shipment
+    });
+
+  } catch (error) {
+    console.error("Secure Delivery Confirmation Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
-);
-
-
-// EXPORT ROUTER
-
+});
 module.exports = router;

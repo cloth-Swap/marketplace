@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import API_URL, { apiFetch } from "../api";
 
 function Dashboard() {
   const [userName, setUserName] = useState(
@@ -28,9 +29,9 @@ function Dashboard() {
 
   async function loadDashboardData() {
   try {
-    const clothesResponse = await fetch(
-      "http://localhost:5000/api/clothes"
-    );
+    const clothesResponse = await apiFetch(
+  `${API_URL}/api/clothes`
+);
 
     const clothesData =
       await clothesResponse.json();
@@ -46,9 +47,9 @@ function Dashboard() {
       setClothes([]);
     }
 
-    const requestsResponse = await fetch(
-      "http://localhost:5000/api/swap-requests"
-    );
+    const requestsResponse = await apiFetch(
+  `${API_URL}/api/swap-requests`
+);
 
     const requestsData =
       await requestsResponse.json();
@@ -76,10 +77,6 @@ function Dashboard() {
   }
 }
 
-/* =========================================================
-   LOAD SENDER NOTIFICATIONS
-========================================================= */
-
 async function loadSenderNotifications() {
   try {
     const currentUser =
@@ -94,10 +91,10 @@ async function loadSenderNotifications() {
 
     setNotificationLoading(true);
 
-    const response = await fetch(
-      "http://localhost:5000/api/shipments/notifications/" +
-        encodeURIComponent(currentUser)
-    );
+    const response = await apiFetch(
+  `${API_URL}/api/shipments/notifications/` +
+  encodeURIComponent(currentUser)
+);
 
     const data = await response.json();
 
@@ -192,7 +189,6 @@ async function loadSenderNotifications() {
       "div",
       { className: "container py-4 py-md-5" },
 
-      /* ================= HEADER ================= */
 
       React.createElement(
         "div",
@@ -224,7 +220,6 @@ async function loadSenderNotifications() {
         )
       ),
 
-      /* ================= PROFILE ================= */
 
       React.createElement(
         "div",
@@ -265,13 +260,11 @@ async function loadSenderNotifications() {
         )
       ),
 
-      /* ================= STATISTICS ================= */
 
       React.createElement(
         "div",
         { className: "row g-3 mb-4" },
 
-        /* MY LISTINGS */
 
         React.createElement(
           "div",
@@ -301,7 +294,6 @@ async function loadSenderNotifications() {
           )
         ),
 
-        /* SENT REQUESTS */
 
         React.createElement(
           "div",
@@ -331,7 +323,6 @@ async function loadSenderNotifications() {
           )
         ),
 
-        /* RECEIVED REQUESTS */
 
         React.createElement(
           "div",
@@ -360,8 +351,6 @@ async function loadSenderNotifications() {
             )
           )
         ),
-
-        /* SUCCESSFUL SWAPS */
 
         React.createElement(
           "div",
@@ -392,7 +381,6 @@ async function loadSenderNotifications() {
         )
       ),
 
-      /* ================= COURIER NOTIFICATIONS ================= */
 
 notifications.length > 0
   ? React.createElement(
@@ -453,13 +441,11 @@ notifications.length > 0
       )
     )
   : null,
-      /* ================= MAIN CONTENT ================= */
 
       React.createElement(
         "div",
         { className: "row g-4" },
 
-        /* ================= MY LISTINGS ================= */
 
         React.createElement(
           "div",
@@ -632,7 +618,6 @@ notifications.length > 0
           )
         ),
 
-        /* ================= RECENT ACTIVITIES ================= */
 
         React.createElement(
           "div",
@@ -867,7 +852,6 @@ notifications.length > 0
         )
       ),
 
-      /* ================= QUICK ACTIONS ================= */
 
       React.createElement(
         "div",
@@ -889,7 +873,6 @@ notifications.length > 0
               "row g-3 mt-1"
           },
 
-          /* BROWSE CLOTHES */
 
           React.createElement(
             "div",
@@ -931,7 +914,6 @@ notifications.length > 0
             )
           ),
 
-          /* SWAP REQUESTS */
 
           React.createElement(
             "div",
@@ -973,7 +955,6 @@ notifications.length > 0
             )
           ),
 
-          /* NEGOTIATION CHAT */
 
           React.createElement(
             "div",

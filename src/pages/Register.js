@@ -1,13 +1,6 @@
-import React, {
-  useEffect,
-  useRef,
-  useState
-} from "react";
-
-import {
-  Link,
-  useNavigate
-} from "react-router-dom";
+import React, {useEffect,useRef,useState} from "react";
+import {Link,useNavigate} from "react-router-dom";
+import API_URL from "../api";
 
 
 function Register() {
@@ -29,8 +22,8 @@ function Register() {
   const [confirmPassword, setConfirmPassword] =
     useState("");
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [error, setError] =
     useState("");
@@ -65,7 +58,7 @@ function Register() {
 
         const result =
           await fetch(
-            "http://localhost:5000/api/auth/google",
+           `${API_URL}/api/auth/google`,
             {
               method: "POST",
 
@@ -122,7 +115,7 @@ function Register() {
 
 
         const adminEmail =
-          "kuhu2109@gmail.com";
+          "khushbu2109@gmail.com";
 
 
         localStorage.removeItem("clothswapLoggedIn");
@@ -145,17 +138,17 @@ localStorage.removeItem("clothswapLoggedIn");
 
 localStorage.setItem(
   "clothswapRegisteredEmail",
-  email.trim().toLowerCase()
+  googleEmail
 );
 
 localStorage.setItem(
   "clothswapRegisteredName",
-  name.trim()
+  googleName
 );
 
 localStorage.setItem(
   "clothswapRegisteredLocation",
-  location.trim()
+  googleUser.location || ""
 );
 
 navigate("/login");
@@ -363,7 +356,7 @@ if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
 
         const response =
           await fetch(
-            "http://localhost:5000/api/users",
+            `${API_URL}/api/users`,
             {
               method: "POST",
 
@@ -384,17 +377,23 @@ if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
 
         const data =
           await response.json();
+if (!response.ok || !data.success) {
 
+  if (
+    response.status === 409 ||
+    (data.message || "").toLowerCase().includes("already")
+  ) {
+    setError(
+      "You are already registered. Please login with your existing account."
+    );
+  } else {
+    setError(
+      data.message || "Unable to register user."
+    );
+  }
 
-        if (!response.ok) {
-
-          setError(
-            data.message ||
-              "Unable to register user."
-          );
-
-          return;
-        }
+  return;
+}
 
       } catch (error) {
 
@@ -410,7 +409,12 @@ if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
         return;
       }
 
+localStorage.setItem(
+  "clothswapIsAdmin",
+  "false"
+);
 
+localStorage.removeItem("clothswapToken");
       localStorage.setItem(
         "clothswapUserName",
         name
@@ -427,15 +431,6 @@ if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
         "clothswapUserLocation",
         location
       );
-
-
-      localStorage.setItem(
-        "clothswapLoggedIn",
-        "true"
-      );
-
-
-      
 navigate("/login");
     };
 
@@ -884,48 +879,53 @@ navigate("/login");
 
 
             React.createElement(
+  "div",
+  {
+    className: "register-field"
+  },
 
-              "div",
+  React.createElement(
+    "label",
+    null,
+    "Confirm password"
+  ),
 
-              {
-                className:
-                  "register-field"
-              },
+  React.createElement(
+    "div",
+    {
+      className: "register-password"
+    },
 
+    React.createElement("input", {
+      type: showConfirmPassword ? "text" : "password",
+      autoComplete: "new-password",
+      placeholder: "Re-enter your password",
+      value: confirmPassword,
+      onChange: function (event) {
+        setConfirmPassword(event.target.value);
+      }
+    }),
 
-              React.createElement(
-                "label",
-                null,
-                "Confirm password"
-              ),
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        "aria-label": showConfirmPassword
+          ? "Hide confirm password"
+          : "Show confirm password",
+        onClick: function () {
+          setShowConfirmPassword(!showConfirmPassword);
+        }
+      },
 
-
-              React.createElement(
-
-                "input",
-
-                {
-                  type:
-                    "password",
-
-                  placeholder:
-                    "Re-enter your password",
-
-                  value:
-                    confirmPassword,
-
-                  onChange:
-                    function (event) {
-
-                      setConfirmPassword(
-                        event.target.value
-                      );
-
-                    }
-                }
-              )
-            ),
-
+      React.createElement("i", {
+        className: showConfirmPassword
+          ? "bi bi-eye-slash"
+          : "bi bi-eye"
+      })
+    )
+  )
+),
 
             React.createElement(
 

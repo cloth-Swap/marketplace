@@ -1,11 +1,10 @@
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLanguage } from "../LanguageContext";
+import API_URL from "../api";
 
 function Settings() {
   const navigate = useNavigate();
-
-  const { language, changeLanguage, t } = useLanguage();
 
   const currentUserEmail =
     localStorage.getItem("clothswapUserEmail") ||
@@ -84,13 +83,9 @@ function Settings() {
     );
   }
 
-  function changeSettingsLanguage(value) {
-    changeLanguage(value);
-  }
-
   /* ================= LOGOUT ================= */
 
-  function handleLogout() {
+  async function handleLogout() {
     const isLoggedIn =
       localStorage.getItem("clothswapLoggedIn") === "true";
 
@@ -109,13 +104,30 @@ function Settings() {
       return;
     }
 
-    localStorage.removeItem("clothswapLoggedIn");
-    localStorage.removeItem("clothswapUserName");
-    localStorage.removeItem("clothSwapUserName");
-    localStorage.removeItem("clothswapEmail");
-    localStorage.removeItem("clothswapUserEmail");
+    try {
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
 
-    navigate("/");
+    } catch (error) {
+      console.error("Logout Error:", error);
+
+    } finally {
+      localStorage.removeItem("clothswapToken");
+      localStorage.removeItem("clothswapLoggedIn");
+      localStorage.removeItem("clothswapIsAdmin");
+
+      localStorage.removeItem("clothswapUserName");
+      localStorage.removeItem("clothSwapUserName");
+      localStorage.removeItem("clothswapEmail");
+      localStorage.removeItem("clothswapUserEmail");
+
+      navigate("/");
+    }
   }
 
   function settingSwitch(checked, onChange) {
@@ -164,27 +176,14 @@ function Settings() {
         "div",
         null,
 
-        React.createElement(
-          "h3",
-          null,
-          title
-        ),
+        React.createElement("h3", null, title),
 
-        React.createElement(
-          "p",
-          null,
-          description
-        )
+        React.createElement("p", null, description)
       )
     );
   }
 
-  function navigationRow(
-    icon,
-    title,
-    description,
-    path
-  ) {
+  function navigationRow(icon, title, description, path) {
     return React.createElement(
       "button",
       {
@@ -199,8 +198,7 @@ function Settings() {
       React.createElement(
         "span",
         {
-          className:
-            "clothswap-settings-action-icon"
+          className: "clothswap-settings-action-icon"
         },
         icon
       ),
@@ -208,28 +206,18 @@ function Settings() {
       React.createElement(
         "div",
         {
-          className:
-            "clothswap-settings-action-content"
+          className: "clothswap-settings-action-content"
         },
 
-        React.createElement(
-          "strong",
-          null,
-          title
-        ),
+        React.createElement("strong", null, title),
 
-        React.createElement(
-          "p",
-          null,
-          description
-        )
+        React.createElement("p", null, description)
       ),
 
       React.createElement(
         "span",
         {
-          className:
-            "clothswap-settings-arrow"
+          className: "clothswap-settings-arrow"
         },
         "›"
       )
@@ -247,15 +235,13 @@ function Settings() {
     React.createElement(
       "div",
       {
-        className:
-          "clothswap-settings-header"
+        className: "clothswap-settings-header"
       },
 
       React.createElement(
         "div",
         {
-          className:
-            "clothswap-settings-icon"
+          className: "clothswap-settings-icon"
         },
         "⚙️"
       ),
@@ -264,16 +250,12 @@ function Settings() {
         "div",
         null,
 
-        React.createElement(
-          "h2",
-          null,
-          t("settingsTitle")
-        ),
+        React.createElement("h2", null, "Settings"),
 
         React.createElement(
           "p",
           null,
-          t("settingsSubtitle")
+          "Manage your ClothSwap account preferences."
         )
       )
     ),
@@ -283,14 +265,13 @@ function Settings() {
     React.createElement(
       "div",
       {
-        className:
-          "clothswap-settings-card"
+        className: "clothswap-settings-card"
       },
 
       sectionTitle(
         "⚙️",
-        t("preferences"),
-        t("preferencesDescription")
+        "Preferences",
+        "Manage your personal settings."
       ),
 
       divider(),
@@ -298,22 +279,19 @@ function Settings() {
       React.createElement(
         "div",
         {
-          className:
-            "clothswap-setting-row"
+          className: "clothswap-setting-row"
         },
 
         React.createElement(
           "div",
           {
-            className:
-              "clothswap-setting-info"
+            className: "clothswap-setting-info"
           },
 
           React.createElement(
             "span",
             {
-              className:
-                "clothswap-setting-symbol"
+              className: "clothswap-setting-symbol"
             },
             "🔔"
           ),
@@ -325,21 +303,18 @@ function Settings() {
             React.createElement(
               "strong",
               null,
-              t("notificationsTitle")
+              "Notifications"
             ),
 
             React.createElement(
               "p",
               null,
-              t("notificationsDescription")
+              "Receive notifications about your account."
             )
           )
         ),
 
-        settingSwitch(
-          notifications,
-          changeNotifications
-        )
+        settingSwitch(notifications, changeNotifications)
       ),
 
       divider(),
@@ -347,22 +322,19 @@ function Settings() {
       React.createElement(
         "div",
         {
-          className:
-            "clothswap-setting-row"
+          className: "clothswap-setting-row"
         },
 
         React.createElement(
           "div",
           {
-            className:
-              "clothswap-setting-info"
+            className: "clothswap-setting-info"
           },
 
           React.createElement(
             "span",
             {
-              className:
-                "clothswap-setting-symbol"
+              className: "clothswap-setting-symbol"
             },
             "📱"
           ),
@@ -374,105 +346,18 @@ function Settings() {
             React.createElement(
               "strong",
               null,
-              t("compactMode")
+              "Compact Mode"
             ),
 
             React.createElement(
               "p",
               null,
-              t("compactModeDescription")
+              "Use a more compact layout."
             )
           )
         ),
 
-        settingSwitch(
-          compactMode,
-          changeCompactMode
-        )
-      ),
-
-      divider(),
-
-      React.createElement(
-        "div",
-        {
-          className:
-            "clothswap-setting-row"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "clothswap-setting-info"
-          },
-
-          React.createElement(
-            "span",
-            {
-              className:
-                "clothswap-setting-symbol"
-            },
-            "🌐"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "strong",
-              null,
-              t("languageTitle")
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              t("languageDescription")
-            )
-          )
-        ),
-
-        React.createElement(
-          "select",
-          {
-            className:
-              "clothswap-settings-select",
-
-            value: language,
-
-            onChange: function (event) {
-              changeSettingsLanguage(
-                event.target.value
-              );
-            }
-          },
-
-          React.createElement(
-            "option",
-            {
-              value: "english"
-            },
-            "English"
-          ),
-
-          React.createElement(
-            "option",
-            {
-              value: "hindi"
-            },
-            "Hindi"
-          ),
-
-          React.createElement(
-            "option",
-            {
-              value: "gujarati"
-            },
-            "Gujarati"
-          )
-        )
+        settingSwitch(compactMode, changeCompactMode)
       )
     ),
 
@@ -481,14 +366,13 @@ function Settings() {
     React.createElement(
       "div",
       {
-        className:
-          "clothswap-settings-card"
+        className: "clothswap-settings-card"
       },
 
       sectionTitle(
         "💬",
-        t("communication"),
-        t("communicationDescription")
+        "Communication",
+        "Manage your communication preferences."
       ),
 
       divider(),
@@ -496,22 +380,19 @@ function Settings() {
       React.createElement(
         "div",
         {
-          className:
-            "clothswap-setting-row"
+          className: "clothswap-setting-row"
         },
 
         React.createElement(
           "div",
           {
-            className:
-              "clothswap-setting-info"
+            className: "clothswap-setting-info"
           },
 
           React.createElement(
             "span",
             {
-              className:
-                "clothswap-setting-symbol"
+              className: "clothswap-setting-symbol"
             },
             "💬"
           ),
@@ -523,13 +404,13 @@ function Settings() {
             React.createElement(
               "strong",
               null,
-              t("chatNotifications")
+              "Chat Notifications"
             ),
 
             React.createElement(
               "p",
               null,
-              t("chatNotificationsDescription")
+              "Receive notifications for new chat messages."
             )
           )
         ),
@@ -545,22 +426,19 @@ function Settings() {
       React.createElement(
         "div",
         {
-          className:
-            "clothswap-setting-row"
+          className: "clothswap-setting-row"
         },
 
         React.createElement(
           "div",
           {
-            className:
-              "clothswap-setting-info"
+            className: "clothswap-setting-info"
           },
 
           React.createElement(
             "span",
             {
-              className:
-                "clothswap-setting-symbol"
+              className: "clothswap-setting-symbol"
             },
             "🔄"
           ),
@@ -572,13 +450,13 @@ function Settings() {
             React.createElement(
               "strong",
               null,
-              t("swapRequestNotifications")
+              "Swap Request Notifications"
             ),
 
             React.createElement(
               "p",
               null,
-              t("swapRequestNotificationsDescription")
+              "Receive updates about your swap requests."
             )
           )
         ),
@@ -595,22 +473,21 @@ function Settings() {
     React.createElement(
       "div",
       {
-        className:
-          "clothswap-settings-card"
+        className: "clothswap-settings-card"
       },
 
       sectionTitle(
         "❓",
-        t("helpSupport"),
-        t("helpSupportDescription")
+        "Help & Support",
+        "Get help and learn more about ClothSwap."
       ),
 
       divider(),
 
       navigationRow(
         "📖",
-        t("howClothSwapWorks"),
-        t("howClothSwapWorksDescription"),
+        "How ClothSwap Works",
+        "Learn how to use ClothSwap.",
         "/how-clothswap-works"
       ),
 
@@ -618,8 +495,8 @@ function Settings() {
 
       navigationRow(
         "❓",
-        t("frequentlyAskedQuestions"),
-        t("frequentlyAskedQuestionsDescription"),
+        "Frequently Asked Questions",
+        "Find answers to common questions.",
         "/faq"
       ),
 
@@ -627,8 +504,8 @@ function Settings() {
 
       navigationRow(
         "🐛",
-        t("reportProblem"),
-        t("reportProblemDescription"),
+        "Report a Problem",
+        "Let us know if you face any issues.",
         "/report-problem"
       )
     ),
@@ -638,22 +515,21 @@ function Settings() {
     React.createElement(
       "div",
       {
-        className:
-          "clothswap-settings-card"
+        className: "clothswap-settings-card"
       },
 
       sectionTitle(
         "📄",
-        t("legalPrivacy"),
-        t("legalPrivacyDescription")
+        "Legal & Privacy",
+        "Read our policies and community rules."
       ),
 
       divider(),
 
       navigationRow(
         "🔐",
-        t("privacyPolicy"),
-        t("privacyPolicyDescription"),
+        "Privacy Policy",
+        "Learn how your information is protected.",
         "/privacy-policy"
       ),
 
@@ -661,8 +537,8 @@ function Settings() {
 
       navigationRow(
         "📜",
-        t("termsConditions"),
-        t("termsConditionsDescription"),
+        "Terms & Conditions",
+        "Read the terms of using ClothSwap.",
         "/terms-conditions"
       ),
 
@@ -670,8 +546,8 @@ function Settings() {
 
       navigationRow(
         "♻️",
-        t("communityGuidelines"),
-        t("communityGuidelinesDescription"),
+        "Community Guidelines",
+        "Learn about our community rules.",
         "/community-guidelines"
       )
     ),
@@ -703,8 +579,7 @@ function Settings() {
         React.createElement(
           "span",
           {
-            className:
-              "clothswap-settings-action-icon"
+            className: "clothswap-settings-action-icon"
           },
           "🚪"
         ),
@@ -712,8 +587,7 @@ function Settings() {
         React.createElement(
           "div",
           {
-            className:
-              "clothswap-settings-action-content"
+            className: "clothswap-settings-action-content"
           },
 
           React.createElement(
@@ -732,8 +606,7 @@ function Settings() {
         React.createElement(
           "span",
           {
-            className:
-              "clothswap-settings-arrow"
+            className: "clothswap-settings-arrow"
           },
           "›"
         )
@@ -743,11 +616,9 @@ function Settings() {
     React.createElement(
       "div",
       {
-        className:
-          "clothswap-settings-note"
+        className: "clothswap-settings-note"
       },
-      "💡 ",
-      t("settingsSaved")
+      "💡 Your settings are saved automatically."
     )
   );
 }

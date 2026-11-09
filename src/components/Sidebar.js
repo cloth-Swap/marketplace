@@ -261,7 +261,12 @@ function Sidebar() {
             "Admin Panel",
             "/admin"
           ),
-
+localStorage.getItem("clothswapIsAdmin") === "true" &&
+  menuItem(
+    "📊",
+    "CEO Dashboard",
+    "/admin-dashboard"
+  ),
         
       ),
 

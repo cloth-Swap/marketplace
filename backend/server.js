@@ -1,45 +1,610 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const cors = require("cors");
-require("dotenv").config();
-const { OAuth2Client } = require("google-auth-library");
+  const express = require("express");
+  const mongoose = require("mongoose");
+  const bcrypt = require("bcryptjs");
+  const jwt = require("jsonwebtoken");
+  const cors = require("cors");
+  require("dotenv").config();
+  if (!process.env.JWT_SECRET) {
+  console.error(
+    "FATAL ERROR: JWT_SECRET is missing in backend .env file."
+  );
 
-const Clothing = require("./models/Clothing");
-const SwapRequest = require("./models/SwapRequest");
-const Message = require("./models/Message");
-const User = require("./models/User");
-const Dispute = require("./models/Dispute");
-const shipmentRoutes = require("./routes/ShipmentRoutes.js");
-const Notification = require("./models/Notification");
+  process.exit(1);
+}
+  const { OAuth2Client } = require("google-auth-library");
 
-const app = express();
-const googleClient = new OAuth2Client(
-  process.env.GOOGLE_CLIENT_ID
-);
+  const Clothing = require("./models/Clothing");
+  const Shipment = require("./models/Shipment");
+  const SwapRequest = require("./models/SwapRequest");
+  const Message = require("./models/Message");
+  const User = require("./models/User");
+  const RefreshSession = require("./models/RefreshSession");
+  const Dispute = require("./models/Dispute");
+    const ReportedListing = require("./models/ReportedListing");
+  const shipmentRoutes = require("./routes/ShipmentRoutes.js");
+  const Notification = require("./models/Notification");
+  const UserActivity = require("./models/UserActivity");
+  const cookieParser = require("cookie-parser");
+  
+function parseMeetingDateTimeIST(meetingDate, meetingTime) {
+  if (!meetingDate || !meetingTime) {
+    return null;
+  }
 
-const PORT = process.env.PORT || 5000;
+  const dateMatch = String(meetingDate).match(
+    /^(\d{4})-(\d{2})-(\d{2})$/
+  );
 
-/* =====================================================
-   MIDDLEWARE
-===================================================== */
+  const timeMatch = String(meetingTime).match(
+    /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+  );
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    credentials: true
-  })
-);
+  if (!dateMatch || !timeMatch) {
+    return null;
+  }
 
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use("/api/shipments", shipmentRoutes);
-/* =====================================================
-   ADMIN AUTHENTICATION
-===================================================== */
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
 
-async function requireAdmin(req, res, next) {
+  let hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  const period = timeMatch[3].toUpperCase();
+
+  if (
+    month < 1 || month > 12 ||
+    day < 1 || day > 31 ||
+    hour < 1 || hour > 12 ||
+    minute < 0 || minute > 59
+  ) {
+    return null;
+  }
+
+  if (period === "AM" && hour === 12) {
+    hour = 0;
+  } else if (period === "PM" && hour !== 12) {
+    hour += 12;
+  }
+
+  // Convert Indian Standard Time (UTC +5:30) to UTC
+  const meetingTimestamp =
+    Date.UTC(year, month - 1, day, hour, minute) -
+    (5 * 60 + 30) * 60 * 1000;
+
+  const result = new Date(meetingTimestamp);
+
+  // Reject invalid calendar dates
+  if (
+    result.getUTCFullYear() !== year ||
+    result.getUTCMonth() !== month - 1 ||
+    result.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return result;
+}
+
+
+async function sendHandToHandDeadlineNotification(
+  recipientEmail,
+  request,
+  title,
+  message,
+  type
+) {
+  if (!recipientEmail) {
+    return;
+  }
+
+  await Notification.create({
+    recipient: recipientEmail,
+    sender: "system",
+    senderName: "ClothSwap",
+    type: type,
+    title: title,
+    message: message,
+    relatedId: String(request._id),
+    isRead: false
+  });
+}
+
+
+let handToHandDeadlineCheckRunning = false;
+
+async function checkHandToHandDeadlines() {
+  if (handToHandDeadlineCheckRunning) {
+    return;
+  }
+
+  handToHandDeadlineCheckRunning = true;
+
+  try {
+    const now = Date.now();
+
+    const requests = await SwapRequest.find({
+      status: "Accepted",
+      exchangeMethod: "Local Exchange",
+      completionStatus: { $ne: "Completed" },
+      meetingDate: { $nin: ["", null] },
+      meetingTime: { $nin: ["", null] }
+    });
+
+    for (const request of requests) {
+      try {
+        let changed = false;
+
+        // If both participants have completed the swap,
+        // mark the request completed without sending reminders.
+        if (
+          request.ownerCompleted &&
+          request.requesterCompleted
+        ) {
+          request.ownerConfirmationOverdue = false;
+          request.requesterConfirmationOverdue = false;
+          request.completionStatus = "Completed";
+          request.agreementStatus = "Completed";
+
+          await request.save();
+          continue;
+        }
+
+        const meetingAt = parseMeetingDateTimeIST(
+          request.meetingDate,
+          request.meetingTime
+        );
+
+        if (!meetingAt) {
+          continue;
+        }
+
+        const meetingTimestamp = meetingAt.getTime();
+
+        // Reset the deadline schedule whenever meeting details change.
+        // This must happen BEFORE checking whether the meeting is in future.
+        if (
+          !request.handToHandExchangeStartedAt ||
+          new Date(
+            request.handToHandExchangeStartedAt
+          ).getTime() !== meetingTimestamp
+        ) {
+          request.handToHandExchangeStartedAt = meetingAt;
+
+          request.ownerReminder24Sent = false;
+          request.requesterReminder24Sent = false;
+
+          request.ownerReminder36Sent = false;
+          request.requesterReminder36Sent = false;
+
+          request.ownerConfirmationOverdue = false;
+          request.requesterConfirmationOverdue = false;
+
+          changed = true;
+        }
+
+        // Save reset values even when the new meeting is in future.
+        if (changed) {
+          await request.save();
+          changed = false;
+        }
+
+        // Countdown starts only after the scheduled meeting time.
+        if (now < meetingTimestamp) {
+          continue;
+        }
+
+        const elapsedHours =
+          (now - meetingTimestamp) / (60 * 60 * 1000);
+
+        const participants = [
+          {
+            email: request.ownerEmail,
+            completed: request.ownerCompleted,
+            reminder24: "ownerReminder24Sent",
+            reminder36: "ownerReminder36Sent",
+            overdue: "ownerConfirmationOverdue"
+          },
+          {
+            email: request.requesterEmail,
+            completed: request.requesterCompleted,
+            reminder24: "requesterReminder24Sent",
+            reminder36: "requesterReminder36Sent",
+            overdue: "requesterConfirmationOverdue"
+          }
+        ];
+
+        for (const participant of participants) {
+          const participantEmail = String(
+            participant.email || ""
+          ).trim().toLowerCase();
+
+          // Already completed participants must not receive reminders.
+          if (participant.completed) {
+            if (request[participant.overdue]) {
+              request[participant.overdue] = false;
+              changed = true;
+            }
+
+            continue;
+          }
+
+          if (!participantEmail) {
+            continue;
+          }
+
+          // First reminder after 24 hours.
+          if (
+            elapsedHours >= 24 &&
+            !request[participant.reminder24]
+          ) {
+            await sendHandToHandDeadlineNotification(
+              participantEmail,
+              request,
+              "Hand-to-Hand Swap Reminder",
+              "Your Hand-to-Hand swap meeting time has passed. Please complete your swap confirmation.",
+              "hand_to_hand_reminder"
+            );
+
+            request[participant.reminder24] = true;
+            changed = true;
+            await request.save();
+            changed = false;
+          }
+
+          // Second reminder after 36 hours.
+          if (
+            elapsedHours >= 36 &&
+            !request[participant.reminder36]
+          ) {
+            await sendHandToHandDeadlineNotification(
+              participantEmail,
+              request,
+              "Final Hand-to-Hand Swap Reminder",
+              "Your Hand-to-Hand swap confirmation is still pending. Please complete it within the next 12 hours.",
+              "hand_to_hand_final_reminder"
+            );
+
+            request[participant.reminder36] = true;
+            changed = true;
+            await request.save();
+            changed = false;
+          }
+
+          // At 48 hours, check for a pending genuine dispute.
+          if (elapsedHours >= 48) {
+            const pendingDispute = await Dispute.findOne({
+              swapRequestId: request._id,
+              reporterEmail: participantEmail,
+              status: "Pending"
+            });
+
+            if (
+              !pendingDispute &&
+              !request[participant.overdue]
+            ) {
+              request[participant.overdue] = true;
+              changed = true;
+
+              await sendHandToHandDeadlineNotification(
+                participantEmail,
+                request,
+                "Swap Confirmation Overdue",
+                "Your Hand-to-Hand swap confirmation is overdue. Your ClothSwap activities are temporarily restricted until this pending confirmation is resolved.",
+                "hand_to_hand_overdue"
+              );
+
+              await request.save();
+              changed = false;
+            }
+          }
+        }
+
+        if (changed) {
+          await request.save();
+        }
+
+      } catch (requestError) {
+        console.error(
+          "Hand-to-Hand deadline error for:",
+          request._id,
+          requestError
+        );
+      }
+    }
+
+  } catch (error) {
+    console.error(
+      "Hand-to-Hand deadline scheduler error:",
+      error
+    );
+
+  } finally {
+    handToHandDeadlineCheckRunning = false;
+  }
+}
+
+
+const CURRENT_TERMS_VERSION = "1.0";
+  const app = express();
+  const googleClient = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID
+  );
+
+  const PORT = process.env.PORT || 5000;
+  // =====================================================
+  // ACCESS TOKEN + REFRESH TOKEN HELPERS
+  // =====================================================
+
+  const crypto = require("crypto");
+
+  function generateAccessToken(user) {
+    return jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "15m" }
+    );
+  }
+
+  function generateRefreshToken() {
+    return crypto.randomBytes(64).toString("hex");
+  }
+
+  function hashRefreshToken(token) {
+    return crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+  }
+  async function createRefreshSession(user, res) {
+    const refreshToken = generateRefreshToken();
+
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
+    await RefreshSession.create({
+      userId: user._id,
+      tokenHash: hashRefreshToken(refreshToken),
+      expiresAt: expiresAt
+    });
+
+    setRefreshCookie(res, refreshToken);
+
+    return generateAccessToken(user);
+  }
+  function setRefreshCookie(res, refreshToken) {
+    res.cookie("clothswapRefreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+      path: "/api/auth"
+    });
+  }
+
+
+  app.use(
+    cors({
+      origin: process.env.FRONTEND_URL || "http://localhost:5173",
+      credentials: true
+    })
+  );
+
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+  app.use(cookieParser());
+
+  app.use("/api/shipments", shipmentRoutes);
+  // =====================================================
+  // REFRESH ACCESS TOKEN API
+  // =====================================================
+
+  app.post("/api/auth/refresh", async (req, res) => {
+    try {
+      const oldRefreshToken = req.cookies.clothswapRefreshToken;
+
+      if (!oldRefreshToken) {
+        return res.status(401).json({
+          success: false,
+          message: "Refresh token not found. Please login again."
+        });
+      }
+
+      const oldTokenHash = hashRefreshToken(oldRefreshToken);
+
+      const session = await RefreshSession.findOne({
+        tokenHash: oldTokenHash,
+        revokedAt: null,
+        expiresAt: { $gt: new Date() }
+      });
+
+      if (!session) {
+        res.clearCookie("clothswapRefreshToken", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/api/auth"
+        });
+
+        return res.status(401).json({
+          success: false,
+          message: "Session expired. Please login again."
+        });
+      }
+
+      const user = await User.findById(session.userId);
+
+      if (!user || user.status === "Blocked") {
+        session.revokedAt = new Date();
+        await session.save();
+
+        res.clearCookie("clothswapRefreshToken", {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/api/auth"
+        });
+
+        return res.status(401).json({
+          success: false,
+          message: "Account unavailable. Please contact support."
+        });
+      }
+
+      const newRefreshToken = generateRefreshToken();
+
+      const newExpiresAt = new Date();
+      newExpiresAt.setFullYear(newExpiresAt.getFullYear() + 1);
+
+      const updatedSession = await RefreshSession.findOneAndUpdate(
+        {
+          _id: session._id,
+          tokenHash: oldTokenHash,
+          revokedAt: null,
+          expiresAt: { $gt: new Date() }
+        },
+        {
+          $set: {
+            tokenHash: hashRefreshToken(newRefreshToken),
+            expiresAt: newExpiresAt
+          }
+        },
+        { new: true }
+      );
+
+      if (!updatedSession) {
+        return res.status(401).json({
+          success: false,
+          message: "Session expired. Please login again."
+        });
+      }
+
+      setRefreshCookie(res, newRefreshToken);
+
+      const newAccessToken = generateAccessToken(user);
+
+      return res.json({
+        success: true,
+        message: "Token refreshed successfully",
+        token: newAccessToken,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          location: user.location,
+          role: user.role
+        }
+      });
+
+    } catch (error) {
+      console.error("Refresh Token Error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to refresh session"
+      });
+    }
+  });
+  // =====================================================
+  // LOGOUT API
+  // =====================================================
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      const refreshToken = req.cookies.clothswapRefreshToken;
+
+      if (refreshToken) {
+        const tokenHash = hashRefreshToken(refreshToken);
+
+        await RefreshSession.findOneAndUpdate(
+          {
+            tokenHash: tokenHash,
+            revokedAt: null
+          },
+          {
+            $set: {
+              revokedAt: new Date()
+            }
+          }
+        );
+      }
+
+      res.clearCookie("clothswapRefreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/api/auth"
+      });
+
+      return res.json({
+        success: true,
+        message: "Logout successful"
+      });
+
+    } catch (error) {
+      console.error("Logout Error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Logout failed"
+      });
+    }
+  });
+
+ async function requireAdmin(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required"
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.userId).select("-password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    if (user.status === "Blocked") {
+      return res.status(403).json({
+        success: false,
+        message: "Your account has been blocked"
+      });
+    }
+
+    if (user.role !== "Admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access required"
+      });
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        lastActivityAt: new Date()
+      }
+    });
+
+    req.user = user;
+    next();
+
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired authentication token"
+    });
+  }
+}
+
+async function requireAuth(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -71,19 +636,17 @@ async function requireAdmin(req, res, next) {
     if (user.status === "Blocked") {
       return res.status(403).json({
         success: false,
-        message: "Your account has been blocked"
+        message: "Your account has been blocked."
       });
     }
 
-    if (user.role !== "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Admin access required"
-      });
-    }
+    await User.findByIdAndUpdate(user._id, {
+      $set: {
+        lastActivityAt: new Date()
+      }
+    });
 
     req.user = user;
-
     next();
 
   } catch (error) {
@@ -94,269 +657,1465 @@ async function requireAdmin(req, res, next) {
   }
 }
 
-/* =====================================================
-   HOME
-===================================================== */
-
-app.get("/", function (req, res) {
-  res.json({
-    success: true,
-    message: "ClothSwap Backend is running!"
-  });
-});
-
-/* =====================================================
-   CLOTHING
-===================================================== */
-
-/* GET ALL CLOTHES */
-
-app.get("/api/clothes", async function (req, res) {
+async function requireNoHandToHandOverdue(req, res, next) {
   try {
-    const clothes = await Clothing.find().sort({
-      createdAt: -1
-    });
+    const userEmail = String(req.user.email || "")
+      .trim()
+      .toLowerCase();
 
-    res.json(clothes);
-
-  } catch (error) {
-    console.error("Failed to fetch clothes:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch clothes",
-      error: error.message
-    });
-  }
-});
-/* =====================================================
-   DISPUTE - REPORT A DISPUTE
-===================================================== */
-app.post("/api/disputes", async function (req, res) {
-  try {
-    const {
-      swapRequestId,
-      reportedBy,
-      reportedAgainst,
-      reason,
-      description
-    } = req.body;
-
-    if (!swapRequestId || !reportedBy || !reason) {
-      return res.status(400).json({
+    if (!userEmail) {
+      return res.status(401).json({
         success: false,
-        message: "Swap request, reporter and reason are required"
+        message: "User information not found"
       });
     }
 
-    const dispute = await Dispute.create({
-      swapRequestId: swapRequestId,
-      reportedBy: reportedBy,
-      reportedAgainst: reportedAgainst || "Not specified",
-      reason: reason,
-      description: description || ""
-    });
+    // Find all pending Hand-to-Hand confirmations overdue for this user.
+    const overdueRequests = await SwapRequest.find({
+      status: "Accepted",
+      exchangeMethod: "Local Exchange",
+      completionStatus: { $ne: "Completed" },
+      $or: [
+        {
+          ownerEmail: userEmail,
+          ownerConfirmationOverdue: true,
+          ownerCompleted: { $ne: true }
+        },
+        {
+          requesterEmail: userEmail,
+          requesterConfirmationOverdue: true,
+          requesterCompleted: { $ne: true }
+        }
+      ]
+    }).select("_id clothingTitle");
 
-    res.status(201).json({
-      success: true,
-      message: "Dispute reported successfully",
-      dispute: dispute
-    });
-
-  } catch (error) {
-    console.error("Dispute report error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to report dispute",
-      error: error.message
-    });
-  }
-});
-//  ADMIN - GET ALL DISPUTES
-app.get("/api/admin/disputes", requireAdmin, async function (req, res) {
-  try {
-    const disputes = await Dispute.find()
-      .populate("swapRequestId")
-      .sort({ createdAt: -1 });
-
-    res.json({
-      success: true,
-      disputes: disputes
-    });
-
-  } catch (error) {
-    console.error("Admin disputes loading error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to load disputes",
-      error: error.message
-    });
-  }
-});
-/* =====================================================
-   ADMIN - RESOLVE DISPUTE
-===================================================== */
-app.put("/api/admin/disputes/:id/resolve", requireAdmin, async function (req, res) {
-  try {
-    const id = req.params.id;
-    const adminNote = req.body.adminNote || "";
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid dispute ID"
-      });
+    if (overdueRequests.length === 0) {
+      return next();
     }
 
-    const dispute = await Dispute.findByIdAndUpdate(
-      id,
-      {
-        status: "Resolved",
-        adminNote: adminNote,
-        resolvedAt: new Date()
+    // A user who has raised a pending dispute for that swap
+    // must not be restricted for that particular swap.
+    const pendingDisputes = await Dispute.find({
+      swapRequestId: {
+        $in: overdueRequests.map(function (request) {
+          return request._id;
+        })
       },
-      {
-        new: true
+      reporterEmail: userEmail,
+      status: "Pending"
+    }).select("swapRequestId");
+
+    const exemptSwapIds = new Set(
+      pendingDisputes.map(function (dispute) {
+        return String(dispute.swapRequestId);
+      })
+    );
+
+    const restrictedRequest = overdueRequests.find(
+      function (request) {
+        return !exemptSwapIds.has(String(request._id));
       }
     );
 
-    if (!dispute) {
-      return res.status(404).json({
-        success: false,
-        message: "Dispute not found"
-      });
+    // Allow access if every overdue swap has a pending dispute
+    // raised by this user.
+    if (!restrictedRequest) {
+      return next();
     }
 
-    res.json({
-      success: true,
-      message: "Dispute resolved successfully",
-      dispute: dispute
+    return res.status(403).json({
+      success: false,
+      code: "HAND_TO_HAND_CONFIRMATION_OVERDUE",
+      message:
+        "Your Hand-to-Hand swap confirmation is overdue. Complete your pending confirmation or raise a dispute if you have a genuine issue.",
+      swapRequestId: String(restrictedRequest._id),
+      clothingTitle: restrictedRequest.clothingTitle
     });
 
   } catch (error) {
-    console.error("Dispute resolve error:", error);
+    console.error(
+      "Hand-to-Hand overdue restriction error:",
+      error
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Failed to resolve dispute",
+      message: "Unable to verify your swap confirmation status."
+    });
+  }
+}
+
+// CHECK LOGGED-IN USER ACCOUNT STATUS
+app.get("/api/auth/status", requireAuth, function (req, res) {
+  return res.status(200).json({
+    success: true,
+    message: "Account is active."
+  });
+});
+
+  async function recordUserActivity({
+    userId = null,
+    userName = "",
+    userEmail = "",
+    activityType,
+    description = "",
+    relatedId = ""
+  }) {
+    try {
+      await UserActivity.create({
+        userId,
+        userName,
+        userEmail: String(userEmail).trim().toLowerCase(),
+        activityType,
+        description,
+        relatedId
+      });
+    } catch (error) {
+      console.error("User activity tracking error:", error);
+    }
+  }
+
+  app.get("/", function (req, res) {
+    res.json({
+      success: true,
+      message: "ClothSwap Backend is running!"
+    });
+  });
+
+  app.get("/api/clothes", async function (req, res) {
+    try {
+      const clothes = await Clothing.find({
+        status: "Available",
+        $and: [
+          {
+            $or: [
+              { isDeleted: false },
+              { isDeleted: { $exists: false } }
+            ]
+          },
+          {
+            $or: [
+              { listingStatus: "Available" },
+              { listingStatus: { $exists: false } }
+            ]
+          }
+        ]
+      }).sort({
+        createdAt: -1
+      });
+
+      res.json(clothes);
+
+    } catch (error) {
+      console.error("Failed to fetch clothes:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch clothes",
+        error: error.message
+      });
+    }
+  });
+  app.post("/api/auth/accept-terms", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found."
+      });
+    }
+
+    user.acceptedTermsVersion = CURRENT_TERMS_VERSION;
+    user.acceptedTermsAt = new Date();
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Terms & Conditions accepted successfully.",
+      acceptedTermsVersion: user.acceptedTermsVersion,
+      acceptedTermsAt: user.acceptedTermsAt
+    });
+
+  } catch (error) {
+    console.error("Accept Terms Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to accept Terms & Conditions."
+    });
+  }
+});
+/* CHECK USER TERMS & CONDITIONS STATUS */
+app.get(
+  "/api/auth/terms-status",
+  requireAuth,
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.user._id);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found."
+        });
+      }
+
+      const accepted =
+        user.acceptedTermsVersion === CURRENT_TERMS_VERSION;
+
+      return res.status(200).json({
+        success: true,
+        accepted: accepted,
+        acceptedTermsVersion:
+          user.acceptedTermsVersion || "",
+        currentTermsVersion:
+          CURRENT_TERMS_VERSION,
+        acceptedTermsAt:
+          user.acceptedTermsAt || null
+      });
+
+    } catch (error) {
+      console.error(
+        "Terms Status Error:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to check Terms & Conditions status."
+      });
+    }
+  }
+);
+
+/* CHECK WHETHER USER ALREADY REPORTED THIS LISTING */
+// CREATE NEW CLOTHING LISTING
+app.post(
+  "/api/clothes",
+  requireAuth,
+  requireNoHandToHandOverdue,
+  async (req, res) => {
+  try {
+    const {
+      title,
+      brand,
+      category,
+      size,
+      condition,
+      location,
+      price,
+      owner,
+      description,
+      image,
+      ownerEmail
+    } = req.body;
+
+    if (
+      !title ||
+      !category ||
+      !size ||
+      !condition ||
+      !image
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required clothing details."
+      });
+    }
+
+    const newClothing = new Clothing({
+      title: title.trim(),
+      brand: brand || "",
+      category,
+      size,
+      condition,
+      location: location || "",
+      price: Number(price) || 0,
+      owner: req.user.name,
+      description: description || "",
+      image,
+ownerEmail: req.user.email,
+      status: "Available",
+      isDeleted: false,
+      listingStatus: "Available"
+    });
+
+    await newClothing.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Clothing listed successfully!",
+      clothing: newClothing
+    });
+
+  } catch (error) {
+    console.error("Create clothing error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to list clothing.",
       error: error.message
     });
   }
 });
+app.get(
+  "/api/clothes/:id/report/check",
+  requireAuth,
+  async function (req, res) {
+    try {
+      const clothingId = req.params.id;
 
+      if (!mongoose.Types.ObjectId.isValid(clothingId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid clothing ID"
+        });
+      }
 
+      const reporterEmail = String(req.user.email || "")
+        .trim()
+        .toLowerCase();
 
-/* GET SINGLE CLOTHING */
+      const existingReport = await ReportedListing.findOne({
+        clothingId: clothingId,
+        reporterEmail: reporterEmail
+      });
 
-app.get("/api/clothes/:id", async function (req, res) {
+      return res.json({
+        success: true,
+        alreadyReported: !!existingReport,
+        message: existingReport
+          ? "You have already reported this listing."
+          : "You can report this listing."
+      });
+
+    } catch (error) {
+      console.error("Check report error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to check report status"
+      });
+    }
+  }
+);
+/* =========================================
+   REPORT CLOTHING LISTING
+========================================= */
+
+app.post("/api/clothes/:id/report", requireAuth, async function (req, res) {
   try {
+    const { reason, description } = req.body;
+    const clothingId = req.params.id;
 
-    const id = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(clothingId)) {
       return res.status(400).json({
         success: false,
         message: "Invalid clothing ID"
       });
     }
 
-    const clothing =
-      await Clothing.findById(id);
-
-    if (!clothing) {
-      return res.status(404).json({
+    if (!reason) {
+      return res.status(400).json({
         success: false,
-        message: "Clothing not found"
+        message: "Please select a report reason"
       });
     }
 
-    res.json(clothing);
+    const clothing = await Clothing.findById(clothingId);
+
+    if (
+      !clothing ||
+      clothing.isDeleted === true ||
+      clothing.listingStatus === "Removed"
+    ) {
+      return res.status(404).json({
+        success: false,
+        message: "Clothing listing not found"
+      });
+    }
+
+const reporterEmail = String(req.user.email || "")
+  .trim()
+  .toLowerCase();
+
+    if (!reporterEmail) {
+      return res.status(401).json({
+        success: false,
+        message: "User information not found"
+      });
+    }
+
+    if (reporterEmail === String(clothing.ownerEmail || "").toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot report your own listing"
+      });
+    }
+
+    const existingReport = await ReportedListing.findOne({
+  clothingId: clothing._id,
+  reporterEmail: reporterEmail
+});
+
+if (existingReport) {
+  return res.status(400).json({
+    success: false,
+    message: "You have already reported this listing."
+  });
+}
+
+    const report = new ReportedListing({
+      clothingId: clothing._id,
+      listingTitle: clothing.title,
+      reporter: req.user.name,
+      reporterEmail: reporterEmail,
+      owner: clothing.owner,
+      ownerEmail: clothing.ownerEmail,
+      reason: reason,
+      description: description || ""
+    });
+
+    await report.save();
+return res.status(201).json({
+      success: true,
+      message: "Listing reported successfully",
+      report
+    });
 
   } catch (error) {
+    console.error("Report listing error:", error);
 
-    console.error(
-      "Failed to fetch clothing:",
-      error
-    );
-
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Failed to fetch clothing",
+      message: "Failed to report listing",
       error: error.message
     });
   }
 });
-
-
-/* CREATE CLOTHING */
-
-app.post("/api/clothes", async function (req, res) {
+app.get("/api/admin/reported-listings", requireAdmin, async function (req, res) {
   try {
-    const {
-      title,
-      category,
-      size,
-      condition,
-      location,
-      price,
-      description,
-      image,
-      owner,
-      ownerEmail
-    } = req.body;
+    const reports = await ReportedListing.find()
+      .sort({ createdAt: -1 });
 
-    const clothing =
-      new Clothing({
-        title,
-        category,
-        size,
-        condition,
-        location,
-        price,
-        description,
-        image,
-        owner,
-        ownerEmail
+    return res.json({
+      success: true,
+      reports
+    });
+
+  } catch (error) {
+    console.error("Fetch reported listings error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch reported listings",
+      error: error.message
+    });
+  }
+});
+/* =========================================
+   ADMIN - REVIEW REPORTED LISTING
+========================================= */
+
+app.patch(
+  "/api/admin/reported-listings/:id/review",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const { status, adminNote } = req.body;
+
+      if (!["Reviewed", "Removed", "Rejected"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid report status"
+        });
+      }
+
+      const report = await ReportedListing.findById(req.params.id);
+
+      if (!report) {
+        return res.status(404).json({
+          success: false,
+          message: "Reported listing not found"
+        });
+      }
+
+      if (status === "Removed") {
+        const clothing = await Clothing.findById(report.clothingId);
+
+        if (clothing) {
+          clothing.isDeleted = true;
+          clothing.listingStatus = "Removed";
+          clothing.deletedAt = new Date();
+          clothing.deletedBy =
+            req.user.email || req.user.name || "Admin";
+          clothing.removalReason = adminNote || report.reason;
+
+          await clothing.save();
+        }
+      }
+
+      report.status = status;
+      report.adminNote = adminNote || "";
+      report.reviewedBy =
+        req.user.email || req.user.name || "Admin";
+      report.reviewedAt = new Date();
+
+// SAVE ADMIN ACTION HISTORY
+report.actionHistory.push({
+  action: status,
+  adminName: req.user.name || "Admin",
+  adminEmail: req.user.email || "",
+  adminNote: adminNote || "",
+  actionDate: new Date()
+});
+
+await report.save();
+
+      // NOTIFY THE USER WHO REPORTED THE LISTING
+      try {
+        const reporterEmail = String(
+          report.reporterEmail || ""
+        ).trim().toLowerCase();
+
+        if (reporterEmail) {
+          let notificationTitle = "";
+          let notificationMessage = "";
+
+          if (status === "Reviewed") {
+            notificationTitle = "Report Reviewed";
+            notificationMessage =
+              "Your report for \"" +
+              report.listingTitle +
+              "\" has been reviewed by the ClothSwap admin.";
+          } else if (status === "Removed") {
+            notificationTitle = "Listing Removed";
+            notificationMessage =
+              "Your reported listing \"" +
+              report.listingTitle +
+              "\" has been reviewed and removed by the ClothSwap admin.";
+          } else if (status === "Rejected") {
+            notificationTitle = "Report Rejected";
+            notificationMessage =
+              "Your report for \"" +
+              report.listingTitle +
+              "\" has been reviewed and rejected by the ClothSwap admin.";
+          }
+
+          if (notificationTitle) {
+            await Notification.create({
+              recipient: reporterEmail,
+              sender: String(req.user.email || ""),
+              senderName: "ClothSwap Admin",
+              type: "Report Update",
+              title: notificationTitle,
+              message: notificationMessage,
+              relatedId: String(report._id),
+              isRead: false
+            });
+
+            console.log(
+              "REPORT NOTIFICATION CREATED FOR:",
+              reporterEmail
+            );
+          }
+        }
+      } catch (notificationError) {
+        console.error(
+          "Report notification error:",
+          notificationError
+        );
+      }
+
+      return res.json({
+        success: true,
+        message: "Report updated successfully",
+        report
       });
 
-    await clothing.save();
+    } catch (error) {
+      console.error("Review reported listing error:", error);
 
-    res.status(201).json({
-      success: true,
-      message: "Clothing listed successfully",
-      clothing
-    });
-
-  } catch (error) {
-
-    console.error(
-      "Failed to create clothing:",
-      error
-    );
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to create clothing",
-      error: error.message
-    });
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update report",
+        error: error.message
+      });
+    }
   }
-});
-/* =====================================================
-   ADMIN - GET ALL USERS
-===================================================== */
+);
+/* =========================================
+   ADMIN - DELETE SELECTED REPORTED LISTINGS
+========================================= */
 
+app.delete(
+  "/api/admin/reported-listings",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const ids = req.body.ids;
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select reports to delete."
+        });
+      }
+
+      const validIds = ids.filter(function (id) {
+        return mongoose.Types.ObjectId.isValid(id);
+      });
+
+      if (
+        validIds.length !== ids.length ||
+        validIds.length === 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid report IDs."
+        });
+      }
+
+      const result = await ReportedListing.deleteMany({
+        _id: { $in: validIds }
+      });
+
+      return res.json({
+        success: true,
+        message: "Selected reports deleted successfully.",
+        deletedCount: result.deletedCount
+      });
+
+    } catch (error) {
+      console.error("Delete reported listings error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to delete selected reports."
+      });
+    }
+  }
+);
+
+
+/* =========================================
+   RAISE DISPUTE FOR SWAP REQUEST
+========================================= */
+
+app.post(
+  "/api/swap-requests/:id/dispute",
+  requireAuth,
+  async function (req, res) {
+    try {
+      const swapRequestId = req.params.id;
+      const reason = String(req.body.reason || "").trim();
+      const description = String(req.body.description || "").trim();
+
+      if (!mongoose.Types.ObjectId.isValid(swapRequestId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid swap request ID"
+        });
+      }
+
+      if (!reason) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a dispute reason"
+        });
+      }
+
+      const request = await SwapRequest.findById(swapRequestId);
+
+      if (!request) {
+        return res.status(404).json({
+          success: false,
+          message: "Swap request not found"
+        });
+      }
+
+      if (request.status !== "Accepted") {
+        return res.status(400).json({
+          success: false,
+          message: "You can raise a dispute only for accepted swaps"
+        });
+      }
+
+      const userEmail = String(req.user.email || "")
+        .trim()
+        .toLowerCase();
+
+      const ownerEmail = String(request.ownerEmail || "")
+        .trim()
+        .toLowerCase();
+
+      const requesterEmail = String(request.requesterEmail || "")
+        .trim()
+        .toLowerCase();
+
+      let reportedAgainst = "";
+      let reportedUser = "";
+
+      if (userEmail && userEmail === ownerEmail) {
+        reportedAgainst = request.requester;
+        reportedUser = requesterEmail;
+      } else if (userEmail && userEmail === requesterEmail) {
+        reportedAgainst = request.owner;
+        reportedUser = ownerEmail;
+      } else {
+        return res.status(403).json({
+          success: false,
+          message: "You are not part of this swap"
+        });
+      }
+
+      const existingDispute = await Dispute.findOne({
+        swapRequestId: request._id,
+        reporterEmail: userEmail
+      });
+
+      if (existingDispute) {
+        return res.status(400).json({
+          success: false,
+          message: "You have already raised a dispute for this swap"
+        });
+      }
+
+      const dispute = new Dispute({
+        swapRequestId: request._id,
+        reportedBy: req.user.name,
+        reportedAgainst: reportedAgainst,
+        reason: reason,
+        description: description,
+        subject: "Swap Dispute",
+        reportedUser: reportedUser,
+        reporterEmail: userEmail,
+        relatedSwap: request.clothingTitle,
+        status: "Pending"
+      });
+
+      await dispute.save();
+
+      // NOTIFY ALL ACTIVE ADMIN USERS
+      try {
+        const adminUsers = await User.find({
+          role: "Admin",
+          status: { $ne: "Blocked" }
+        }).select("name email");
+
+        await Promise.all(
+          adminUsers.map(function (admin) {
+            return Notification.create({
+              recipient: admin.email,
+              sender: userEmail,
+              senderName: req.user.name,
+              type: "Dispute Raised",
+              title: "New Swap Dispute",
+              message:
+                req.user.name +
+                " has raised a dispute for swap: " +
+                request.clothingTitle,
+              relatedId: String(dispute._id),
+              isRead: false
+            });
+          })
+        );
+
+        console.log("ADMIN DISPUTE NOTIFICATION CREATED");
+
+      } catch (notificationError) {
+        console.error(
+          "Admin dispute notification error:",
+          notificationError
+        );
+      }
+
+      await recordUserActivity({
+        userId: req.user._id,
+        userName: req.user.name,
+        userEmail: userEmail,
+        activityType: "Dispute Raised",
+        description: "Dispute raised for " + request.clothingTitle,
+        relatedId: String(dispute._id)
+      });
+
+      return res.status(201).json({
+        success: true,
+        message: "Dispute raised successfully",
+        dispute: dispute
+      });
+
+    } catch (error) {
+      console.error("Raise dispute error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to raise dispute",
+        error: error.message
+      });
+    }
+  }
+);
+/* =========================================
+   GET CURRENT USER'S RAISED DISPUTES
+========================================= */
+
+app.get(
+  "/api/swap-requests/my-disputes",
+  requireAuth,
+  async function (req, res) {
+    try {
+      const userEmail = String(req.user.email || "")
+        .trim()
+        .toLowerCase();
+
+      const disputes = await Dispute.find({
+        reporterEmail: userEmail
+      }).select("swapRequestId");
+
+      const swapRequestIds = disputes
+        .filter(function (dispute) {
+          return dispute.swapRequestId;
+        })
+        .map(function (dispute) {
+          return String(dispute.swapRequestId);
+        });
+
+      return res.json({
+        success: true,
+        swapRequestIds: swapRequestIds
+      });
+
+    } catch (error) {
+      console.error("Fetch my disputes error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch your disputes"
+      });
+    }
+  }
+);
+
+/* =========================================
+   ADMIN - GET ALL DISPUTES
+========================================= */
+
+app.get(
+  "/api/admin/disputes",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const disputes = await Dispute.find()
+        .populate("swapRequestId")
+        .sort({ createdAt: -1 });
+
+      return res.json({
+        success: true,
+        disputes: disputes
+      });
+
+    } catch (error) {
+      console.error("Fetch admin disputes error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch disputes",
+        error: error.message
+      });
+    }
+  }
+);
+
+
+/* =========================================
+   ADMIN - REJECT DISPUTE
+========================================= */
+
+app.put(
+  "/api/admin/disputes/:id/reject",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const id = req.params.id;
+      const adminNote = String(req.body.adminNote || "").trim();
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid dispute ID"
+        });
+      }
+
+      if (!adminNote) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a rejection reason"
+        });
+      }
+
+      const dispute = await Dispute.findById(id);
+
+      if (!dispute || dispute.isDeleted) {
+        return res.status(404).json({
+          success: false,
+          message: "Dispute not found"
+        });
+      }
+
+      if (
+        dispute.status === "Resolved" ||
+        dispute.status === "Rejected"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "This dispute has already been processed"
+        });
+      }
+
+      dispute.status = "Rejected";
+      dispute.adminNote = adminNote;
+      dispute.resolvedAt = new Date();
+
+      dispute.resolutionHistory.push({
+        action: "Rejected",
+        adminNote: adminNote,
+        adminName: req.user.name,
+        adminEmail: req.user.email,
+        actionDate: new Date()
+      });
+
+      await dispute.save();
+
+      await recordUserActivity({
+        userId: req.user._id,
+        userName: req.user.name,
+        userEmail: req.user.email,
+        activityType: "Dispute Rejected",
+        description: "Dispute rejected by admin",
+        relatedId: String(dispute._id)
+      });
+
+      // NOTIFY BOTH DISPUTE PARTICIPANTS
+      try {
+        const reporterEmail = String(
+          dispute.reporterEmail || ""
+        ).trim().toLowerCase();
+
+        const reportedUserEmail = String(
+          dispute.reportedUser || ""
+        ).trim().toLowerCase();
+
+        const notifications = [];
+
+        if (reporterEmail) {
+          notifications.push(
+            Notification.create({
+              recipient: reporterEmail,
+              sender: req.user.email,
+              senderName: "ClothSwap Admin",
+              type: "Dispute Rejected",
+              title: "Your Dispute Has Been Rejected",
+              message:
+                "Your dispute has been rejected by the Admin. Reason: " +
+                adminNote,
+              relatedId: String(dispute._id),
+              isRead: false
+            })
+          );
+        }
+
+        if (
+          reportedUserEmail &&
+          reportedUserEmail !== reporterEmail
+        ) {
+          notifications.push(
+            Notification.create({
+              recipient: reportedUserEmail,
+              sender: req.user.email,
+              senderName: "ClothSwap Admin",
+              type: "Dispute Rejected",
+              title: "Dispute Rejection Notice",
+              message:
+                "The Admin has rejected a dispute related to you. Admin Note: " +
+                adminNote,
+              relatedId: String(dispute._id),
+              isRead: false
+            })
+          );
+        }
+
+        await Promise.all(notifications);
+
+      } catch (notificationError) {
+        console.error(
+          "Dispute rejection notification error:",
+          notificationError
+        );
+      }
+
+      return res.json({
+        success: true,
+        message: "Dispute rejected successfully",
+        dispute: dispute
+      });
+
+    } catch (error) {
+      console.error("Dispute reject error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to reject dispute",
+        error: error.message
+      });
+    }
+  }
+);
+/* =========================================
+   ADMIN - RESOLVE DISPUTE
+========================================= */
+
+app.put(
+  "/api/admin/disputes/:id/resolve",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const id = req.params.id;
+      const adminNote = String(req.body.adminNote || "").trim();
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid dispute ID"
+        });
+      }
+
+      const dispute = await Dispute.findById(id);
+
+      if (!dispute || dispute.isDeleted) {
+        return res.status(404).json({
+          success: false,
+          message: "Dispute not found"
+        });
+      }
+
+      if (
+        dispute.status === "Resolved" ||
+        dispute.status === "Rejected"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "This dispute has already been processed"
+        });
+      }
+
+      dispute.status = "Resolved";
+      dispute.adminNote = adminNote;
+      dispute.resolvedAt = new Date();
+
+      dispute.resolutionHistory.push({
+        action: "Resolved",
+        adminNote: adminNote,
+        adminName: req.user.name,
+        adminEmail: req.user.email,
+        actionDate: new Date()
+      });
+
+      await dispute.save();
+
+      await recordUserActivity({
+        userId: req.user._id,
+        userName: req.user.name,
+        userEmail: req.user.email,
+        activityType: "Dispute Resolved",
+        description: "Dispute resolved by admin",
+        relatedId: String(dispute._id)
+      });
+
+      // NOTIFY DISPUTE PARTICIPANTS
+      try {
+        const reporterEmail = String(
+          dispute.reporterEmail || ""
+        ).trim().toLowerCase();
+
+        const reportedUserEmail = String(
+          dispute.reportedUser || ""
+        ).trim().toLowerCase();
+
+        const notifications = [];
+
+        if (reporterEmail) {
+          notifications.push(
+            Notification.create({
+              recipient: reporterEmail,
+              sender: req.user.email,
+              senderName: "ClothSwap Admin",
+              type: "Dispute Resolved",
+              title: "Your Dispute Has Been Resolved",
+              message:
+                "Your dispute has been resolved by the Admin. " +
+                (adminNote ? "Admin Note: " + adminNote : ""),
+              relatedId: String(dispute._id),
+              isRead: false
+            })
+          );
+        }
+
+        if (
+          reportedUserEmail &&
+          reportedUserEmail !== reporterEmail
+        ) {
+          notifications.push(
+            Notification.create({
+              recipient: reportedUserEmail,
+              sender: req.user.email,
+              senderName: "ClothSwap Admin",
+              type: "Dispute Resolved",
+              title: "Dispute Resolution Notice",
+              message:
+                "The Admin has resolved a dispute related to you.",
+              relatedId: String(dispute._id),
+              isRead: false
+            })
+          );
+        }
+
+        await Promise.all(notifications);
+
+      } catch (notificationError) {
+        console.error(
+          "Dispute resolution notification error:",
+          notificationError
+        );
+      }
+
+      return res.json({
+        success: true,
+        message: "Dispute resolved successfully",
+        dispute: dispute
+      });
+
+    } catch (error) {
+      console.error("Dispute resolve error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to resolve dispute",
+        error: error.message
+      });
+    }
+  }
+);
+/* =========================================
+   ADMIN - SOFT DELETE SELECTED DISPUTES
+========================================= */
+
+app.delete(
+  "/api/admin/disputes",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const ids = req.body.ids;
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select at least one dispute"
+        });
+      }
+
+      const validIds = ids.filter(function (id) {
+        return mongoose.Types.ObjectId.isValid(id);
+      });
+
+      if (validIds.length !== ids.length) {
+        return res.status(400).json({
+          success: false,
+          message: "One or more dispute IDs are invalid"
+        });
+      }
+
+      const disputes = await Dispute.find({
+        _id: { $in: validIds },
+        isDeleted: { $ne: true }
+      });
+
+      if (disputes.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No active disputes found"
+        });
+      }
+
+      const deletedAt = new Date();
+
+      for (const dispute of disputes) {
+        dispute.isDeleted = true;
+        dispute.deletedAt = deletedAt;
+        dispute.deletedBy = req.user.email || req.user.name;
+
+        dispute.resolutionHistory.push({
+          action: "Deleted",
+          adminNote: "Dispute archived by admin",
+          adminName: req.user.name,
+          adminEmail: req.user.email,
+          actionDate: deletedAt
+        });
+
+        await dispute.save();
+      }
+
+      await recordUserActivity({
+        userId: req.user._id,
+        userName: req.user.name,
+        userEmail: req.user.email,
+        activityType: "Disputes Deleted",
+        description:
+          disputes.length + " dispute(s) archived by admin",
+        relatedId: validIds.join(",")
+      });
+
+      return res.json({
+        success: true,
+        message: disputes.length + " dispute(s) archived successfully",
+        deletedCount: disputes.length
+      });
+
+    } catch (error) {
+      console.error("Dispute bulk delete error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to archive disputes",
+        error: error.message
+      });
+    }
+  }
+);
+
+ app.get(
+  "/api/admin/dashboard/analytics",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const { startDate, endDate } = req.query;
+
+      const dateFilter = {};
+
+      if (startDate || endDate) {
+        dateFilter.createdAt = {};
+
+        if (startDate) {
+          dateFilter.createdAt.$gte = new Date(startDate);
+        }
+
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          dateFilter.createdAt.$lte = end;
+        }
+      }
+
+      const [
+        totalUsers,
+        activeUsers,
+        totalListings,
+        totalSwaps,
+        completedSwaps,
+        recentActivities,
+        monthlySwaps,
+        monthlyListings,
+        monthlyUsers
+      ] = await Promise.all([
+
+        // Total Users
+        User.countDocuments(dateFilter),
+
+        // Active Users
+        UserActivity.distinct("userEmail", {
+          ...dateFilter,
+          userEmail: { $nin: ["", null] }
+        }),
+
+        // Total Listings
+        Clothing.countDocuments({
+          ...dateFilter,
+          isDeleted: { $ne: true },
+          listingStatus: { $ne: "Removed" }
+        }),
+
+        // Total Swap Requests
+        SwapRequest.countDocuments(dateFilter),
+
+        // Total Completed Swaps
+        SwapRequest.countDocuments({
+          ...dateFilter,
+          completionStatus: "Completed"
+        }),
+
+        // Recent Activities
+        UserActivity.find(dateFilter)
+          .sort({ createdAt: -1 })
+          .limit(10),
+
+        // Monthly Swaps
+        SwapRequest.aggregate([
+          { $match: dateFilter },
+          {
+            $group: {
+              _id: {
+                year: { $year: "$createdAt" },
+                month: { $month: "$createdAt" }
+              },
+              total: { $sum: 1 },
+              completed: {
+                $sum: {
+                  $cond: [
+                    { $eq: ["$completionStatus", "Completed"] },
+                    1,
+                    0
+                  ]
+                }
+              }
+            }
+          },
+          { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]),
+
+        // Monthly Listings
+        Clothing.aggregate([
+          { $match: dateFilter },
+          {
+            $group: {
+              _id: {
+                year: { $year: "$createdAt" },
+                month: { $month: "$createdAt" }
+              },
+              total: { $sum: 1 }
+            }
+          },
+          { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]),
+
+        // Monthly Users
+        User.aggregate([
+          { $match: dateFilter },
+          {
+            $group: {
+              _id: {
+                year: { $year: "$createdAt" },
+                month: { $month: "$createdAt" }
+              },
+              total: { $sum: 1 }
+            }
+          },
+          { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ])
+
+      ]);
+
+      const activeUserCount = activeUsers.length;
+
+      const swapCompletionRate = totalSwaps > 0
+        ? Number(
+            ((completedSwaps / totalSwaps) * 100).toFixed(2)
+          )
+        : 0;
+
+      return res.json({
+        success: true,
+        analytics: {
+          totalUsers,
+          activeUsers: activeUserCount,
+          totalListings,
+          totalSwaps,
+          completedSwaps,
+          swapCompletionRate,
+          monthlySwaps,
+          monthlyListings,
+          monthlyUsers,
+          recentActivities
+        }
+      });
+
+    } catch (error) {
+      console.error("Dashboard analytics error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to load dashboard analytics",
+        error: error.message
+      });
+    }
+  }
+);
 app.get("/api/admin/users", requireAdmin, async function (req, res) {
   try {
     const users = await User.find()
-      .select("-__v")
-      .sort({ createdAt: -1 });
+      .select("-password -__v")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const userStats = await Promise.all(
+      users.map(async function (user) {
+        const email = user.email.toLowerCase();
+
+        const [
+          totalListings,
+          swapRequestsSent,
+          swapRequestsReceived,
+          completedSwaps
+        ] = await Promise.all([
+          Clothing.countDocuments({
+            ownerEmail: email
+          }),
+
+          SwapRequest.countDocuments({
+            requesterEmail: email
+          }),
+
+          SwapRequest.countDocuments({
+            ownerEmail: email
+          }),
+
+          SwapRequest.countDocuments({
+            $or: [
+              { requesterEmail: email },
+              { ownerEmail: email }
+            ],
+            completionStatus: "Completed"
+          })
+        ]);
+
+        const lastActive = user.lastActivityAt || null;
+
+        const inactiveDays = lastActive
+          ? Math.floor(
+              (Date.now() - new Date(lastActive).getTime()) /
+              (1000 * 60 * 60 * 24)
+            )
+          : null;
+
+        return {
+          ...user,
+          totalListings,
+          swapRequestsSent,
+          swapRequestsReceived,
+          completedSwaps,
+          lastActive,
+          inactiveDays
+        };
+      })
+    );
 
     res.json({
       success: true,
-      users: users
+      users: userStats
     });
+
   } catch (error) {
     console.error("Admin users loading error:", error);
 
@@ -366,184 +2125,126 @@ app.get("/api/admin/users", requireAdmin, async function (req, res) {
       error: error.message
     });
   }
-});
-/* =====================================================
-   ADMIN - BLOCK / UNBLOCK USER
-===================================================== */
-
+}),
 app.put("/api/admin/users/:id/status", requireAdmin, async function (req, res) {
-  try {
-    const id = req.params.id;
-    const status = req.body.status;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
-
-    if (status !== "Active" && status !== "Blocked") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user status"
-      });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      id,
-      {
-        status: status
-      },
-      {
-        new: true
-      }
-    ).select("-__v");
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "User status updated successfully",
-      user: user
-    });
-  } catch (error) {
-    console.error("Admin user status error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to update user status",
-      error: error.message
-    });
-  }
-});
-/* =====================================================
-   ADMIN - DELETE USER
-===================================================== */
-app.delete("/api/admin/users/:id", requireAdmin, async function (req, res) {
-  try {
-    const id = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid user ID"
-      });
-    }
-
-    const user = await User.findById(id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    if (user.role === "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Admin user cannot be deleted"
-      });
-    }
-
-    await User.findByIdAndDelete(id);
-
-    res.json({
-      success: true,
-      message: "User deleted successfully"
-    });
-  } catch (error) {
-    console.error("Admin user delete error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete user",
-      error: error.message
-    });
-  }
-});
-/* =====================================================
-   DELETE CLOTHING
-===================================================== */
-
-app.delete("/api/clothes/:id", async function (req, res) {
-  try {
-    const id = req.params.id;
-    const user = req.body.user;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid clothing ID"
-      });
-    }
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "User is required"
-      });
-    }
-
-    const clothing = await Clothing.findById(id);
-
-    if (!clothing) {
-      return res.status(404).json({
-        success: false,
-        message: "Clothing not found"
-      });
-    }
-
-    if (
-      String(clothing.owner || "").toLowerCase() !==
-      String(user || "").toLowerCase()
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: "You can delete only your own clothing"
-      });
-    }
-
-    await Clothing.findByIdAndDelete(id);
-
-    await SwapRequest.deleteMany({
-      clothingId: id
-    });
-
-    res.json({
-      success: true,
-      message: "Clothing deleted successfully"
-    });
-
-  } catch (error) {
-    console.error("Delete clothing error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete clothing",
-      error: error.message
-    });
-  }
-});
-/* =====================================================
-   ADMIN DELETE CLOTHING
-===================================================== */
-
-app.delete(
-  "/api/admin/clothes/:id",
-  requireAdmin,
-  async function (req, res) {
     try {
       const id = req.params.id;
-      const adminEmail = req.body.adminEmail;
+      const status = req.body.status;
 
-i
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid user ID"
+        });
+      }
+
+      if (status !== "Active" && status !== "Blocked") {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid user status"
+        });
+      }
+
+      const user = await User.findByIdAndUpdate(
+        id,
+        {
+          status: status
+        },
+        {
+          new: true
+        }
+      ).select("-__v");
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found"
+        });
+      }
+  // REVOKE ALL REFRESH SESSIONS WHEN USER IS BLOCKED
+
+  if (status === "Blocked") {
+    await RefreshSession.updateMany(
+      {
+        userId: user._id,
+        revokedAt: null
+      },
+      {
+        $set: {
+          revokedAt: new Date()
+        }
+      }
+    );
+  }
+      res.json({
+        success: true,
+        message: "User status updated successfully",
+        user: user
+      });
+    } catch (error) {
+      console.error("Admin user status error:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to update user status",
+        error: error.message
+      });
+    }
+  }),
+
+  app.delete("/api/admin/users/:id", requireAdmin, async function (req, res) {
+    try {
+      const id = req.params.id;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid user ID"
+        });
+      }
+
+      const user = await User.findById(id);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found"
+        });
+      }
+
+      if (user.role === "Admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Admin user cannot be deleted"
+        });
+      }
+
+      await User.findByIdAndDelete(id);
+
+      res.json({
+        success: true,
+        message: "User deleted successfully"
+      });
+    } catch (error) {
+      console.error("Admin user delete error:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to delete user",
+        error: error.message
+      });
+    }
+  }),
+
+
+app.delete(
+  "/api/clothes/:id",
+  requireAuth,
+  requireNoHandToHandOverdue,
+  async (req, res) => {
+        try {
+      const id = req.params.id;
+      const user = req.body.user;
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
@@ -551,23 +2252,7 @@ i
           message: "Invalid clothing ID"
         });
       }
-
-
-      if (
-        !adminEmail ||
-        String(adminEmail).trim().toLowerCase() !==
-          "kuhu2109@gmail.com"
-      ) {
-        return res.status(403).json({
-          success: false,
-          message: "Admin access required"
-        });
-      }
-
-      /* FIND CLOTHING */
-
-      const clothing =
-        await Clothing.findById(id);
+      const clothing = await Clothing.findById(id);
 
       if (!clothing) {
         return res.status(404).json({
@@ -576,1544 +2261,1404 @@ i
         });
       }
 
-      /* DELETE CLOTHING */
+    if (req.user.role !== "Admin") {
+  if (
+    String(clothing.ownerEmail || "").trim().toLowerCase() !==
+    String(req.user.email || "").trim().toLowerCase()
+  ) {
+    return res.status(403).json({
+      success: false,
+      message: "You can delete only your own clothing"
+    });
+  }
+}
 
-      await Clothing.findByIdAndDelete(id);
+      clothing.isDeleted = true;
+  clothing.listingStatus = "Removed";
+  clothing.status = "Removed";
+  clothing.deletedAt = new Date();
+  clothing.deletedBy = clothing.owner;
 
-      /* DELETE RELATED SWAP REQUESTS */
-
-      await SwapRequest.deleteMany({
-        clothingId: id
-      });
+  await clothing.save();
 
       res.json({
         success: true,
-        message: "Clothing listing removed by admin"
+        message: "Clothing deleted successfully"
       });
 
     } catch (error) {
-      console.error(
-        "Admin delete clothing error:",
-        error
-      );
+      console.error("Delete clothing error:", error);
 
       res.status(500).json({
         success: false,
-        message: "Failed to remove clothing listing",
+        message: "Failed to delete clothing",
         error: error.message
       });
     }
-  }
-);
-//  SWAP REQUEST
-
-
-/* CREATE SWAP REQUEST */
-
+  }),
 app.post(
   "/api/swap-requests",
-  async function (req, res) {
-
-    try {
+  requireAuth,
+  requireNoHandToHandOverdue,
+  async (req, res) => {
+      try {
 
       const {
-        clothingId,
-        requester,
-        message
-      } = req.body;
+  clothingId,
+  message
+} = req.body;
 
-      const requesterEmailFromUser =
-        String(
-          req.body.requesterEmail || ""
-        )
-          .trim()
-          .toLowerCase();
+const requester = req.user.name;
+const requesterEmailFromUser =
+  String(req.user.email || "")
+    .trim()
+    .toLowerCase();
 
 
-      if (
-        !clothingId ||
-        !requester
-      ) {
+        if (
+          !clothingId ||
+          !requester
+        ) {
 
-        return res.status(400).json({
-          success: false,
-          message:
-            "Clothing ID and requester are required"
-        });
-      }
-
-
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          clothingId
-        )
-      ) {
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid clothing ID"
-        });
-      }
+          return res.status(400).json({
+            success: false,
+            message:
+              "Clothing ID and requester are required"
+          });
+        }
 
 
-      const clothing =
-        await Clothing.findById(
-          clothingId
-        );
+        if (
+          !mongoose.Types.ObjectId.isValid(
+            clothingId
+          )
+        ) {
+
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid clothing ID"
+          });
+        }
 
 
-      if (!clothing) {
-
-        return res.status(404).json({
-          success: false,
-          message:
-            "Clothing not found"
-        });
-      }
+        const clothing =
+          await Clothing.findById(
+            clothingId
+          );
 
 
-      /* USER CANNOT REQUEST OWN ITEM */
+        if (!clothing) {
 
-      if (
-        clothing.owner === requester
-      ) {
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "You cannot request your own clothing"
-        });
-      }
+          return res.status(404).json({
+            success: false,
+            message:
+              "Clothing not found"
+          });
+        }
 
 
-      /* CHECK DUPLICATE PENDING REQUEST */
 
-      const existingRequest =
-        await SwapRequest.findOne({
-          clothingId: clothingId,
-          requester: requester,
-          status: "Pending"
-        });
+        if (
+          clothing.owner === requester
+        ) {
 
-
-      if (existingRequest) {
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "You already sent a request for this clothing"
-        });
-      }
+          return res.status(400).json({
+            success: false,
+            message:
+              "You cannot request your own clothing"
+          });
+        }
+      const existingRequest = await SwapRequest.findOne({
+  clothingId: clothing._id,
+  requesterEmail: requesterEmailFromUser
+});
 
 
-      /* CREATE SWAP REQUEST */
+        if (existingRequest) {
 
-      const swapRequest =
-        new SwapRequest({
+          return res.status(400).json({
+            success: false,
+            message:
+              "You already sent a request for this clothing"
+          });
+        }
 
-          clothingId:
-            clothing._id,
 
-          clothingTitle:
-            clothing.title,
 
-          clothingImage:
-            clothing.image || "",
+        const swapRequest =
+          new SwapRequest({
 
-          owner:
-            clothing.owner,
+            clothingId:
+              clothing._id,
 
-          ownerEmail:
+            clothingTitle:
+              clothing.title,
+
+            clothingImage:
+              clothing.image || "",
+
+            owner:
+              clothing.owner,
+
+            ownerEmail:
+              String(
+                clothing.ownerEmail || ""
+              )
+                .trim()
+                .toLowerCase(),
+
+            requester:
+              requester,
+
+            requesterEmail:
+              requesterEmailFromUser,
+
+            message:
+              message || "",
+
+            status:
+              "Pending",
+
+            ownerAgreed:
+              false,
+
+            requesterAgreed:
+              false,
+
+            agreementStatus:
+              "Not Started"
+          });
+
+
+        await swapRequest.save();
+  await recordUserActivity({
+    userName: requester,
+    userEmail: requesterEmailFromUser,
+    activityType: "Swap Requested",
+    description:
+      "Swap request sent for " + clothing.title,
+    relatedId: String(swapRequest._id)
+  });     
+
+
+      
+
+        try {
+
+          const ownerEmail =
             String(
               clothing.ownerEmail || ""
             )
               .trim()
-              .toLowerCase(),
+              .toLowerCase();
 
-          requester:
-            requester,
 
-          requesterEmail:
-            requesterEmailFromUser,
+          const senderEmail =
+            requesterEmailFromUser;
+
+
+          if (
+            ownerEmail &&
+            senderEmail &&
+            ownerEmail !== senderEmail
+          ) {
+
+            await Notification.create({
+
+              recipient:
+                ownerEmail,
+
+              sender:
+                senderEmail,
+
+              senderName:
+                requester,
+
+              type:
+                "Swap Request",
+
+              title:
+                "New Swap Request",
+
+              message:
+                requester +
+                " sent you a swap request for " +
+                clothing.title,
+
+              relatedId:
+                String(
+                  swapRequest._id
+                ),
+
+              isRead:
+                false
+            });
+
+          }
+
+        } catch (
+          notificationError
+        ) {
+
+          console.error(
+            "Swap request notification error:",
+            notificationError
+          );
+        }
+
+
+        res.status(201).json({
+
+          success: true,
 
           message:
-            message || "",
+            "Swap request sent successfully",
 
-          status:
-            "Pending",
-
-          ownerAgreed:
-            false,
-
-          requesterAgreed:
-            false,
-
-          agreementStatus:
-            "Not Started"
+          request:
+            swapRequest
         });
 
 
-      await swapRequest.save();
+      } catch (error) {
+
+        console.error(
+          "Failed to create swap request:",
+          error
+        );
+
+        res.status(500).json({
+
+          success: false,
+
+          message:
+            "Failed to create swap request",
+
+          error:
+            error.message
+        });
+      }
+    }
+  ),
 
 
-      /* =====================================================
-         CREATE NOTIFICATION FOR EXACT OWNER EMAIL
-      ===================================================== */
+  app.get(
+    "/api/swap-requests",
+    async function (req, res) {
 
       try {
 
-        const ownerEmail =
+        console.log(
+          "QUERY RECEIVED:",
+          req.query
+        );
+
+        const userEmail =
           String(
-            clothing.ownerEmail || ""
+            req.query.userEmail || ""
           )
             .trim()
             .toLowerCase();
 
+        console.log(
+          "FILTER EMAIL:",
+          userEmail
+        );
 
-        const senderEmail =
-          requesterEmailFromUser;
 
+        if (!userEmail) {
 
-        if (
-          ownerEmail &&
-          senderEmail &&
-          ownerEmail !== senderEmail
-        ) {
+          console.log(
+            "NO USER EMAIL - RETURNING EMPTY"
+          );
 
-          await Notification.create({
-
-            recipient:
-              ownerEmail,
-
-            sender:
-              senderEmail,
-
-            senderName:
-              requester,
-
-            type:
-              "Swap Request",
-
-            title:
-              "New Swap Request",
-
-            message:
-              requester +
-              " sent you a swap request for " +
-              clothing.title,
-
-            relatedId:
-              String(
-                swapRequest._id
-              ),
-
-            isRead:
-              false
-          });
-
+          return res.json([]);
         }
 
-      } catch (
-        notificationError
-      ) {
 
-        console.error(
-          "Swap request notification error:",
-          notificationError
-        );
-      }
+        
 
-
-      res.status(201).json({
-
-        success: true,
-
-        message:
-          "Swap request sent successfully",
-
-        request:
-          swapRequest
-      });
+        const escapedEmail =
+          userEmail.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+          );
 
 
-    } catch (error) {
-
-      console.error(
-        "Failed to create swap request:",
-        error
-      );
-
-      res.status(500).json({
-
-        success: false,
-
-        message:
-          "Failed to create swap request",
-
-        error:
-          error.message
-      });
-    }
-  }
-);
-/* =====================================================
-   GET ALL SWAP REQUESTS
-===================================================== */
-
-app.get(
-  "/api/swap-requests",
-  async function (req, res) {
-
-    try {
-
-      console.log(
-        "QUERY RECEIVED:",
-        req.query
-      );
-
-      const userEmail =
-        String(
-          req.query.userEmail || ""
-        )
-          .trim()
-          .toLowerCase();
-
-      console.log(
-        "FILTER EMAIL:",
-        userEmail
-      );
+        const emailRegex =
+          new RegExp(
+            "^" +
+            escapedEmail +
+            "$",
+            "i"
+          );
 
 
-      if (!userEmail) {
-
-        console.log(
-          "NO USER EMAIL - RETURNING EMPTY"
-        );
-
-        return res.json([]);
-      }
-
-
-      /*
-        Email comparison is case-insensitive.
-        This keeps exact email identity while handling
-        uppercase/lowercase differences.
-      */
-
-      const escapedEmail =
-        userEmail.replace(
-          /[.*+?^${}()|[\]\\]/g,
-          "\\$&"
-        );
-
-
-      const emailRegex =
-        new RegExp(
-          "^" +
-          escapedEmail +
-          "$",
-          "i"
-        );
-
-
-      const requests =
-        await SwapRequest.find({
-          $or: [
-            {
-              ownerEmail:
-                emailRegex
-            },
-            {
-              requesterEmail:
-                emailRegex
-            }
-          ]
-        }).sort({
-          createdAt: -1
-        });
-
-
-      console.log(
-        "FILTERED REQUESTS COUNT:",
-        requests.length
-      );
-
-      console.log(
-        "FILTERED REQUESTS:",
-        requests
-      );
-
-
-      return res.json(requests);
-
-
-    } catch (error) {
-
-      console.error(
-        "Failed to fetch swap requests:",
-        error
-      );
-
-      return res.status(500).json({
-
-        success: false,
-
-        message:
-          "Failed to fetch swap requests",
-
-        error:
-          error.message
-      });
-    }
-  }
-);
-/* =====================================================
-   ADMIN - GET ALL SWAP REQUESTS
-===================================================== */
-
-app.get(
-  "/api/admin/swap-requests",
-   requireAdmin,
-  async function (req, res) {
-
-    try {
-
-      const requests =
-        await SwapRequest.find({})
-          .sort({
+        const requests =
+          await SwapRequest.find({
+            $or: [
+              {
+                ownerEmail:
+                  emailRegex
+              },
+              {
+                requesterEmail:
+                  emailRegex
+              }
+            ]
+          }).sort({
             createdAt: -1
           });
 
-      return res.json(requests);
 
-    } catch (error) {
+        console.log(
+          "FILTERED REQUESTS COUNT:",
+          requests.length
+        );
 
-      console.error(
-        "Failed to fetch admin swap requests:",
-        error
-      );
+        console.log(
+          "FILTERED REQUESTS:",
+          requests
+        );
 
-      return res.status(500).json({
 
-        success: false,
+        return res.json(requests);
 
+
+      } catch (error) {
+
+        console.error(
+          "Failed to fetch swap requests:",
+          error
+        );
+
+        return res.status(500).json({
+
+          success: false,
+
+          message:
+            "Failed to fetch swap requests",
+
+          error:
+            error.message
+        });
+      }
+    }
+  ),
+
+
+  app.get(
+    "/api/admin/swap-requests",
+    requireAdmin,
+    async function (req, res) {
+
+      try {
+
+        const requests =
+          await SwapRequest.find({})
+            .sort({
+              createdAt: -1
+            });
+            console.log(
+  "ADMIN SWAP STATUS CHECK:",
+  requests.map(function (request) {
+    return {
+      id: request._id,
+      clothingTitle: request.clothingTitle,
+      completionStatus: request.completionStatus,
+      agreementStatus: request.agreementStatus
+    };
+  })
+);
+
+        return res.json(requests);
+
+      } catch (error) {
+
+        console.error(
+          "Failed to fetch admin swap requests:",
+          error
+        );
+
+        return res.status(500).json({
+
+          success: false,
+
+          message:
+            "Failed to fetch admin swap requests",
+
+          error:
+            error.message
+        });
+      }
+    }
+  ),
+
+
+  app.put(
+  "/api/swap-requests/:id",
+  requireAuth,
+  requireNoHandToHandOverdue,
+  async function (req, res) {
+      try {
+
+        const id =
+          req.params.id;
+
+        const status =
+          req.body.status;
+
+
+        if (
+          !mongoose.Types.ObjectId.isValid(id)
+        ) {
+
+          return res.status(400).json({
+
+            success: false,
+
+            message:
+              "Invalid swap request ID"
+          });
+        }
+
+
+
+        if (
+          status !== "Accepted" &&
+          status !== "Rejected"
+        ) {
+
+          return res.status(400).json({
+
+            success: false,
+
+            message:
+              "Status must be Accepted or Rejected"
+          });
+        }
+
+
+        const request =
+          await SwapRequest.findById(id);
+
+
+        if (!request) {
+
+          return res.status(404).json({
+
+            success: false,
+
+            message:
+              "Swap request not found"
+          });
+        }
+
+  const wasAlreadyAccepted =
+    request.status === "Accepted";
+        request.status =
+          status;
+
+
+
+        if (
+          status === "Rejected"
+        ) {
+
+          request.ownerAgreed =
+            false;
+
+          request.requesterAgreed =
+            false;
+
+          request.agreementStatus =
+            "Not Started";
+        }
+
+
+
+        if (
+          status === "Accepted"
+        ) {
+
+          request.ownerAgreed =
+            false;
+
+          request.requesterAgreed =
+            false;
+
+          request.agreementStatus =
+            "Not Started";
+        }
+
+
+        await request.save();
+  if (
+    status === "Accepted" &&
+    !wasAlreadyAccepted
+  ) {
+    await recordUserActivity({
+      userName: request.owner,
+      userEmail: request.ownerEmail,
+      activityType: "Swap Accepted",
+      description:
+        "Accepted swap request for " +
+        request.clothingTitle,
+      relatedId: String(request._id)
+    });
+  }
+  try {
+    const requesterUser = await User.findOne({
+      name: {
+        $regex:
+          "^" +
+          String(request.requester)
+            .trim()
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+          "$",
+        $options: "i"
+      }
+    });
+
+    const ownerUser = await User.findOne({
+      name: {
+        $regex:
+          "^" +
+          String(request.owner)
+            .trim()
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+          "$",
+        $options: "i"
+      }
+    });
+
+    if (requesterUser && ownerUser) {
+      await Notification.create({
+        recipient: requesterUser.email,
+        sender: ownerUser.email,
+        senderName: ownerUser.name,
+        type:
+          request.status === "Accepted"
+            ? "swap_accepted"
+            : "swap_rejected",
+        title:
+          request.status === "Accepted"
+            ? "Swap Request Accepted"
+            : "Swap Request Rejected",
         message:
-          "Failed to fetch admin swap requests",
-
-        error:
-          error.message
+          ownerUser.name +
+          " " +
+          (
+            request.status === "Accepted"
+              ? "accepted"
+              : "rejected"
+          ) +
+          " your swap request for " +
+          request.clothingTitle +
+          ".",
+        relatedId: String(request._id),
+        isRead: false
       });
     }
-  }
-);
-/* =====================================================
-   ACCEPT / REJECT SWAP REQUEST
-===================================================== */
 
-app.put(
-  "/api/swap-requests/:id",
+  } catch (notificationError) {
+    console.error(
+      "Accept/Reject notification error:",
+      notificationError
+    );
+  }
+
+        res.json({
+
+          success: true,
+
+          message:
+            `Swap request ${status.toLowerCase()} successfully`,
+
+          request:
+            request
+        });
+
+      } catch (error) {
+
+        console.error(
+          "Update swap request error:",
+          error
+        );
+
+        res.status(500).json({
+
+          success: false,
+
+          message:
+            "Failed to update swap request",
+
+          error:
+            error.message
+        });
+      }
+    }
+  ),
+ app.put(
+  "/api/swap-requests/:id/agree",
+  requireAuth,
+  requireNoHandToHandOverdue,
   async function (req, res) {
 
-    try {
+      try {
 
-      const id =
-        req.params.id;
+        const id =
+          req.params.id;
 
-      const status =
-        req.body.status;
+        const user =
+          req.body.user;
 
-
-      if (
-        !mongoose.Types.ObjectId.isValid(id)
-      ) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "Invalid swap request ID"
-        });
-      }
+        const userEmail =
+            req.body.userEmail || "";
 
 
-      /* VALID STATUS */
 
-      if (
-        status !== "Accepted" &&
-        status !== "Rejected"
-      ) {
+        if (
+          !mongoose.Types.ObjectId.isValid(id)
+        ) {
 
-        return res.status(400).json({
+          return res.status(400).json({
 
-          success: false,
+            success: false,
 
-          message:
-            "Status must be Accepted or Rejected"
-        });
-      }
+            message:
+              "Invalid swap request ID"
+          });
+        }
 
 
-      const request =
-        await SwapRequest.findById(id);
+
+        if (!user) {
+
+          return res.status(400).json({
+
+            success: false,
+
+            message:
+              "User is required"
+          });
+        }
 
 
-      if (!request) {
 
-        return res.status(404).json({
-
-          success: false,
-
-          message:
-            "Swap request not found"
-        });
-      }
+        const request =
+          await SwapRequest.findById(id);
 
 
-      request.status =
-        status;
+        if (!request) {
+
+          return res.status(404).json({
+
+            success: false,
+
+            message:
+              "Swap request not found"
+          });
+        }
 
 
-      /* IF REJECTED, RESET AGREEMENT */
 
-      if (
-        status === "Rejected"
-      ) {
+        if (
+          request.status !== "Accepted"
+        ) {
 
-        request.ownerAgreed =
-          false;
+          return res.status(400).json({
 
-        request.requesterAgreed =
-          false;
+            success: false,
 
-        request.agreementStatus =
-          "Not Started";
-      }
+            message:
+              "Agreement is available only after the request is accepted"
+          });
+        }
 
 
-      /* IF ACCEPTED */
 
-      if (
-        status === "Accepted"
-      ) {
+  const normalizedUserEmail =
+    String(userEmail || "")
+      .trim()
+      .toLowerCase();
 
-        request.ownerAgreed =
-          false;
+  const normalizedUser =
+    String(user || "")
+      .trim()
+      .toLowerCase();
 
-        request.requesterAgreed =
-          false;
+  const normalizedOwner =
+    String(request.owner || "")
+      .trim()
+      .toLowerCase();
 
-        request.agreementStatus =
-          "Not Started";
-      }
+  const normalizedRequester =
+    String(request.requester || "")
+      .trim()
+      .toLowerCase();
 
+  const normalizedOwnerEmail =
+    String(request.ownerEmail || "")
+      .trim()
+      .toLowerCase();
 
-      await request.save();
-/* NOTIFY REQUESTER */
+  const normalizedRequesterEmail =
+    String(request.requesterEmail || "")
+      .trim()
+      .toLowerCase();
 
-try {
-  const requesterUser = await User.findOne({
-    name: {
-      $regex:
-        "^" +
-        String(request.requester)
-          .trim()
-          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
-        "$",
-      $options: "i"
-    }
-  });
+  const isOwnerByEmail =
+    normalizedUserEmail &&
+    normalizedOwnerEmail &&
+    normalizedOwnerEmail === normalizedUserEmail;
 
-  const ownerUser = await User.findOne({
-    name: {
-      $regex:
-        "^" +
-        String(request.owner)
-          .trim()
-          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
-        "$",
-      $options: "i"
-    }
-  });
+  const isRequesterByEmail =
+    normalizedUserEmail &&
+    normalizedRequesterEmail &&
+    normalizedRequesterEmail === normalizedUserEmail;
 
-  if (requesterUser && ownerUser) {
-    await Notification.create({
-      recipient: requesterUser.email,
-      sender: ownerUser.email,
-      senderName: ownerUser.name,
-      type:
-        request.status === "Accepted"
-          ? "swap_accepted"
-          : "swap_rejected",
-      title:
-        request.status === "Accepted"
-          ? "Swap Request Accepted"
-          : "Swap Request Rejected",
-      message:
-        ownerUser.name +
-        " " +
-        (
-          request.status === "Accepted"
-            ? "accepted"
-            : "rejected"
-        ) +
-        " your swap request for " +
-        request.clothingTitle +
-        ".",
-      relatedId: String(request._id),
-      isRead: false
+  const isOwnerByName =
+    normalizedOwner === normalizedUser;
+
+  const isRequesterByName =
+    normalizedRequester === normalizedUser;
+
+  if (
+    !isOwnerByEmail &&
+    !isRequesterByEmail &&
+    !isOwnerByName &&
+    !isRequesterByName
+  ) {
+    return res.status(403).json({
+      success: false,
+      message: "You are not part of this swap"
     });
   }
 
-} catch (notificationError) {
-  console.error(
-    "Accept/Reject notification error:",
-    notificationError
-  );
-}
 
+
+  if (
+    isOwnerByEmail ||
+    isOwnerByName
+  ) {
+    request.ownerAgreed = true;
+  }
+
+
+
+  if (
+    isRequesterByEmail ||
+    isRequesterByName
+  ) {
+    request.requesterAgreed = true;
+  }
+
+
+        if (
+          request.ownerAgreed &&
+          request.requesterAgreed
+        ) {
+
+          request.agreementStatus =
+            "Confirmed";
+
+        } else if (
+          request.ownerAgreed ||
+          request.requesterAgreed
+        ) {
+
+          request.agreementStatus =
+            "Waiting for Both";
+
+        } else {
+
+          request.agreementStatus =
+            "Not Started";
+        }
+
+
+        await request.save();
       res.json({
 
-        success: true,
+          success: true,
 
-        message:
-          `Swap request ${status.toLowerCase()} successfully`,
+          message:
+            "Agreement updated successfully",
 
-        request:
-          request
-      });
+          request:
+            request
+        });
 
-    } catch (error) {
+      } catch (error) {
 
-      console.error(
-        "Update swap request error:",
-        error
-      );
+        console.error(
+          "Agree to swap error:",
+          error
+        );
 
-      res.status(500).json({
+        res.status(500).json({
 
-        success: false,
+          success: false,
 
-        message:
-          "Failed to update swap request",
+          message:
+            "Failed to update agreement",
 
-        error:
-          error.message
-      });
+          error:
+            error.message
+        });
+      }
     }
-  }
-);
-
-
-/* =====================================================
-   AGREE TO SWAP
-===================================================== */
-
-app.put(
-  "/api/swap-requests/:id/agree",
-  async function (req, res) {
-
-    try {
-
-      const id =
-        req.params.id;
-
-      const user =
-        req.body.user;
-
-      const userEmail =
-          req.body.userEmail || "";
-
-
-      /* CHECK ID */
-
-      if (
-        !mongoose.Types.ObjectId.isValid(id)
-      ) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "Invalid swap request ID"
-        });
-      }
-
-
-      /* CHECK USER */
-
-      if (!user) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "User is required"
-        });
-      }
-
-
-      /* FIND REQUEST */
-
-      const request =
-        await SwapRequest.findById(id);
-
-
-      if (!request) {
-
-        return res.status(404).json({
-
-          success: false,
-
-          message:
-            "Swap request not found"
-        });
-      }
-
-
-      /* ONLY ACCEPTED REQUEST */
-
-      if (
-        request.status !== "Accepted"
-      ) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "Agreement is available only after the request is accepted"
-        });
-      }
-
-
-      /* USER MUST BE OWNER OR REQUESTER */
-
-const normalizedUserEmail =
-  String(userEmail || "")
-    .trim()
-    .toLowerCase();
-
-const normalizedUser =
-  String(user || "")
-    .trim()
-    .toLowerCase();
-
-const normalizedOwner =
-  String(request.owner || "")
-    .trim()
-    .toLowerCase();
-
-const normalizedRequester =
-  String(request.requester || "")
-    .trim()
-    .toLowerCase();
-
-const normalizedOwnerEmail =
-  String(request.ownerEmail || "")
-    .trim()
-    .toLowerCase();
-
-const normalizedRequesterEmail =
-  String(request.requesterEmail || "")
-    .trim()
-    .toLowerCase();
-
-const isOwnerByEmail =
-  normalizedUserEmail &&
-  normalizedOwnerEmail &&
-  normalizedOwnerEmail === normalizedUserEmail;
-
-const isRequesterByEmail =
-  normalizedUserEmail &&
-  normalizedRequesterEmail &&
-  normalizedRequesterEmail === normalizedUserEmail;
-
-const isOwnerByName =
-  normalizedOwner === normalizedUser;
-
-const isRequesterByName =
-  normalizedRequester === normalizedUser;
-
-if (
-  !isOwnerByEmail &&
-  !isRequesterByEmail &&
-  !isOwnerByName &&
-  !isRequesterByName
-) {
-  return res.status(403).json({
-    success: false,
-    message: "You are not part of this swap"
-  });
-}
-
-
-     /* OWNER AGREES */
-
-if (
-  isOwnerByEmail ||
-  isOwnerByName
-) {
-  request.ownerAgreed = true;
-}
-
-
-/* REQUESTER AGREES */
-
-if (
-  isRequesterByEmail ||
-  isRequesterByName
-) {
-  request.requesterAgreed = true;
-}
-
-      /* UPDATE AGREEMENT STATUS */
-
-      if (
-        request.ownerAgreed &&
-        request.requesterAgreed
-      ) {
-
-        request.agreementStatus =
-          "Confirmed";
-
-      } else if (
-        request.ownerAgreed ||
-        request.requesterAgreed
-      ) {
-
-        request.agreementStatus =
-          "Waiting for Both";
-
-      } else {
-
-        request.agreementStatus =
-          "Not Started";
-      }
-
-
-      await request.save();
-
-
-      res.json({
-
-        success: true,
-
-        message:
-          "Agreement updated successfully",
-
-        request:
-          request
-      });
-
-    } catch (error) {
-
-      console.error(
-        "Agree to swap error:",
-        error
-      );
-
-      res.status(500).json({
-
-        success: false,
-
-        message:
-          "Failed to update agreement",
-
-        error:
-          error.message
-      });
-    }
-  }
-);
-/* ================= SELECT EXCHANGE METHOD ================= */
+  ),
 
 app.put(
   "/api/swap-requests/:id/exchange-method",
+  requireAuth,
+  requireNoHandToHandOverdue,
   async function (req, res) {
-    try {
-      const { exchangeMethod, user } = req.body;
+      try {
+        const { exchangeMethod, user } = req.body;
 
-      const allowedMethods = [
-        "Courier",
-        "Local Exchange"
-      ];
+        const allowedMethods = [
+          "Courier",
+          "Local Exchange"
+        ];
 
-      if (!allowedMethods.includes(exchangeMethod)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid exchange method"
-        });
-      }
+        if (!allowedMethods.includes(exchangeMethod)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid exchange method"
+          });
+        }
 
-      const request =
-        await SwapRequest.findById(req.params.id);
+        const request =
+          await SwapRequest.findById(req.params.id);
 
-      if (!request) {
-        return res.status(404).json({
-          success: false,
-          message: "Swap request not found"
-        });
-      }
+        if (!request) {
+          return res.status(404).json({
+            success: false,
+            message: "Swap request not found"
+          });
+        }
 
-      /* Only accepted + confirmed swaps */
 
-      if (
-        request.status !== "Accepted" ||
-        request.agreementStatus !== "Confirmed"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Exchange method can be selected only after swap confirmation"
-        });
-      }
-
-      /* Only swap participants */
-
-      if (
-        request.owner !== user &&
-        request.requester !== user
-      ) {
-        return res.status(403).json({
-          success: false,
-          message:
-            "You are not a participant of this swap"
-        });
-      }
-
-      /* Do not allow changing the selected method */
-
-      if (
-        request.exchangeMethod &&
-        request.exchangeMethod !== "Not Selected"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Exchange method has already been selected"
-        });
-      }
-
-      request.exchangeMethod = exchangeMethod;
-
-      await request.save();
-
-      res.json({
-        success: true,
-        message:
-          "Exchange method selected successfully",
-        request: request
-      });
-    } catch (error) {
-      console.error(
-        "Exchange Method Error:",
-        error
-      );
-
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
-    }
-  }
-);
-app.put("/api/swap-requests/:id/complete", async function (req, res) {
-  try {
-    const id = req.params.id;
-    const user = req.body.user;
-    const userEmail =
-        req.body.userEmail || "";
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid swap request ID"
-      });
-    }
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "User is required"
-      });
-    }
-
-    const request = await SwapRequest.findById(id);
-
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: "Swap request not found"
-      });
-    }
-
-    if (request.agreementStatus !== "Confirmed") {
-      return res.status(400).json({
-        success: false,
-        message: "Swap must be confirmed before marking as completed"
-      });
-    }
-
-    const normalizedUserEmail =
-  String(userEmail || "").trim().toLowerCase();
-
-const isOwnerByEmail =
-  request.ownerEmail &&
-  request.ownerEmail.toLowerCase() ===
-    normalizedUserEmail;
-
-const isRequesterByEmail =
-  request.requesterEmail &&
-  request.requesterEmail.toLowerCase() ===
-    normalizedUserEmail;
-
-const isOwnerByName =
-  request.owner === user;
-
-const isRequesterByName =
-  request.requester === user;
-
-if (
-  !isOwnerByEmail &&
-  !isRequesterByEmail &&
-  !isOwnerByName &&
-  !isRequesterByName
-) {
-  return res.status(403).json({
-    success: false,
-    message: "You are not part of this swap"
-  });
-}
-
-   if (
-  isOwnerByEmail ||
-  (!request.ownerEmail && isOwnerByName)
-) {
-  request.ownerCompleted = true;
-}
-
-if (
-  isRequesterByEmail ||
-  (!request.requesterEmail && isRequesterByName)
-) {
-  request.requesterCompleted = true;
-}
-
-    if (request.ownerCompleted && request.requesterCompleted) {
-      request.completionStatus = "Completed";
-      request.agreementStatus = "Completed";
-    } else {
-      request.completionStatus = "Waiting for Both";
-    }
-
-    await request.save();
-
-    res.json({
-      success: true,
-      message: "Completion status updated successfully",
-      request: request
-    });
-
-  } catch (error) {
-    console.error("Complete swap error:", error);
-
-    res.status(500).json({
+        if (
+          request.status !== "Accepted" ||
+          request.agreementStatus !== "Confirmed"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Exchange method can be selected only after swap confirmation"
+          });
+        }
+  if (request.owner !== user) {
+    return res.status(403).json({
       success: false,
-      message: "Failed to update completion status",
-      error: error.message
+      message: "Only the clothing owner can select the exchange method"
     });
   }
-});
-/* =====================================================
-   GET SINGLE SWAP REQUEST
-===================================================== */
+  if (
+          request.exchangeMethod &&
+          request.exchangeMethod !== "Not Selected"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Exchange method has already been selected"
+          });
+        }
 
-app.get(
-  "/api/swap-requests/:id",
-  async function (req, res) {
+        request.exchangeMethod = exchangeMethod;
 
+        await request.save();
+
+        res.json({
+          success: true,
+          message:
+            "Exchange method selected successfully",
+          request: request
+        });
+      } catch (error) {
+        console.error(
+          "Exchange Method Error:",
+          error
+        );
+
+        res.status(500).json({
+          success: false,
+          message: error.message
+        });
+      }
+    }
+  ),
+  app.put("/api/swap-requests/:id/complete", async function (req, res) {
     try {
+      const id = req.params.id;
+      const user = req.body.user;
+      const userEmail =
+          req.body.userEmail || "";
 
-      const id =
-        req.params.id;
-
-      if (
-        !mongoose.Types.ObjectId.isValid(id)
-      ) {
-
+      if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
           message: "Invalid swap request ID"
         });
       }
 
-      const request =
-        await SwapRequest.findById(id);
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: "User is required"
+        });
+      }
+
+  const request = await SwapRequest.findById(id);
+
+  if (!request) {
+    return res.status(404).json({
+      success: false,
+      message: "Swap request not found"
+    });
+  }
+
+  const wasAlreadyCompleted =
+    request.completionStatus === "Completed";
+
+      if (request.agreementStatus !== "Confirmed") {
+        return res.status(400).json({
+          success: false,
+          message: "Swap must be confirmed before marking as completed"
+        });
+      }
+      
+  /* COURIER DELIVERY MUST BE VERIFIED BEFORE COMPLETION */
+
+  if (
+    request.exchangeMethod === "Courier" ||
+    request.exchangeMethod === "Courier Delivery"
+  ) {
+    const shipment = await Shipment.findOne({
+      swapRequestId: String(request._id)
+    });
+
+    if (
+      !shipment ||
+      shipment.otpVerified !== true ||
+      shipment.deliveryConfirmed !== true
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "The parcel must be delivered and its OTP verified before completing the swap."
+      });
+    }
+  }
+
+
+      const normalizedUserEmail =
+    String(userEmail || "").trim().toLowerCase();
+
+  const isOwnerByEmail =
+    request.ownerEmail &&
+    request.ownerEmail.toLowerCase() ===
+      normalizedUserEmail;
+
+  const isRequesterByEmail =
+    request.requesterEmail &&
+    request.requesterEmail.toLowerCase() ===
+      normalizedUserEmail;
+
+  const isOwnerByName =
+    request.owner === user;
+
+  const isRequesterByName =
+    request.requester === user;
+
+  if (
+    !isOwnerByEmail &&
+    !isRequesterByEmail &&
+    !isOwnerByName &&
+    !isRequesterByName
+  ) {
+    return res.status(403).json({
+      success: false,
+      message: "You are not part of this swap"
+    });
+  }
+
+    if (
+    isOwnerByEmail ||
+    (!request.ownerEmail && isOwnerByName)
+  ) {
+    request.ownerCompleted = true;
+  }
+
+  if (
+    isRequesterByEmail ||
+    (!request.requesterEmail && isRequesterByName)
+  ) {
+    request.requesterCompleted = true;
+  }
+
+    
+  if (request.ownerCompleted && request.requesterCompleted) {
+    request.completionStatus = "Completed";
+    request.agreementStatus = "Completed";
+    await Clothing.findByIdAndDelete(request.clothingId);
+  } else {
+    request.completionStatus = "Waiting for Both";
+  }
+
+  await request.save();
+
+  if (
+    !wasAlreadyCompleted &&
+    request.completionStatus === "Completed" &&
+    request.ownerCompleted &&
+    request.requesterCompleted
+  ) {
+    await recordUserActivity({
+      userName: request.requester,
+      userEmail: request.requesterEmail,
+      activityType: "Swap Completed",
+      description:
+        "Swap completed for " + request.clothingTitle,
+      relatedId: String(request._id)
+    });
+  }
+
+      res.json({
+        success: true,
+        message: "Completion status updated successfully",
+        request: request
+      });
+
+    } catch (error) {
+      console.error("Complete swap error:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to update completion status",
+        error: error.message
+      });
+    }
+  }),
+
+
+  app.get(
+    "/api/swap-requests/:id",
+    async function (req, res) {
+
+      try {
+
+        const id =
+          req.params.id;
+
+        if (
+          !mongoose.Types.ObjectId.isValid(id)
+        ) {
+
+          return res.status(400).json({
+            success: false,
+            message: "Invalid swap request ID"
+          });
+        }
+
+        const request =
+          await SwapRequest.findById(id);
+
+        if (!request) {
+
+          return res.status(404).json({
+            success: false,
+            message: "Swap request not found"
+          });
+        }
+
+        res.json(request);
+
+      } catch (error) {
+
+        console.error(
+          "Get single swap request error:",
+          error
+        );
+
+        res.status(500).json({
+          success: false,
+          message: "Failed to load swap request",
+          error: error.message
+        });
+      }
+    }
+  ),
+
+// DELETE SWAP REQUEST
+app.delete(
+  "/api/swap-requests/:id",
+  requireAuth,
+  requireNoHandToHandOverdue,
+  async function (req, res) {
+    try {
+      const id = req.params.id;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid swap request ID"
+        });
+      }
+
+      const request = await SwapRequest.findById(id);
 
       if (!request) {
-
         return res.status(404).json({
           success: false,
           message: "Swap request not found"
         });
       }
 
-      res.json(request);
+      const currentUserEmail =
+        String(req.user.email || "")
+          .trim()
+          .toLowerCase();
+
+      const ownerEmail =
+        String(request.ownerEmail || "")
+          .trim()
+          .toLowerCase();
+
+      const requesterEmail =
+        String(request.requesterEmail || "")
+          .trim()
+          .toLowerCase();
+
+      if (
+        currentUserEmail !== ownerEmail &&
+        currentUserEmail !== requesterEmail
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not allowed to delete this swap request"
+        });
+      }
+
+      await SwapRequest.findByIdAndDelete(id);
+
+      return res.json({
+        success: true,
+        message: "Swap request deleted successfully"
+      });
 
     } catch (error) {
+      console.error("Delete swap request error:", error);
 
-      console.error(
-        "Get single swap request error:",
-        error
-      );
-
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message: "Failed to load swap request",
+        message: "Failed to delete swap request",
         error: error.message
       });
     }
   }
 );
-/* =====================================================
-   DELETE SWAP REQUEST
-===================================================== */
 
-app.delete(
-  "/api/swap-requests/:id",
-  async function (req, res) {
+  app.delete(
+    "/api/admin/clothes/:id",
+    requireAdmin,
+    async function (req, res) {
+      try {
+        const id = req.params.id;
 
-    try {
-
-      const id =
-        req.params.id;
-
-
-      if (
-        !mongoose.Types.ObjectId.isValid(id)
-      ) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "Invalid swap request ID"
-        });
-      }
-
-
-      const request =
-        await SwapRequest.findById(id);
-
-
-      if (!request) {
-
-        return res.status(404).json({
-
-          success: false,
-
-          message:
-            "Swap request not found"
-        });
-      }
-
-
-      /* DELETE RELATED MESSAGES */
-
-      await Message.deleteMany({
-        swapRequestId:
-          request._id
-      });
-
-
-      await SwapRequest.findByIdAndDelete(
-        id
-      );
-
-
-      res.json({
-
-        success: true,
-
-        message:
-          "Swap request deleted successfully"
-      });
-
-    } catch (error) {
-
-      console.error(
-        "Delete swap request error:",
-        error
-      );
-
-      res.status(500).json({
-
-        success: false,
-
-        message:
-          "Failed to delete swap request",
-
-        error:
-          error.message
-      });
-    }
-  }
-);
-
-
-/* =====================================================
-   CHAT MESSAGES
-===================================================== */
-
-
-/* GET MESSAGES */
-
-app.get(
-  "/api/messages/:swapRequestId",
-  async function (req, res) {
-
-    try {
-
-      const swapRequestId =
-        req.params.swapRequestId;
-
-
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          swapRequestId
-        )
-      ) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "Invalid swap request ID"
-        });
-      }
-
-
-      const messages =
-        await Message
-          .find({
-            swapRequestId:
-              swapRequestId
-          })
-          .sort({
-            createdAt: 1
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid clothing ID"
           });
+        }
 
+        const clothing = await Clothing.findById(id);
 
-      res.json(messages);
+        if (!clothing) {
+          return res.status(404).json({
+            success: false,
+            message: "Clothing not found"
+          });
+        }
 
-    } catch (error) {
+        if (
+          clothing.isDeleted === true ||
+          clothing.listingStatus === "Removed"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Clothing is already removed"
+          });
+        }
 
-      console.error(
-        "Failed to fetch messages:",
-        error
-      );
+        clothing.isDeleted = true;
+        clothing.listingStatus = "Removed";
+        clothing.status = "Removed";
+        clothing.deletedAt = new Date();
+        clothing.deletedBy = req.user.email;
 
-      res.status(500).json({
+        await clothing.save();
 
-        success: false,
+        res.set("Cache-Control", "no-store");
 
-        message:
-          "Failed to fetch messages",
+        return res.json({
+          success: true,
+          message: "Clothing listing removed by admin",
+          clothing
+        });
 
-        error:
-          error.message
-      });
+      } catch (error) {
+        console.error("Admin delete clothing error:", error);
+
+        return res.status(500).json({
+          success: false,
+          message: "Failed to remove clothing listing",
+          error: error.message
+        });
+      }
     }
-  }
-);
+  );
 
-
-/* SEND MESSAGE */
-
-app.post(
-  "/api/messages",
-  async function (req, res) {
-
-    try {
-
-      const {
-        swapRequestId,
-        sender,
-        text
-      } = req.body;
-
-
-      if (
-        !swapRequestId ||
-        !sender ||
-        !text
-      ) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "Swap request ID, sender and text are required"
-        });
-      }
-
-
-      if (
-        !mongoose.Types.ObjectId.isValid(
-          swapRequestId
-        )
-      ) {
-
-        return res.status(400).json({
-
-          success: false,
-
-          message:
-            "Invalid swap request ID"
-        });
-      }
-
-
-      const request =
-        await SwapRequest.findById(
-          swapRequestId
-        );
-
-
-      if (!request) {
-
-        return res.status(404).json({
-
-          success: false,
-
-          message:
-            "Swap request not found"
-        });
-      }
-
-
-      /* ONLY OWNER OR REQUESTER CAN CHAT */
-
-      if (
-        request.owner !== sender &&
-        request.requester !== sender
-      ) {
-
-        return res.status(403).json({
-
-          success: false,
-
-          message:
-            "You are not part of this swap"
-        });
-      }
-
-
-      /* DETERMINE RECEIVER */
-
-      let receiver;
-
-
-      if (
-        request.owner === sender
-      ) {
-
-        receiver =
-          request.requester;
-
-      } else {
-
-        receiver =
-          request.owner;
-      }
-
-
-      const newMessage =
-        new Message({
-
-          swapRequestId:
-            swapRequestId,
-
-          sender:
-            sender,
-
-          receiver:
-            receiver,
-
-          text:
-            text.trim()
-        });
-
-
-      await newMessage.save();
-      if (req.body.chatNotificationsEnabled === true) {
-            /* =====================================================
-         CREATE CHAT NOTIFICATION
-      ===================================================== */
+  app.get(
+    "/api/messages/:swapRequestId",
+    async function (req, res) {
 
       try {
 
-        let receiverEmail = "";
-
-        if (
-          request.owner === sender
-        ) {
-
-          receiverEmail =
-            String(
-              request.requesterEmail || ""
-            )
-              .trim()
-              .toLowerCase();
-
-        } else {
-
-          receiverEmail =
-            String(
-              request.ownerEmail || ""
-            )
-              .trim()
-              .toLowerCase();
-        }
-
-
-        const senderEmail =
-          request.owner === sender
-            ? String(
-                request.ownerEmail || ""
-              )
-                .trim()
-                .toLowerCase()
-            : String(
-                request.requesterEmail || ""
-              )
-                .trim()
-                .toLowerCase();
+        const swapRequestId =
+          req.params.swapRequestId;
 
 
         if (
-          receiverEmail &&
-          senderEmail &&
-          receiverEmail !== senderEmail
+          !mongoose.Types.ObjectId.isValid(
+            swapRequestId
+          )
         ) {
 
-          await Notification.create({
+          return res.status(400).json({
 
-            recipient:
-              receiverEmail,
-
-            sender:
-              senderEmail,
-
-            senderName:
-              sender,
-
-            type:
-              "chat",
-
-            title:
-              "New Chat Message",
+            success: false,
 
             message:
-              sender +
-              " sent you a new message about your swap.",
-
-            relatedId:
-              String(
-                swapRequestId
-              ),
-
-            isRead:
-              false
+              "Invalid swap request ID"
           });
-
         }
 
-      } catch (
-        chatNotificationError
-      ) {
+
+        const messages =
+          await Message
+            .find({
+              swapRequestId:
+                swapRequestId
+            })
+            .sort({
+              createdAt: 1
+            });
+
+
+        res.json(messages);
+
+      } catch (error) {
 
         console.error(
-          "Chat notification error:",
-          chatNotificationError
+          "Failed to fetch messages:",
+          error
         );
 
+        res.status(500).json({
+
+          success: false,
+
+          message:
+            "Failed to fetch messages",
+
+          error:
+            error.message
+        });
       }
-
-
-      res.status(201).json({
-
-        success: true,
-
-        message:
-          "Message sent successfully",
-
-        savedMessage:
-          newMessage
-      });
-
-    }}
-     catch (error) {
-
-      console.error(
-        "Send message error:",
-        error
-      );
-
-      res.status(500).json({
-
-        success: false,
-
-        message:
-          "Failed to send message",
-
-        error:
-          error.message
-      });
     }
-  }
-);
-/* =====================================================
-   HAND-TO-HAND EXCHANGE
-   SAVE MEETING DETAILS
-===================================================== */
+  );
+const CHAT_WARNING =
+  "This chat is only for ClothSwap-related communication.";
 
-app.put(
-  "/api/swap-requests/:id/local-exchange",
+function isClothSwapRelatedMessage(message) {
+  const text = String(message || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Clearly inappropriate personal or romantic messages.
+  const blockedPatterns = [
+    /\bi\s+love\s+you\b/,
+    /\blove\s+u\b/,
+    /\bi\s+like\s+you\b/,
+    /\b(date|dating)\s+you\b/,
+    /\bdate\s+me\b/,
+    /\bgo\s+on\s+a\s+date\b/,
+    /\bgirlfriend\b/,
+    /\bboyfriend\b/,
+    /\bkiss\b/,
+    /\bflirt(?:ing)?\b/,
+    /\bromance\b/,
+    /\bsweetheart\b/,
+    /\bdarling\b/,
+    /\bcrush\s+on\s+you\b/,
+    /\bare\s+you\s+single\b/,
+    /\bselfie\b/,
+    /\byour\s+phone\s+number\b/,
+    /\byour\s+instagram\b/,
+    /\byour\s+whatsapp\b/,
+    /\byour\s+snapchat\b/
+  ];
+
+  if (blockedPatterns.some(function (pattern) {
+    return pattern.test(text);
+  })) {
+    return false;
+  }
+
+  // ClothSwap-related topics.
+  const allowedTopics =
+    /\b(cloth|clothes|clothing|kapda|kapde|dress|shirt|t-shirt|jeans|kurti|top|jacket|trouser|shoes|item|listing|photo|picture|pic|size|colour|color|condition|quality|brand|swap|swapping|exchange|offer|request|value|price|courier|delivery|deliver|parcel|shipment|shipping|tracking|dispatch|pickup|pick up|hand to hand|local exchange|meeting|meet|location|address|place|date|time|tomorrow|today|otp|received|send|share|available|available|packing|pack)\b/i;
+
+  // Normal short replies needed during a swap conversation.
+  const shortReplies =
+  /^(ok|okay|okey|ohk|okk|yes|no|yep|nope|sure|fine|alright|all right|right|hmm|hm|hmmm|acha|accha|achha|saru|saras|barabar|thik|thik che|theek hai|ha|haa|han|haan|na|naa|kem cho|majama|maja ma|good|nice|great|hello|hi|hey|bye|good morning|good afternoon|good evening|good night|thanks|thank you|thankyou|thank u|thnx|welcome|you're welcome|ur welcome|please|pls|noted|got it|understood|done|perfect|no problem|its okay|it's okay|koi baat nahi|koi problem nahi|sorry|my bad|haha|hehe|lol|😂|👍|🙏)[.!?, ]*$/i;  return allowedTopics.test(text) || shortReplies.test(text);
+}
+
+  app.post(
+  "/api/messages",
+  requireAuth,
+  requireNoHandToHandOverdue,
   async function (req, res) {
     try {
-      const {
-        user,
-        meetingLocation,
-        meetingDate,
-        meetingTime,
-        meetingNotes
-      } = req.body;
+      const { swapRequestId, sender, text } = req.body;
 
-      if (!user) {
+      if (!swapRequestId || !sender || !text || !text.trim()) {
         return res.status(400).json({
           success: false,
-          message: "User information is required"
+          message: "Swap request ID, sender and text are required"
+        });
+      }
+if (!isClothSwapRelatedMessage(text)) {
+  return res.status(400).json({
+    success: false,
+    message: CHAT_WARNING
+  });
+}
+      if (!mongoose.Types.ObjectId.isValid(swapRequestId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid swap request ID"
         });
       }
 
-      if (!meetingLocation || !meetingDate || !meetingTime) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Meeting location, date and time are required"
-        });
-      }
-
-      const request =
-        await SwapRequest.findById(req.params.id);
+      const request = await SwapRequest.findById(swapRequestId);
 
       if (!request) {
         return res.status(404).json({
@@ -2122,618 +3667,717 @@ app.put(
         });
       }
 
-      /* ================= PARTICIPANT CHECK ================= */
-
-      if (
-        request.owner !== user &&
-        request.requester !== user
-      ) {
+      if (request.owner !== sender && request.requester !== sender) {
         return res.status(403).json({
           success: false,
-          message:
-            "Only swap participants can set meeting details"
+          message: "You are not part of this swap"
         });
       }
 
-      /* ================= CONFIRMED SWAP CHECK ================= */
+      const receiver =
+        request.owner === sender ? request.requester : request.owner;
 
-      if (
-        request.status !== "Accepted" ||
-        request.agreementStatus !== "Confirmed"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Meeting details can be added only after the swap is confirmed"
-        });
+      const newMessage = new Message({
+        swapRequestId,
+        sender,
+        receiver,
+        text: text.trim()
+      });
+
+      await newMessage.save();
+
+      // Notification is optional; message saving is not dependent on it.
+      if (req.body.chatNotificationsEnabled === true) {
+        try {
+          const receiverEmail = String(
+            request.owner === sender
+              ? request.requesterEmail || ""
+              : request.ownerEmail || ""
+          ).trim().toLowerCase();
+
+          const senderEmail = String(
+            request.owner === sender
+              ? request.ownerEmail || ""
+              : request.requesterEmail || ""
+          ).trim().toLowerCase();
+
+          if (
+            receiverEmail &&
+            senderEmail &&
+            receiverEmail !== senderEmail
+          ) {
+            await Notification.create({
+              recipient: receiverEmail,
+              sender: senderEmail,
+              senderName: sender,
+              type: "chat",
+              title: "New Chat Message",
+              message: sender + " sent you a new message about your swap.",
+              relatedId: String(swapRequestId),
+              isRead: false
+            });
+          }
+        } catch (chatNotificationError) {
+          console.error("Chat notification error:", chatNotificationError);
+        }
       }
 
-      /* ================= EXCHANGE METHOD ================= */
-
-      request.exchangeMethod =
-        "Local Exchange";
-
-      request.meetingLocation =
-        meetingLocation.trim();
-
-      request.meetingDate =
-        meetingDate;
-
-      request.meetingTime =
-        meetingTime;
-
-      request.meetingNotes =
-        meetingNotes
-          ? meetingNotes.trim()
-          : "";
-
-      await request.save();
-
-      res.json({
+      // Always respond after saving, whether notifications are enabled or not.
+      return res.status(201).json({
         success: true,
-        message:
-          "Hand-to-hand exchange details saved successfully",
-        request: request
+        message: "Message sent successfully",
+        savedMessage: newMessage
       });
 
     } catch (error) {
+      console.error("Send message error:", error);
 
-      console.error(
-        "Local Exchange Setup Error:",
-        error
-      );
-
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
-        message:
-          "Failed to save hand-to-hand exchange details",
-        error:
-          error.message
+        message: "Failed to send message",
+        error: error.message
       });
     }
-  }
-);
+  });
 
 
-/* =====================================================
-   HAND-TO-HAND EXCHANGE
-   OWNER / REQUESTER CONFIRMATION
-===================================================== */
-
-app.put(
-  "/api/swap-requests/:id/local-exchange/complete",
+  app.put(
+  "/api/swap-requests/:id/local-exchange",
+  requireAuth,
+  requireNoHandToHandOverdue,
   async function (req, res) {
+      try {
+        const {
+          user,
+          meetingLocation,
+          meetingDate,
+          meetingTime,
+          meetingNotes
+        } = req.body;
+
+        if (!user) {
+          return res.status(400).json({
+            success: false,
+            message: "User information is required"
+          });
+        }
+
+        if (!meetingLocation || !meetingDate || !meetingTime) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Meeting location, date and time are required"
+          });
+        }
+
+        const request =
+          await SwapRequest.findById(req.params.id);
+
+        if (!request) {
+          return res.status(404).json({
+            success: false,
+            message: "Swap request not found"
+          });
+        }
+
+
+        if (
+          request.owner !== user &&
+          request.requester !== user
+        ) {
+          return res.status(403).json({
+            success: false,
+            message:
+              "Only swap participants can set meeting details"
+          });
+        }
+
+
+        if (
+          request.status !== "Accepted" ||
+          request.agreementStatus !== "Confirmed"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Meeting details can be added only after the swap is confirmed"
+          });
+        }
+
+
+        request.exchangeMethod =
+          "Local Exchange";
+
+        request.meetingLocation =
+          meetingLocation.trim();
+
+        request.meetingDate =
+          meetingDate;
+
+        request.meetingTime =
+          meetingTime;
+
+        request.meetingNotes =
+          meetingNotes
+            ? meetingNotes.trim()
+            : "";
+
+        await request.save();
+
+        res.json({
+          success: true,
+          message:
+            "Hand-to-hand exchange details saved successfully",
+          request: request
+        });
+
+      } catch (error) {
+
+        console.error(
+          "Local Exchange Setup Error:",
+          error
+        );
+
+        res.status(500).json({
+          success: false,
+          message:
+            "Failed to save hand-to-hand exchange details",
+          error:
+            error.message
+        });
+      }
+    }
+  );
+
+
+ app.put(
+  "/api/swap-requests/:id/local-exchange/complete",
+  requireAuth,
+  async function (req, res) {
+      try {
+        const {
+          user
+        } = req.body;
+
+        if (!user) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "User information is required"
+          });
+        }
+
+        const request =
+          await SwapRequest.findById(req.params.id);
+
+        if (!request) {
+          return res.status(404).json({
+            success: false,
+            message:
+              "Swap request not found"
+          });
+        }
+
+
+        if (
+          request.owner !== user &&
+          request.requester !== user
+        ) {
+          return res.status(403).json({
+            success: false,
+            message:
+              "Only swap participants can confirm the exchange"
+          });
+        }
+
+
+        if (
+          request.exchangeMethod !==
+          "Local Exchange"
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "This swap is not using hand-to-hand exchange"
+          });
+        }
+
+
+  if (request.owner === user) {
+    request.ownerCompleted = true;
+  }
+
+  if (request.requester === user) {
+    request.requesterCompleted = true;
+  }
+        if (
+          request.ownerCompleted === true &&
+          request.requesterCompleted === true
+        ) {
+
+          request.completionStatus =
+            "Completed";
+
+          request.agreementStatus =
+            "Completed";
+
+        } else {
+
+          request.completionStatus =
+            "Waiting for Both";
+        }
+
+        await request.save();
+
+        res.json({
+          success: true,
+
+          message:
+            request.completionStatus ===
+            "Completed"
+              ? "Hand-to-hand exchange completed successfully"
+              : "Your exchange confirmation has been recorded. Waiting for the other person.",
+
+          request:
+            request
+        });
+
+      } catch (error) {
+
+        console.error(
+          "Local Exchange Completion Error:",
+          error
+        );
+
+        res.status(500).json({
+          success: false,
+          message:
+            "Failed to confirm hand-to-hand exchange",
+          error:
+            error.message
+        });
+      }
+    }
+  );
+
+  app.post(
+    "/api/auth/google",
+    async function (req, res) {
+
+      try {
+
+        const credential = req.body.credential;
+
+        if (!credential) {
+          return res.status(400).json({
+            success: false,
+            message: "Google credential is required"
+          });
+        }
+
+        const ticket =
+          await googleClient.verifyIdToken({
+            idToken: credential,
+            audience:
+              process.env.GOOGLE_CLIENT_ID
+          });
+
+        const payload =
+          ticket.getPayload();
+
+        const googleId = payload.sub;
+        const email =
+          String(payload.email || "")
+            .trim()
+            .toLowerCase();
+
+        const name =
+          payload.name ||
+          payload.given_name ||
+          "Google User";
+
+        if (!googleId || !email) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Google account information is incomplete"
+          });
+        }
+
+        let user =
+          await User.findOne({
+            email: email
+          });
+
+        
+  if (!user) {
+
+    user = new User({
+      name: name,
+      email: email,
+      password: await bcrypt.hash(
+        require("crypto").randomBytes(32).toString("hex"),
+        10
+      ),
+      location: "Not specified"
+    });
+  await user.save();
+  }
+  // BLOCKED USER CHECK — AHI ADD KARVU
+  if (user.status === "Blocked") {
+    return res.status(403).json({
+      success: false,
+      message: "Your account has been blocked."
+    });
+  }
+  const token = await createRefreshSession(user, res);
+
+
+  await recordUserActivity({
+    userId: user._id,
+    userName: user.name,
+    userEmail: user.email,
+    activityType: "Login",
+    description: "User logged in with Google"
+  });
+  res.json({
+    success: true,
+    message: "Google login successful",
+    token: token,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      location: user.location,
+      role: user.role
+    }
+  });
+      } catch (error) {
+
+        console.error(
+          "Google login error:",
+          error
+        );
+
+        res.status(401).json({
+          success: false,
+          message:
+            "Google authentication failed"
+        });
+      }
+    }
+  );
+
+
+  app.post("/api/users", async function (req, res) {
     try {
       const {
-        user
+        name,
+        email,
+        location,
+        password
       } = req.body;
 
-      if (!user) {
+      if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
-          message:
-            "User information is required"
+          message: "Name, email and password are required"
         });
       }
 
-      const request =
-        await SwapRequest.findById(req.params.id);
+      const normalizedEmail = email.trim().toLowerCase();
 
-      if (!request) {
-        return res.status(404).json({
-          success: false,
-          message:
-            "Swap request not found"
-        });
-      }
+      const existingUser = await User.findOne({
+        email: normalizedEmail
+      });
 
-      /* ================= PARTICIPANT CHECK ================= */
+      if (existingUser) {
+    return res.status(409).json({
+      success: false,
+      message: "You are already registered. Please login with your existing account."
+    });
+  }
 
-      if (
-        request.owner !== user &&
-        request.requester !== user
-      ) {
-        return res.status(403).json({
-          success: false,
-          message:
-            "Only swap participants can confirm the exchange"
-        });
-      }
+      const user = new User({
+        name: name.trim(),
+        email: normalizedEmail,
+        password: await bcrypt.hash(password, 10),
+        location: location
+          ? location.trim()
+          : "Not specified"
+      });
 
-      /* ================= LOCAL EXCHANGE CHECK ================= */
+      await user.save();
 
-      if (
-        request.exchangeMethod !==
-        "Local Exchange"
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "This swap is not using hand-to-hand exchange"
-        });
-      }
+      await recordUserActivity({
+        userId: user._id,
+        userName: user.name,
+        userEmail: user.email,
+        activityType: "Registration",
+        description: "New user registered"
+      });
 
-      /* ================= CONFIRM USER ================= */
-
-if (
-  isOwnerByEmail ||
-  (!request.ownerEmail && isOwnerByName)
-) {
-  request.ownerAgreed =
-    true;
-}
-
-if (
-  isRequesterByEmail ||
-  (!request.requesterEmail && isRequesterByName)
-) {
-  request.requesterAgreed =
-    true;
-}
-
-/* ================= CHECK BOTH ================= */
-      if (
-        request.ownerCompleted === true &&
-        request.requesterCompleted === true
-      ) {
-
-        request.completionStatus =
-          "Completed";
-
-        request.agreementStatus =
-          "Completed";
-
-      } else {
-
-        request.completionStatus =
-          "Waiting for Both";
-      }
-
-      await request.save();
-
-      res.json({
+      return res.status(201).json({
         success: true,
-
-        message:
-          request.completionStatus ===
-          "Completed"
-            ? "Hand-to-hand exchange completed successfully"
-            : "Your exchange confirmation has been recorded. Waiting for the other person.",
-
-        request:
-          request
+        message: "User registered successfully",
+        user: user
       });
 
     } catch (error) {
+      console.error("User registration error:", error);
 
-      console.error(
-        "Local Exchange Completion Error:",
-        error
-      );
+      return res.status(500).json({
+        success: false,
+        message: "Failed to register user",
+        error: error.message
+      });
+    }
+  });
+
+  app.post("/api/auth/login", async function (req, res) {
+    try {
+      const {
+        name,
+        email,
+        password
+      } = req.body;
+
+      if (!name || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Username, email and password are required"
+        });
+      }
+
+      const user = await User.findOne({
+        name: name.trim(),
+        email: email.trim().toLowerCase()
+      });
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Please register first or check your username and email."
+        });
+      }
+
+      const passwordMatch = await bcrypt.compare(password, user.password);
+
+  if (!passwordMatch) {
+        return res.status(401).json({
+          success: false,
+          message: "Incorrect password."
+        });
+      }
+
+      if (user.status === "Blocked") {
+        return res.status(403).json({
+          success: false,
+          message: "Your account has been blocked."
+        });
+      }
+  const token = await createRefreshSession(user, res);
+  await recordUserActivity({
+    userId: user._id,
+    userName: user.name,
+    userEmail: user.email,
+    activityType: "Login",
+    description: "User logged in"
+  });
+
+  res.json({
+    success: true,
+    message: "Login successful",
+    token: token,
+    user: {
+      name: user.name,
+      email: user.email,
+      location: user.location,
+      role: user.role
+    }
+  });
+    } catch (error) {
+      console.error("User login error:", error);
 
       res.status(500).json({
         success: false,
-        message:
-          "Failed to confirm hand-to-hand exchange",
-        error:
-          error.message
+        message: "Failed to login",
+        error: error.message
       });
     }
-  }
-);
-// GOOGLE SIGN IN
+  });
+  mongoose
+    .connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 15000
+    })
+    .then(function () {
+      
+// Run Hand-to-Hand deadline checks every minute.
+setInterval(function () {
+  checkHandToHandDeadlines();
+}, 60 * 1000);
 
-app.post(
-  "/api/auth/google",
-  async function (req, res) {
+// Also check once immediately after database connection.
+checkHandToHandDeadlines();
 
-    try {
 
-      const credential = req.body.credential;
-
-      if (!credential) {
-        return res.status(400).json({
-          success: false,
-          message: "Google credential is required"
-        });
-      }
-
-      const ticket =
-        await googleClient.verifyIdToken({
-          idToken: credential,
-          audience:
-            process.env.GOOGLE_CLIENT_ID
-        });
-
-      const payload =
-        ticket.getPayload();
-
-      const googleId = payload.sub;
-      const email =
-        String(payload.email || "")
-          .trim()
-          .toLowerCase();
-
-      const name =
-        payload.name ||
-        payload.given_name ||
-        "Google User";
-
-      if (!googleId || !email) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Google account information is incomplete"
-        });
-      }
-
-      let user =
-        await User.findOne({
-          email: email
-        });
-
-      if (!user) {
-
-        user = new User({
-          name: name,
-          email: email,
-          location: "Not specified"
-        });
-
-        await user.save();
-
-      }
-
-     const token = jwt.sign(
-  {
-    userId: user._id
-  },
-  process.env.JWT_SECRET,
-  {
-    expiresIn: "7d"
-  }
-);
-
-res.json({
-  success: true,
-  message: "Google login successful",
-  token: token,
-  user: {
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    location: user.location,
-    role: user.role
-  }
-});
-    } catch (error) {
-
-      console.error(
-        "Google login error:",
-        error
+      console.log(
+        "MongoDB connected successfully!"
       );
 
-      res.status(401).json({
-        success: false,
-        message:
-          "Google authentication failed"
-      });
-    }
-  }
-);
-  // USER REGISTRATION
-
-app.post("/api/users", async function (req, res) {
-  try {
-    const {
-  name,
-  email,
-  location,
-  password
-} = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-       message: "Name, email and password are required"
-      });
-    }
-
-   const normalizedEmail = email.trim().toLowerCase();
-
-const existingUser = await User.findOne({
-  email: normalizedEmail
-});
-
-if (existingUser) {
-  existingUser.name = name.trim();
- existingUser.password = await bcrypt.hash(password, 10);
-  existingUser.location = location
-    ? location.trim()
-    : "Not specified";
-
-  await existingUser.save();
-
-  return res.status(200).json({
-    success: true,
-    message: "User registered successfully",
-    user: existingUser
-  });
-}
-
-    const user = new User({
-  name: name.trim(),
-  email: email.trim().toLowerCase(),
-  password: await bcrypt.hash(password, 10),
-  location: location
-    ? location.trim()
-    : "Not specified"
-});
-
-    await user.save();
-
-    res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      user: user
-    });
-
-  } catch (error) {
-    console.error("User registration error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to register user",
-      error: error.message
-    });
-  }
-});
-//  USER LOGIN
-
-app.post("/api/auth/login", async function (req, res) {
-  try {
-    const {
-      name,
-      email,
-      password
-    } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Username, email and password are required"
-      });
-    }
-
-    const user = await User.findOne({
-      name: name.trim(),
-      email: email.trim().toLowerCase()
-    });
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Please register first or check your username and email."
-      });
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-
-if (!passwordMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Incorrect password."
-      });
-    }
-
-    if (user.status === "Blocked") {
-      return res.status(403).json({
-        success: false,
-        message: "Your account has been blocked."
-      });
-    }
-
-    const token = jwt.sign(
-  {
-    userId: user._id
-  },
-  process.env.JWT_SECRET,
-  {
-    expiresIn: "7d"
-  }
-);
-
-res.json({
-  success: true,
-  message: "Login successful",
-  token: token,
-  user: {
-    name: user.name,
-    email: user.email,
-    location: user.location,
-    role: user.role
-  }
-});
-  } catch (error) {
-    console.error("User login error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to login",
-      error: error.message
-    });
-  }
-});
-/* =====================================================
-   DATABASE CONNECTION
-===================================================== */
-
-mongoose
-  .connect(process.env.MONGO_URI, {
-    serverSelectionTimeoutMS: 15000
-  })
-  .then(function () {
-
-    console.log(
-      "MongoDB connected successfully!"
-    );
-// =====================================================
-// NOTIFICATION ROUTES
-// =====================================================
-
-app.post("/api/notifications", async function (req, res) {
-  try {
-    const notification = new Notification({
-      recipient: req.body.recipient,
-      sender: req.body.sender || "",
-      senderName: req.body.senderName || "",
-      type: req.body.type,
-      title: req.body.title,
-      message: req.body.message,
-      relatedId: req.body.relatedId || "",
-      isRead: false
-    });
-
-    const savedNotification = await notification.save();
-
-    res.status(201).json({
-      message: "Notification created successfully.",
-      notification: savedNotification
-    });
-
-  } catch (error) {
-    console.log("Notification creation error:", error);
-
-    res.status(500).json({
-      message: "Failed to create notification."
-    });
-  }
-});
-
-app.get("/api/notifications/:recipient", async function (req, res) {
-  try {
-    const notifications = await Notification.find({
-      recipient: req.params.recipient
-    }).sort({
-      createdAt: -1
-    });
-
-    res.json({
-      notifications: notifications
-    });
-
-  } catch (error) {
-    console.log("Notification loading error:", error);
-
-    res.status(500).json({
-      message: "Failed to load notifications."
-    });
-  }
-});
-
-app.put("/api/notifications/:id/read", async function (req, res) {
-  
-  try {
-    const notification = await Notification.findByIdAndUpdate(
-      req.params.id,
-      {
-        isRead: true
-      },
-      {
-        new: true
-      }
-    );
-
-    if (!notification) {
-      return res.status(404).json({
-        message: "Notification not found."
-      });
-    }
-
-    res.json({
-      message: "Notification marked as read.",
-      notification: notification
-    });
-
-  } catch (error) {
-    console.log("Notification read error:", error);
-
-    res.status(500).json({
-      message: "Failed to update notification."
-    });
-  }
-}); 
-/* =====================================================
-   DELETE NOTIFICATION
-===================================================== */
-
-app.delete(
-  "/api/notifications/:id",
-  async function (req, res) {
+  app.post("/api/notifications", async function (req, res) {
     try {
-      const id = req.params.id;
+      const notification = new Notification({
+        recipient: req.body.recipient,
+        sender: req.body.sender || "",
+        senderName: req.body.senderName || "",
+        type: req.body.type,
+        title: req.body.title,
+        message: req.body.message,
+        relatedId: req.body.relatedId || "",
+        isRead: false
+      });
 
-      if (
-        !mongoose.Types.ObjectId.isValid(id)
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid notification ID"
-        });
-      }
+      const savedNotification = await notification.save();
 
-      const notification =
-        await Notification.findById(id);
+      res.status(201).json({
+        message: "Notification created successfully.",
+        notification: savedNotification
+      });
+
+    } catch (error) {
+      console.log("Notification creation error:", error);
+
+      res.status(500).json({
+        message: "Failed to create notification."
+      });
+    }
+  });
+
+  app.get("/api/notifications/:recipient", async function (req, res) {
+    try {
+      const notifications = await Notification.find({
+        recipient: req.params.recipient
+      }).sort({
+        createdAt: -1
+      });
+
+      res.json({
+        notifications: notifications
+      });
+
+    } catch (error) {
+      console.log("Notification loading error:", error);
+
+      res.status(500).json({
+        message: "Failed to load notifications."
+      });
+    }
+  });
+
+  app.put("/api/notifications/:id/read", async function (req, res) {
+    
+    try {
+      const notification = await Notification.findByIdAndUpdate(
+        req.params.id,
+        {
+          isRead: true
+        },
+        {
+          new: true
+        }
+      );
 
       if (!notification) {
         return res.status(404).json({
-          success: false,
-          message:
-            "Notification not found"
+          message: "Notification not found."
         });
       }
 
-      await Notification.findByIdAndDelete(
-        id
-      );
-
       res.json({
-        success: true,
-        message:
-          "Notification deleted successfully"
+        message: "Notification marked as read.",
+        notification: notification
       });
 
     } catch (error) {
-      console.error(
-        "Notification delete error:",
-        error
-      );
+      console.log("Notification read error:", error);
 
       res.status(500).json({
-        success: false,
-        message:
-          "Failed to delete notification"
+        message: "Failed to update notification."
       });
     }
-  }
-);
+  }); 
 
-    app.listen(
-      PORT,
-      function () {
 
-        console.log(
-          `ClothSwap Backend running on http://localhost:${PORT}`
+  app.delete(
+    "/api/notifications/:id",
+    async function (req, res) {
+      try {
+        const id = req.params.id;
+
+        if (
+          !mongoose.Types.ObjectId.isValid(id)
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid notification ID"
+          });
+        }
+
+        const notification =
+          await Notification.findById(id);
+
+        if (!notification) {
+          return res.status(404).json({
+            success: false,
+            message:
+              "Notification not found"
+          });
+        }
+
+        await Notification.findByIdAndDelete(
+          id
         );
+
+        res.json({
+          success: true,
+          message:
+            "Notification deleted successfully"
+        });
+
+      } catch (error) {
+        console.error(
+          "Notification delete error:",
+          error
+        );
+
+        res.status(500).json({
+          success: false,
+          message:
+            "Failed to delete notification"
+        });
       }
-    );
-
-  })
-  .catch(function (error) {
-
-    console.error(
-      "MongoDB connection failed:",
-      error
-    );
+    }
+  );
+  app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "online" });
   });
+      app.listen(
+        PORT,
+        function () {
+
+          console.log(
+            `ClothSwap Backend running on http://localhost:${PORT}`
+          );
+        }
+      );
+
+    })
+    .catch(function (error) {
+
+      console.error(
+        "MongoDB connection failed:",
+        error
+      );
+    });

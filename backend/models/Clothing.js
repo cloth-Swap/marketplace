@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const clothingSchema = new mongoose.Schema(
@@ -6,6 +7,11 @@ const clothingSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
+    },
+    
+    brand: {
+      type: String,
+      default: ""
     },
 
     category: {
@@ -49,13 +55,44 @@ const clothingSchema = new mongoose.Schema(
     },
 
     ownerEmail: {
-  type: String,
-  default: ""
-},
+      type: String,
+      default: ""
+    },
 
     status: {
       type: String,
       default: "Available"
+    },
+
+    // Historical Listing Fields
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null
+    },
+
+    deletedBy: {
+      type: String,
+      default: null
+    },
+    removalReason: {
+  type: String,
+  default: ""
+},
+
+    listingStatus: {
+      type: String,
+      enum: ["Available", "Swapped", "Removed"],
+      default: "Available"
+    },
+
+    swappedAt: {
+      type: Date,
+      default: null
     }
   },
   {

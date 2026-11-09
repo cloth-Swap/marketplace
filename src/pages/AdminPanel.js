@@ -1,74 +1,149 @@
 import React, { useEffect, useState } from "react";
+import API_URL from "../api";
+import ExcelJS from "exceljs";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import "../style.css";
 
 function AdminPanel() {
   const [clothes, setClothes] = useState([]);
   const [swapRequests, setSwapRequests] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
   const [disputes, setDisputes] = useState([]);
+  const [reportedListings, setReportedListings] = useState([]);
+  const [selectedReports, setSelectedReports] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
+  const [dashboardCounts, setDashboardCounts] = useState(function () {
+  try {
+    return JSON.parse(
+      localStorage.getItem("clothswapAdminDashboardCounts") || "{}"
+    );
+  } catch (error) {
+    return {};
+  }
+});
 
-  useEffect(function () {
+useEffect(() => {
+  localStorage.setItem(
+    "clothswapAdminDashboardCounts",
+    JSON.stringify(dashboardCounts)
+  );
+}, [dashboardCounts]);
+  const [userSearch, setUserSearch] = useState("");
+  const [userStatusFilter, setUserStatusFilter] = useState("All");
+  const [userSortBy, setUserSortBy] = useState("Newest Users");
+  const [swapStatusFilter, setSwapStatusFilter] = useState("All");
+  const [disputeStatusFilter, setDisputeStatusFilter] = useState("All");
+const [disputeSearch, setDisputeSearch] = useState("");
+const [selectedDisputes, setSelectedDisputes] = useState([]);
+const [showDisputeCheckboxes, setShowDisputeCheckboxes] = useState(false);
+const [selectedDisputeHistory, setSelectedDisputeHistory] = useState(null);
+const [selectedDisputeImages, setSelectedDisputeImages] = useState([]);
+const [showReportCheckboxes, setShowReportCheckboxes] = useState(false);
+
+ useEffect(() => {
   loadAdminData();
   loadUsers();
   loadDisputes();
+  loadReportedListings();
+
+  const interval = setInterval(() => {
+    loadAdminData();
+  }, 30000);
+
+  return () => clearInterval(interval);
 }, []);
-
-
-  async function loadAdminData() {
+function updateDashboardCounts(newCounts) {
+  setDashboardCounts(function (previous) {
+    return {
+      ...previous,
+      ...newCounts
+    };
+  });
+}
+ async function loadAdminData() {
   try {
+    const [clothesResponse, requestsResponse] =
+      await Promise.all([
+        fetch(`${API_URL}/api/clothes`),
 
-    const clothesResponse = await fetch(
-      "http://localhost:5000/api/clothes"
-    );
+        fetch(`${API_URL}/api/admin/swap-requests`, {
+          headers: {
+            Authorization:
+              "Bearer " +
+              localStorage.getItem("clothswapToken")
+          }
+        })
+      ]);
 
-    const clothesData = await clothesResponse.json();
+    const [clothesData, requestsData] =
+      await Promise.all([
+        clothesResponse.json(),
+        requestsResponse.json()
+      ]);
 
-    if (Array.isArray(clothesData)) {
-      setClothes(clothesData);
-    } else if (
-      clothesData &&
-      Array.isArray(clothesData.clothes)
-    ) {
-      setClothes(clothesData.clothes);
-    } else {
-      setClothes([]);
+    if (clothesResponse.ok) {
+      let clothesList = [];
+
+      if (Array.isArray(clothesData)) {
+        clothesList = clothesData;
+      } else if (
+        clothesData &&
+        Array.isArray(clothesData.clothes)
+      ) {
+        clothesList = clothesData.clothes;
+      }
+
+      setClothes(clothesList);
+
+      updateDashboardCounts({
+        totalListings: clothesList.length
+      });
     }
 
-    const requestsResponse = await fetch(
-      "http://localhost:5000/api/admin/swap-requests",
-      {
-        headers: {
-          Authorization:
-            "Bearer " +
-            localStorage.getItem("clothswapToken")
-        }
+    if (requestsResponse.ok) {
+      let requestsList = [];
+
+      if (Array.isArray(requestsData)) {
+        requestsList = requestsData;
+      } else if (
+        requestsData &&
+        Array.isArray(requestsData.requests)
+      ) {
+        requestsList = requestsData.requests;
       }
-    );
 
-    const requestsData =
-      await requestsResponse.json();
+      setSwapRequests(requestsList);
 
-    if (Array.isArray(requestsData)) {
-      setSwapRequests(requestsData);
-    } else if (
-      requestsData &&
-      Array.isArray(requestsData.requests)
-    ) {
-      setSwapRequests(requestsData.requests);
-    } else {
-      setSwapRequests([]);
+      updateDashboardCounts({
+        totalSwapRequests: requestsList.length,
+        pendingRequests: requestsList.filter(
+          function (item) {
+            return item.status === "Pending";
+          }
+        ).length,
+        acceptedRequests: requestsList.filter(
+          function (item) {
+            return item.status === "Accepted";
+          }
+        ).length,
+        rejectedRequests: requestsList.filter(
+          function (item) {
+            return item.status === "Rejected";
+          }
+        ).length,
+        completedSwaps: requestsList.filter(
+          function (item) {
+            return item.completionStatus === "Completed";
+          }
+        ).length
+      });
     }
 
   } catch (error) {
-    console.log(
-      "Admin data loading error:",
-      error
-    );
-
-    setClothes([]);
-    setSwapRequests([]);
-
+    console.log("Admin data loading error:", error);
   } finally {
     setLoading(false);
   }
@@ -79,7 +154,7 @@ function AdminPanel() {
       setUsersLoading(true);
 
      const response = await fetch(
-  "http://localhost:5000/api/admin/users",
+`${API_URL}/api/admin/users`,
   {
     headers: {
       Authorization:
@@ -97,6 +172,17 @@ function AdminPanel() {
         Array.isArray(data.users)
       ) {
         setUsers(data.users);
+        updateDashboardCounts({
+  totalUsers: data.users.length,
+
+  activeUsers: data.users.filter(function (user) {
+    return user.status === "Active";
+  }).length,
+
+  blockedUsers: data.users.filter(function (user) {
+    return user.status === "Blocked";
+  }).length
+});
       } else {
         setUsers([]);
       }
@@ -112,7 +198,7 @@ function AdminPanel() {
 async function loadDisputes() {
   try {
    const response = await fetch(
-  "http://localhost:5000/api/admin/disputes",
+  `${API_URL}/api/admin/disputes`,
   {
     headers: {
       Authorization:
@@ -130,6 +216,27 @@ async function loadDisputes() {
       Array.isArray(data.disputes)
     ) {
       setDisputes(data.disputes);
+      const activeDisputesList = data.disputes.filter(
+  function (dispute) {
+    return !dispute.isDeleted;
+  }
+);
+
+updateDashboardCounts({
+  totalDisputes: data.disputes.length,
+
+  pendingDisputes: activeDisputesList.filter(
+    function (dispute) {
+      return dispute.status === "Pending";
+    }
+  ).length,
+
+  resolvedDisputes: activeDisputesList.filter(
+    function (dispute) {
+      return dispute.status === "Resolved";
+    }
+  ).length
+});
     } else {
       setDisputes([]);
     }
@@ -138,7 +245,35 @@ async function loadDisputes() {
     setDisputes([]);
   }
 }
+async function loadReportedListings() {
+  try {
+    const response = await fetch(
+      `${API_URL}/api/admin/reported-listings`,
+      {
+        headers: {
+          Authorization:
+            "Bearer " +
+            localStorage.getItem("clothswapToken")
+        }
+      }
+    );
 
+    const data = await response.json();
+
+    if (
+      response.ok &&
+      data &&
+      Array.isArray(data.reports)
+    ) {
+      setReportedListings(data.reports);
+    } else {
+      setReportedListings([]);
+    }
+  } catch (error) {
+    console.log("Reported listings loading error:", error);
+    setReportedListings([]);
+  }
+}
   
 
   const pendingRequests = swapRequests.filter(function (request) {
@@ -153,62 +288,225 @@ async function loadDisputes() {
     return request.status === "Rejected";
   });
 
-  const completedSwaps = swapRequests.filter(function (request) {
-    return (
-      request.completionStatus === "Completed" ||
-      request.agreementStatus === "Completed"
-    );
-  });
+   function isSwapCompleted(request) {
+    return request.completionStatus === "Completed";
+  }
 
-  
+  const completedSwaps = swapRequests.filter(isSwapCompleted);
+  // DISPUTE SUMMARY COUNTS
+
+const activeDisputes = disputes.filter(function (dispute) {
+  return !dispute.isDeleted;
+});
+
+const pendingDisputes = activeDisputes.filter(function (dispute) {
+  return dispute.status === "Pending";
+});
+
+const resolvedDisputes = activeDisputes.filter(function (dispute) {
+  return dispute.status === "Resolved";
+});
+
+const rejectedDisputes = activeDisputes.filter(function (dispute) {
+  return dispute.status === "Rejected";
+});
+
+const filteredDisputes = disputes.filter(function (dispute) {
+  const search = disputeSearch.trim().toLowerCase();
+
+  const matchesSearch =
+    (dispute.reportedBy || "").toLowerCase().includes(search) ||
+    (dispute.reportedAgainst || "").toLowerCase().includes(search) ||
+    (dispute.reason || "").toLowerCase().includes(search) ||
+    (dispute.description || "").toLowerCase().includes(search);
+
+  let matchesStatus = false;
+
+  if (disputeStatusFilter === "History") {
+    matchesStatus =
+      dispute.isDeleted === true ||
+      dispute.status === "Resolved" ||
+      dispute.status === "Rejected" ||
+      (
+        Array.isArray(dispute.resolutionHistory) &&
+        dispute.resolutionHistory.length > 0
+      );
+  } else {
+    matchesStatus =
+      !dispute.isDeleted &&
+      (
+        disputeStatusFilter === "All" ||
+        dispute.status === disputeStatusFilter
+      );
+  }
+
+  return matchesSearch && matchesStatus;
+});
+const filteredSwapRequests = swapRequests.filter(function (request) {
+  const status = getAdminSwapStatus(request);
+  const method = request.exchangeMethod || "Not Selected";
+
+  if (swapStatusFilter === "All") {
+    return true;
+  }
+
+  if (
+    swapStatusFilter === "Accepted" ||
+    swapStatusFilter === "Pending" ||
+    swapStatusFilter === "Completed" ||
+    swapStatusFilter === "Rejected"
+  ) {
+    return status === swapStatusFilter;
+  }
+
+  if (swapStatusFilter === "Courier") {
+    return method === "Courier";
+  }
+
+  if (swapStatusFilter === "Local Exchange") {
+    return method === "Local Exchange";
+  }
+
+  if (swapStatusFilter === "Not Selected") {
+    return method === "Not Selected";
+  }
+
+  return true;
+});
+
+function getSwapFilterCount(filter) {
+  if (filter === "All") {
+    return swapRequests.length;
+  }
+
+  return swapRequests.filter(function (request) {
+    const status = getAdminSwapStatus(request);
+    const method = request.exchangeMethod || "Not Selected";
+
+    if (
+      filter === "Accepted" ||
+      filter === "Pending" ||
+      filter === "Completed" ||
+      filter === "Rejected"
+    ) {
+      return status === filter;
+    }
+
+    if (filter === "Courier") {
+      return method === "Courier";
+    }
+
+    if (filter === "Local Exchange") {
+      return method === "Local Exchange";
+    }
+
+    if (filter === "Not Selected") {
+      return method === "Not Selected";
+    }
+
+    return false;
+  }).length;
+}  
   const activeUsers = users.filter(function (user) {
     return user.status === "Active";
   });
 
   const blockedUsers = users.filter(function (user) {
-    return user.status === "Blocked";
-  });
+  return user.status === "Blocked";
+});
+// FILTER USERS
+const filteredUsers = users.filter(function (user) {
+  const search = userSearch.trim().toLowerCase();
 
-  async function deleteClothing(id) {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to remove this clothing listing?"
+  const matchesSearch =
+    (user.name || "").toLowerCase().includes(search) ||
+    (user.email || "").toLowerCase().includes(search) ||
+    (user.location || "").toLowerCase().includes(search) ||
+    (user.role || "").toLowerCase().includes(search) ||
+    (user.status || "").toLowerCase().includes(search);
+
+  const matchesStatus =
+    userStatusFilter === "All" ||
+    user.status === userStatusFilter;
+
+  return matchesSearch && matchesStatus;
+});
+const sortedUsers = [...filteredUsers].sort(function (a, b) {
+  if (userSortBy === "Newest Users") {
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  }
+
+  if (userSortBy === "Oldest Users") {
+    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+  }
+
+  if (userSortBy === "Most Active Users") {
+    const activityA =
+      (a.totalListings || 0) +
+      (a.swapRequestsSent || 0) +
+      (a.swapRequestsReceived || 0) +
+      (a.completedSwaps || 0);
+
+    const activityB =
+      (b.totalListings || 0) +
+      (b.swapRequestsSent || 0) +
+      (b.swapRequestsReceived || 0) +
+      (b.completedSwaps || 0);
+
+    return activityB - activityA;
+  }
+
+  return 0;
+});
+async function deleteClothing(id) {
+  const confirmDelete = window.confirm(
+    "Are you sure you want to remove this clothing listing?"
+  );
+
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/admin/clothes/${id}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization":
+            "Bearer " +
+            localStorage.getItem("clothswapToken")
+        },
+        body: JSON.stringify({
+          adminEmail:
+            localStorage.getItem("clothswapEmail") ||
+            localStorage.getItem("clothswapUserEmail") ||
+            ""
+        })
+      }
     );
 
-    if (!confirmDelete) {
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to remove listing");
       return;
     }
-try {
-      const response = await fetch(
-  "http://localhost:5000/api/admin/clothes/" + id,
-  {
-    method: "DELETE",
-    headers: {
-      "Authorization":
-        "Bearer " +
-        localStorage.getItem("clothswapToken")
-    }
-  }
-);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        alert(data.message || "Failed to remove listing");
-        return;
-      }
-
-      setClothes(function (previous) {
-        return previous.filter(function (item) {
-          return item._id !== id;
-        });
+    setClothes(function (previous) {
+      return previous.filter(function (item) {
+        return item._id !== id;
       });
+    });
 
-      alert("Clothing listing removed successfully.");
-    } catch (error) {
-      console.log("Admin delete error:", error);
-      alert("Failed to remove clothing listing.");
-    }
+    alert("Clothing listing removed successfully.");
+  } catch (error) {
+    console.log("Admin delete error:", error);
+    alert("Failed to remove clothing listing.");
   }
+}
+ 
 
   
   async function changeUserStatus(user) {
@@ -236,9 +534,9 @@ try {
 
     try {
       const response = await fetch(
-        "http://localhost:5000/api/admin/users/" +
-          user._id +
-          "/status",
+        `${API_URL}/api/admin/users/` +
+  user._id +
+  "/status",
         {
           method: "PUT",
           headers: {
@@ -266,10 +564,11 @@ try {
       setUsers(function (previous) {
         return previous.map(function (item) {
           if (item._id === user._id) {
-            return data.user || {
-              ...item,
-              status: newStatus
-            };
+           return {
+  ...item,
+  ...(data.user || {}),
+  status: newStatus
+};
           }
 
           return item;
@@ -308,8 +607,8 @@ try {
 
     try {
      const response = await fetch(
-  "http://localhost:5000/api/admin/users/" +
-    user._id,
+  `${API_URL}/api/admin/users/` +
+  user._id,
   {
     method: "DELETE",
     headers: {
@@ -342,7 +641,407 @@ try {
       alert("Failed to delete user.");
     }
   }
-  
+ async function exportUsersExcel() {
+  if (users.length === 0) {
+    alert("No users available to export.");
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("ClothSwap Users");
+
+  worksheet.columns = [
+    { width: 25 },
+    { width: 32 },
+    { width: 20 },
+    { width: 15 },
+    { width: 15 },
+    { width: 16 },
+    { width: 16 },
+    { width: 18 },
+    { width: 18 },
+    { width: 22 },
+    { width: 16 }
+  ];
+
+  // TITLE
+  worksheet.mergeCells("A1:K1");
+  worksheet.getCell("A1").value = "ClothSwap - User Management";
+  worksheet.getCell("A1").font = {
+    name: "Arial",
+    size: 20,
+    bold: true,
+    color: { argb: "FFFFFFFF" }
+  };
+  worksheet.getCell("A1").fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF8846A5" }
+  };
+  worksheet.getCell("A1").alignment = {
+    horizontal: "center",
+    vertical: "middle"
+  };
+  worksheet.getRow(1).height = 40;
+
+  // SUBTITLE
+  worksheet.mergeCells("A2:K2");
+  worksheet.getCell("A2").value =
+    "Registered Users Report | Swap • Share • Rewear";
+  worksheet.getCell("A2").font = {
+    italic: true,
+    size: 12,
+    color: { argb: "FF75438D" }
+  };
+  worksheet.getCell("A2").alignment = {
+    horizontal: "center"
+  };
+
+  // TOTAL USERS
+  worksheet.mergeCells("A4:K4");
+  worksheet.getCell("A4").value =
+    "Total Registered Users: " + users.length;
+  worksheet.getCell("A4").font = {
+    bold: true,
+    size: 13,
+    color: { argb: "FF75438D" }
+  };
+  worksheet.getCell("A4").fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFF1DDF8" }
+  };
+
+  const headers = [
+    "Name",
+    "Email",
+    "Location",
+    "Role",
+    "Status",
+    "Total Listings",
+    "Requests Sent",
+    "Requests Received",
+    "Completed Swaps",
+    "Last Active",
+    "Inactive Days"
+  ];
+
+  const headerRow = worksheet.addRow(headers);
+
+  headerRow.height = 32;
+  headerRow.eachCell(function (cell) {
+    cell.font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+      size: 11
+    };
+
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF9B59B6" }
+    };
+
+    cell.alignment = {
+      horizontal: "center",
+      vertical: "middle",
+      wrapText: true
+    };
+  });
+
+  // USER DATA
+  users.forEach(function (user) {
+    const row = worksheet.addRow([
+      user.name || "",
+      user.email || "",
+      user.location || "",
+      user.role || "User",
+      user.status || "Active",
+      user.totalListings || 0,
+      user.swapRequestsSent || 0,
+      user.swapRequestsReceived || 0,
+      user.completedSwaps || 0,
+      user.lastActive || "",
+      user.inactiveDays ?? ""
+    ]);
+
+    row.height = 25;
+
+    row.eachCell(function (cell) {
+      cell.font = {
+        name: "Arial",
+        size: 10,
+        color: { argb: "FF493052" }
+      };
+
+      cell.alignment = {
+        vertical: "middle",
+        horizontal: "center"
+      };
+
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFE5C9EF" } },
+        bottom: { style: "thin", color: { argb: "FFE5C9EF" } },
+        left: { style: "thin", color: { argb: "FFE5C9EF" } },
+        right: { style: "thin", color: { argb: "FFE5C9EF" } }
+      };
+    });
+
+    if (row.number % 2 === 0) {
+      row.eachCell(function (cell) {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFFAF3FC" }
+        };
+      });
+    }
+  });
+
+  worksheet.views = [
+    { state: "frozen", ySplit: 5 }
+  ];
+
+  worksheet.autoFilter = {
+    from: "A5",
+    to: "K5"
+  };
+
+  // DOWNLOAD EXCEL
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  const blob = new Blob(
+    [buffer],
+    {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "ClothSwap_Users.xlsx";
+  link.click();
+
+  setTimeout(function () {
+    URL.revokeObjectURL(url);
+  }, 1000);
+
+  alert("Excel report downloaded successfully!");
+}
+function exportUsersPDF() {
+  if (users.length === 0) {
+    alert("No users available to export.");
+    return;
+  }
+
+  const doc = new jsPDF("landscape", "mm", "a4");
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  const activeUsers = users.filter(function (u) {
+    return (u.status || "Active") === "Active";
+  }).length;
+
+  const blockedUsers = users.filter(function (u) {
+    return u.status === "Blocked";
+  }).length;
+
+  const adminUsers = users.filter(function (u) {
+    return u.role === "Admin";
+  }).length;
+
+  const totalListings = users.reduce(function (sum, u) {
+    return sum + (Number(u.totalListings) || 0);
+  }, 0);
+
+  const totalCompleted = users.reduce(function (sum, u) {
+    return sum + (Number(u.completedSwaps) || 0);
+  }, 0);
+
+  function formatDate(value) {
+    if (!value) return "N/A";
+
+    const date = new Date(value);
+
+    if (isNaN(date.getTime())) return value;
+
+    return date.toLocaleString("en-IN");
+  }
+
+  autoTable(doc, {
+    startY: 88,
+
+    head: [[
+      "Name",
+      "Email",
+      "Location",
+      "Role",
+      "Status",
+      "Registered On",
+      "Listings",
+      "Sent",
+      "Received",
+      "Completed",
+      "Last Active",
+      "Inactive Days",
+      "Admin Action"
+    ]],
+
+    body: users.map(function (user) {
+      return [
+        user.name || "N/A",
+        user.email || "N/A",
+        user.location || "Not specified",
+        user.role || "User",
+        user.status || "Active",
+        formatDate(user.createdAt),
+        user.totalListings || 0,
+        user.swapRequestsSent || 0,
+        user.swapRequestsReceived || 0,
+        user.completedSwaps || 0,
+       formatDate(user.lastActive),
+user.inactiveDays ?? "N/A",
+user.status === "Blocked"
+  ? "Unblock User"
+  : "Block User"
+      ];
+    }),
+
+    theme: "grid",
+
+    margin: {
+      top: 88,
+      left: 10,
+      right: 10,
+      bottom: 17
+    },
+
+    styles: {
+      fontSize: 6.5,
+      cellPadding: 3,
+      textColor: [73, 48, 82],
+      lineColor: [229, 201, 239],
+      lineWidth: 0.2,
+      overflow: "linebreak",
+      valign: "middle"
+    },
+
+    headStyles: {
+      fillColor: [155, 89, 182],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      halign: "center"
+    },
+
+    alternateRowStyles: {
+      fillColor: [250, 243, 252]
+    },
+
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: 38 },
+      2: { cellWidth: 23 },
+      3: { cellWidth: 13 },
+      4: { cellWidth: 15 },
+      5: { cellWidth: 24 },
+      6: { cellWidth: 13 },
+      7: { cellWidth: 11 },
+      8: { cellWidth: 14 },
+      9: { cellWidth: 15 },
+      10: { cellWidth: 29 },
+      11: { cellWidth: 16 },
+      12: { cellWidth: 20 }
+    },
+
+    willDrawPage: function () {
+      // FULL PAGE BACKGROUND
+      doc.setFillColor(250, 243, 252);
+      doc.rect(0, 0, pageWidth, pageHeight, "F");
+
+      // HEADER
+      doc.setFillColor(136, 70, 165);
+      doc.rect(0, 0, pageWidth, 32, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(21);
+      doc.text("ClothSwap", 12, 14);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text("Complete User Management Report", 12, 23);
+    },
+
+    didDrawPage: function () {
+      doc.setDrawColor(215, 181, 229);
+      doc.line(10, pageHeight - 13, pageWidth - 10, pageHeight - 13);
+
+      doc.setFontSize(8);
+      doc.setTextColor(117, 67, 141);
+
+      doc.text(
+        "ClothSwap | Swap • Share • Rewear",
+        10,
+        pageHeight - 7
+      );
+
+      doc.text(
+        "Page " + doc.internal.getNumberOfPages(),
+        pageWidth - 25,
+        pageHeight - 7
+      );
+    }
+  });
+doc.setPage(1);
+  // SUMMARY SECTION ON FIRST PAGE
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(10, 38, pageWidth - 20, 42, 3, 3, "F");
+
+  doc.setTextColor(117, 67, 141);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("REPORT OVERVIEW", 16, 46);
+
+  const summary = [
+    ["Total Users", users.length],
+    ["Active Users", activeUsers],
+    ["Blocked Users", blockedUsers],
+    ["Admins", adminUsers],
+    ["Total Listings", totalListings],
+    ["Completed Swaps", totalCompleted]
+  ];
+
+  const cardWidth = 42;
+  const cardGap = 3;
+  const startX = 16;
+
+  summary.forEach(function (item, index) {
+    const x = startX + index * (cardWidth + cardGap);
+
+    doc.setFillColor(244, 229, 250);
+    doc.roundedRect(x, 51, cardWidth, 22, 2, 2, "F");
+
+    doc.setFontSize(13);
+    doc.setTextColor(136, 70, 165);
+    doc.text(String(item[1]), x + cardWidth / 2, 61, {
+      align: "center"
+    });
+
+    doc.setFontSize(7);
+    doc.setTextColor(90, 60, 105);
+    doc.text(item[0], x + cardWidth / 2, 68, {
+      align: "center"
+    });
+  });
+    // SUMMARY FIRST PAGE PAR SHOW KARO
+  doc.setPage(1);
+
+  // DOWNLOAD PDF
+  doc.save("ClothSwap_Users.pdf");
+}
 async function resolveDispute(dispute) {
   const adminNote = window.prompt(
     "Enter admin note for this dispute:"
@@ -354,9 +1053,9 @@ async function resolveDispute(dispute) {
 
   try {
     const response = await fetch(
-      "http://localhost:5000/api/admin/disputes/" +
-        dispute._id +
-        "/resolve",
+      `${API_URL}/api/admin/disputes/` +
+  dispute._id +
+  "/resolve",
       {
         method: "PUT",
         headers: {
@@ -404,7 +1103,292 @@ async function resolveDispute(dispute) {
   }
 }
 
-  
+async function rejectDispute(dispute) {
+  const adminNote = window.prompt(
+    "Enter the reason for rejecting this dispute:"
+  );
+
+  if (adminNote === null) return;
+
+  if (!adminNote.trim()) {
+    alert("Please enter a rejection reason.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/admin/disputes/${dispute._id}/reject`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("clothswapToken")
+        },
+        body: JSON.stringify({
+          adminNote: adminNote.trim()
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      alert(data.message || "Failed to reject dispute.");
+      return;
+    }
+
+    setDisputes(function (previous) {
+      return previous.map(function (item) {
+        return item._id === dispute._id ? data.dispute : item;
+      });
+    });
+
+    alert("Dispute rejected successfully.");
+
+  } catch (error) {
+    console.error("Reject dispute error:", error);
+    alert("Failed to reject dispute.");
+  }
+}
+function toggleDisputeSelection(disputeId, isChecked) {
+  const id = String(disputeId);
+
+  setSelectedDisputes(function (previous) {
+    if (isChecked) {
+      return previous.includes(id)
+        ? previous
+        : [...previous, id];
+    }
+
+    return previous.filter(function (item) {
+      return item !== id;
+    });
+  });
+}
+
+function toggleSelectAllDisputes() {
+  const activeIds = filteredDisputes
+    .filter(function (dispute) {
+      return !dispute.isDeleted;
+    })
+    .map(function (dispute) {
+      return String(dispute._id);
+    });
+
+  const allSelected =
+    activeIds.length > 0 &&
+    activeIds.every(function (id) {
+      return selectedDisputes.includes(id);
+    });
+
+  if (allSelected) {
+    setSelectedDisputes(function (previous) {
+      return previous.filter(function (id) {
+        return !activeIds.includes(id);
+      });
+    });
+
+    setShowDisputeCheckboxes(false);
+  } else {
+    setSelectedDisputes(function (previous) {
+      return Array.from(new Set([...previous, ...activeIds]));
+    });
+
+    setShowDisputeCheckboxes(true);
+  }
+}
+async function deleteSelectedDisputes(ids) {
+  const confirmed = window.confirm(
+    "Are you sure you want to archive " +
+    ids.length +
+    " dispute(s)? Their history will be preserved."
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/admin/disputes`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("clothswapToken")
+        },
+        body: JSON.stringify({ ids: ids })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      alert(data.message || "Failed to archive disputes.");
+      return;
+    }
+
+    setSelectedDisputes([]);
+
+    await loadDisputes();
+
+    alert(data.message || "Disputes archived successfully.");
+
+  } catch (error) {
+    console.error("Dispute delete error:", error);
+    alert("Failed to archive disputes.");
+  }
+}
+
+function deleteAllResolvedDisputes() {
+  const resolvedIds = disputes
+    .filter(function (dispute) {
+      return dispute.status === "Resolved" && !dispute.isDeleted;
+    })
+    .map(function (dispute) {
+      return String(dispute._id);
+    });
+
+  if (resolvedIds.length === 0) {
+    alert("No resolved disputes available.");
+    return;
+  }
+
+  deleteSelectedDisputes(resolvedIds);
+}
+
+async function updateReportedListing(reportId, status) {
+  if (
+    status === "Removed" &&
+    !window.confirm("Are you sure you want to remove this listing?")
+  ) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_URL}/api/admin/reported-listings/${reportId}/review`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("clothswapToken")
+        },
+        body: JSON.stringify({
+          status: status
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Unable to update report.");
+    }
+
+    setReportedListings(function (prev) {
+      return prev.map(function (report) {
+        return report._id === reportId
+          ? { ...report, status: status }
+          : report;
+      });
+    });
+
+    alert("Reported listing updated successfully.");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+ function toggleReportSelection(reportId) {
+  setSelectedReports(function (prev) {
+    if (prev.includes(reportId)) {
+      return prev.filter(function (id) {
+        return id !== reportId;
+      });
+    }
+
+    return [...prev, reportId];
+  });
+}
+
+function toggleSelectAllReports() {
+  const allSelected =
+    reportedListings.length > 0 &&
+    reportedListings.every(function (report) {
+      return selectedReports.includes(String(report._id));
+    });
+
+  if (allSelected) {
+    setSelectedReports([]);
+  } else {
+    setSelectedReports(
+      reportedListings.map(function (report) {
+        return String(report._id);
+      })
+    );
+  }
+}
+
+async function deleteSelectedReports() {
+  if (selectedReports.length === 0) {
+    return;
+  }
+
+  const isAllSelected =
+    selectedReports.length === reportedListings.length;
+
+  const confirmDelete = window.confirm(
+    isAllSelected
+      ? "Are you sure you want to permanently delete all reported listings?"
+      : "Are you sure you want to permanently delete selected reports?"
+  );
+
+  if (!confirmDelete) {
+    return;
+  }
+
+  try {
+    console.log(
+  "DELETE API URL:",
+  `${API_URL}/api/admin/reported-listings`
+);
+    const response = await fetch(
+      `${API_URL}/api/admin/reported-listings`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer " +
+            localStorage.getItem("clothswapToken")
+        },
+        body: JSON.stringify({
+          ids: selectedReports
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Failed to delete reports."
+      );
+    }
+
+    setReportedListings(function (prev) {
+      return prev.filter(function (report) {
+        return !selectedReports.includes(report._id);
+      });
+    });
+
+    setSelectedReports([]);
+
+    alert(data.message || "Reports deleted successfully.");
+
+  } catch (error) {
+    alert(error.message);
+  }
+} 
 
   function getStatusClass(status) {
     if (!status) {
@@ -669,25 +1653,13 @@ async function resolveDispute(dispute) {
     return "Not Started";
   }
 
- 
-
-  if (loading) {
-    return React.createElement(
-      "div",
-      {
-        className: "admin-panel-page"
-      },
-      React.createElement(
-        "div",
-        {
-          className: "admin-loading"
-        },
-        "Loading Admin Panel..."
-      )
-    );
+function getAdminSwapStatus(request) {
+  if (isSwapCompleted(request)) {
+    return "Completed";
   }
 
-
+  return request.status || "Unknown";
+}
 
   return React.createElement(
     "div",
@@ -729,12 +1701,56 @@ async function resolveDispute(dispute) {
       )
     ),
 
-  
+  /* ADMIN PANEL NAVIGATION */
+
+React.createElement(
+  "div",
+  {
+    className: "admin-navigation"
+  },
+
+  React.createElement(
+    "a",
+    { href: "#admin-overview" },
+    "Overview"
+  ),
+
+  React.createElement(
+    "a",
+    { href: "#manage-users" },
+    "Manage Users"
+  ),
+
+  React.createElement(
+    "a",
+    { href: "#manage-listings" },
+    "Manage Listings"
+  ),
+
+  React.createElement(
+    "a",
+    { href: "#swap-activities" },
+    "Swap Activities"
+  ),
+
+  React.createElement(
+    "a",
+    { href: "#dispute-center" },
+    "Dispute Center"
+  ),
+  React.createElement(
+  "a",
+  { href: "#reported-listings" },
+  "Reported Listings"
+)
+),
 
     React.createElement(
       "div",
       {
-        className: "admin-stats-grid"
+        className: "admin-stats-grid",
+        id: "admin-overview"
+        
       },
 
       React.createElement(
@@ -961,7 +1977,9 @@ async function resolveDispute(dispute) {
     React.createElement(
       "div",
       {
-        className: "admin-section-card"
+        className: "admin-section-card",
+        id: "manage-users"
+
       },
 
       React.createElement(
@@ -1001,8 +2019,9 @@ async function resolveDispute(dispute) {
         {
           className: "admin-user-summary"
         },
+// USER SEARCH BOX
 
-        React.createElement(
+          React.createElement(
           "div",
           {
             className: "admin-user-summary-item"
@@ -1059,230 +2078,294 @@ async function resolveDispute(dispute) {
           )
         )
       ),
+      // USER SEARCH BOX
+React.createElement(
+  "div",
+  {
+    className: "admin-user-filters"
+  },
 
-      usersLoading
-        ? React.createElement(
-            "div",
-            {
-              className: "admin-empty-state"
-            },
-            "Loading users..."
-          )
-        : users.length === 0
-        ? React.createElement(
-            "div",
-            {
-              className: "admin-empty-state"
-            },
-            "No registered users found."
-          )
-        : React.createElement(
-            "div",
-            {
-              className: "admin-table-wrapper"
-            },
+  React.createElement("input", {
+    type: "text",
+    className: "admin-search-input",
+    placeholder: "Search users...",
+    value: userSearch,
+    onChange: function (event) {
+      setUserSearch(event.target.value);
+    }
+  }),
 
-            React.createElement(
-              "table",
+  React.createElement(
+    "select",
+    {
+      className: "admin-user-sort-filter",
+      value: userSortBy,
+      onChange: function (event) {
+        setUserSortBy(event.target.value);
+      }
+    },
+    React.createElement("option", { value: "Newest Users" }, "Newest Users"),
+    React.createElement("option", { value: "Oldest Users" }, "Oldest Users"),
+    React.createElement("option", { value: "Most Active Users" }, "Most Active Users")
+  ),
+
+  React.createElement(
+  "button",
+  {
+    type: "button",
+    className: "admin-export-users-btn",
+    onClick: exportUsersExcel
+  },
+  "📊 Export Excel"
+),
+React.createElement(
+  "button",
+  {
+    type: "button",
+    className: "admin-export-pdf-btn",
+    onClick: exportUsersPDF
+  },
+  "📄 Export PDF"
+)
+),
+    
+usersLoading
+  ? React.createElement(
+      "div",
+      {
+        className: "admin-empty-state"
+      },
+      "Loading users..."
+    )
+  : filteredUsers.length === 0
+  ? React.createElement(
+      "div",
+      {
+        className: "admin-empty-state"
+      },
+      "No users match your search."
+    )
+  : React.createElement(
+      "div",
+      {
+        className: "admin-table-wrapper"
+      },
+
+      React.createElement(
+        "table",
+        {
+          className: "admin-table admin-users-table"
+        },
+
+        React.createElement(
+          "thead",
+          null,
+
+          React.createElement(
+            "tr",
+            null,
+
+            React.createElement("th", null, "Name"),
+            React.createElement("th", null, "Email"),
+            React.createElement("th", null, "Location"),
+            React.createElement("th", null, "Role"),
+            React.createElement("th", null, "Status"),
+            React.createElement("th", null, "Listings"),
+            React.createElement("th", null, "Requests Sent"),
+            React.createElement("th", null, "Requests Received"),
+            React.createElement("th", null, "Completed Swaps"),
+            React.createElement("th", null, "Last Active"),
+            React.createElement("th", null, "Inactive Days"),
+            React.createElement("th", null, "Action")
+          )
+        ),
+
+        React.createElement(
+          "tbody",
+          null,
+
+          sortedUsers.map(function (user) {
+            const isAdmin = user.role === "Admin";
+
+            const lastActiveText = user.lastActive
+              ? new Date(user.lastActive).toLocaleString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                })
+              : "Never";
+
+            return React.createElement(
+              "tr",
               {
-                className: "admin-table admin-users-table"
+                key: user._id
               },
 
               React.createElement(
-                "thead",
+                "td",
                 null,
-
                 React.createElement(
-                  "tr",
-                  null,
-
+                  "div",
+                  {
+                    className: "admin-user-name"
+                  },
                   React.createElement(
-                    "th",
+                    "strong",
                     null,
-                    "Name"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Email"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Location"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Role"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Status"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Action"
+                    user.name || "Unknown User"
                   )
                 )
               ),
 
               React.createElement(
-                "tbody",
+                "td",
+                null,
+                user.email || "Not specified"
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                user.location || "Not specified"
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                React.createElement(
+                  "span",
+                  {
+                    className: "admin-user-role"
+                  },
+                  user.role || "User"
+                )
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                React.createElement(
+                  "span",
+                  {
+                    className: getStatusClass(user.status)
+                  },
+                  user.status || "Active"
+                )
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                user.totalListings || 0
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                user.swapRequestsSent || 0
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                user.swapRequestsReceived || 0
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                user.completedSwaps || 0
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                lastActiveText
+              ),
+
+              React.createElement(
+                "td",
+                null,
+                user.inactiveDays !== null &&
+                user.inactiveDays !== undefined
+                  ? user.inactiveDays + " days"
+                  : "Not available"
+              ),
+
+              React.createElement(
+                "td",
                 null,
 
-                users.map(function (user) {
-                  const isAdmin =
-                    user.role === "Admin";
-
-                  return React.createElement(
-                    "tr",
-                    {
-                      key: user._id
-                    },
-
-                    React.createElement(
-                      "td",
-                      null,
-
-                      React.createElement(
-                        "div",
+            React.createElement(
+  "div",
+  {
+    className: "admin-user-actions",
+    style: {
+      display: "flex",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: "10px",
+      flexWrap: "nowrap",
+      whiteSpace: "nowrap",
+      minWidth: "max-content"
+    }
+  },
+                  isAdmin
+                    ? React.createElement(
+                        "span",
                         {
-                          className: "admin-user-name"
+                          className: "admin-protected-label"
                         },
+                        "🔒 Protected"
+                      )
+                    : React.createElement(
+                        React.Fragment,
+                        null,
 
                         React.createElement(
-                          "strong",
-                          null,
-                          user.name || "Unknown User"
+                          "button",
+                          {
+                            className:
+                              user.status === "Blocked"
+                                ? "admin-user-action-btn unblock"
+                                : "admin-user-action-btn block",
+                            onClick: function () {
+                              changeUserStatus(user);
+                            }
+                          },
+                          user.status === "Blocked"
+                            ? "🔓 Unblock"
+                            : "🚫 Block"
+                        ),
+
+                        React.createElement(
+                          "button",
+                          {
+                            className: "admin-user-action-btn delete",
+                            onClick: function () {
+                              deleteUser(user);
+                            }
+                          },
+                          "🗑️ Delete"
                         )
                       )
-                    ),
-
-                    React.createElement(
-                      "td",
-                      null,
-                      user.email || "Not specified"
-                    ),
-
-                    React.createElement(
-                      "td",
-                      null,
-                      user.location || "Not specified"
-                    ),
-
-                    React.createElement(
-                      "td",
-                      null,
-
-                      React.createElement(
-                        "span",
-                        {
-                          className:
-                            "admin-user-role"
-                        },
-                        user.role || "User"
-                      )
-                    ),
-
-                    React.createElement(
-                      "td",
-                      null,
-
-                      React.createElement(
-                        "span",
-                        {
-                          className:
-                            getStatusClass(
-                              user.status
-                            )
-                        },
-                        user.status || "Active"
-                      )
-                    ),
-
-                    React.createElement(
-                      "td",
-                      null,
-
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "admin-user-actions"
-                        },
-
-                        isAdmin
-                          ? React.createElement(
-                              "span",
-                              {
-                                className:
-                                  "admin-protected-label"
-                              },
-                              "🔒 Protected"
-                            )
-                          : React.createElement(
-                              React.Fragment,
-                              null,
-
-                              React.createElement(
-                                "button",
-                                {
-                                  className:
-                                    user.status ===
-                                    "Blocked"
-                                      ? "admin-user-action-btn unblock"
-                                      : "admin-user-action-btn block",
-                                  onClick:
-                                    function () {
-                                      changeUserStatus(
-                                        user
-                                      );
-                                    }
-                                },
-                                user.status ===
-                                "Blocked"
-                                  ? "🔓 Unblock"
-                                  : "🚫 Block"
-                              ),
-
-                              React.createElement(
-                                "button",
-                                {
-                                  className:
-                                    "admin-user-action-btn delete",
-                                  onClick:
-                                    function () {
-                                      deleteUser(
-                                        user
-                                      );
-                                    }
-                                },
-                                "🗑️ Delete"
-                              )
-                            )
-                      )
-                    )
-                  );
-                })
+                )
               )
-            )
+           
+              );
+            })
           )
+        )
+      )
     ),
-
-   
-
-    React.createElement(
+React.createElement(
       "div",
       {
-        className: "admin-section-card"
+        className: "admin-section-card",
+        id: "manage-listings"
       },
 
       React.createElement(
@@ -1317,14 +2400,16 @@ async function resolveDispute(dispute) {
         )
       ),
 
-      clothes.length === 0
-        ? React.createElement(
-            "div",
-            {
-              className: "admin-empty-state"
-            },
-            "No clothing listings available."
-          )
+     clothes.length === 0
+  ? React.createElement(
+      "div",
+      {
+        className: "admin-empty-state"
+      },
+      loading
+        ? "Loading clothing listings..."
+        : "No clothing listings available."
+    )
         : React.createElement(
             "div",
             {
@@ -1745,7 +2830,8 @@ async function resolveDispute(dispute) {
 React.createElement(
   "div",
   {
-    className: "admin-section-card"
+    className: "admin-section-card",
+    id: "dispute-center"
   },
 
   React.createElement(
@@ -1779,16 +2865,155 @@ React.createElement(
       disputes.length + " Disputes"
     )
   ),
+  
+React.createElement(
+  "div",
+  {
+    className: "admin-dispute-summary"
+  },
 
-  disputes.length === 0
+  React.createElement(
+    "div",
+    {
+      className: "admin-dispute-summary-card"
+    },
 
+    React.createElement(
+      "strong",
+      null,
+      disputes.length
+    ),
+
+    React.createElement(
+      "span",
+      null,
+      "Total Disputes"
+    )
+  ),
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-dispute-summary-card"
+    },
+
+    React.createElement(
+      "strong",
+      null,
+      pendingDisputes.length
+    ),
+
+    React.createElement(
+      "span",
+      null,
+      "Pending Disputes"
+    )
+  ),
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-dispute-summary-card"
+    },
+
+    React.createElement(
+      "strong",
+      null,
+      resolvedDisputes.length
+    ),
+
+    React.createElement(
+      "span",
+      null,
+      "Resolved Disputes"
+    )
+  )
+),
+React.createElement(
+  "div",
+  {
+    className: "admin-dispute-toolbar"
+  },
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-dispute-search"
+    },
+    React.createElement("input", {
+      type: "text",
+      placeholder: "Search by user name or complaint reason...",
+      value: disputeSearch,
+      onChange: function (e) {
+        setDisputeSearch(e.target.value);
+      }
+    })
+  ),
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-dispute-controls"
+    },
+
+    ["All", "Pending", "Resolved", "Rejected", "History"].map(
+      function (status) {
+        return React.createElement(
+          "button",
+          {
+            key: status,
+            type: "button",
+            className:
+              disputeStatusFilter === status
+                ? "admin-filter-btn active"
+                : "admin-filter-btn",
+            onClick: function () {
+              setDisputeStatusFilter(status);
+              setSelectedDisputes([]);
+              setShowDisputeCheckboxes(false);
+            }
+          },
+          status
+        );
+      }
+    ),
+
+    React.createElement(
+      "label",
+      {
+        className: "admin-select-all-label"
+      },
+
+      React.createElement("input", {
+        type: "checkbox",
+        checked: showDisputeCheckboxes,
+        onChange: toggleSelectAllDisputes
+      }),
+
+      " Select All"
+    )
+  ),
+  showDisputeCheckboxes &&
+React.createElement("button", {
+  type: "button",
+  className: "admin-delete-resolved-btn",
+  disabled: resolvedDisputes.length === 0,
+  onClick: deleteAllResolvedDisputes
+},
+ "Delete All (",
+selectedDisputes.length,
+")"
+),
+),
+filteredDisputes.length === 0
     ? React.createElement(
         "div",
         {
           className: "admin-empty-state"
         },
-        "No disputes reported."
+        "No matching disputes found."
       )
+      
 
     : React.createElement(
         "div",
@@ -1806,60 +3031,71 @@ React.createElement(
             "thead",
             null,
 
-            React.createElement(
-              "tr",
-              null,
+           React.createElement(
+  "tr",
+  null,
 
-              React.createElement(
-                "th",
-                null,
-                "Reported By"
-              ),
+  React.createElement(
+    "th",
+    null,
+    "Select"
+  ),
 
-              React.createElement(
-                "th",
-                null,
-                "Reported Against"
-              ),
+  React.createElement(
+    "th",
+    null,
+    "Reported By"
+  ),
 
-              React.createElement(
-                "th",
-                null,
-                "Reason"
-              ),
+  React.createElement(
+    "th",
+    null,
+    "Reported Against"
+  ),
 
-              React.createElement(
-                "th",
-                null,
-                "Description"
-              ),
+  React.createElement(
+    "th",
+    null,
+    "Reason"
+  ),
 
-              React.createElement(
-                "th",
-                null,
-                "Status"
-              ),
+  React.createElement(
+    "th",
+    null,
+    "Description"
+  ),
 
-              React.createElement(
-                "th",
-                null,
-                "Admin Note"
-              ),
+  React.createElement(
+    "th",
+    null,
+    "Attachments"
+  ),
 
-              React.createElement(
-                "th",
-                null,
-                "Action"
-              )
-            )
-          ),
+  React.createElement(
+    "th",
+    null,
+    "Account Status"
+  ),
 
-          React.createElement(
-            "tbody",
-            null,
+  React.createElement(
+    "th",
+    null,
+    "Admin Note"
+  ),
 
-            disputes.map(function (dispute) {
+  React.createElement(
+    "th",
+    null,
+    "Action"
+  )
+)
+),
 
+React.createElement(
+  "tbody",
+  null,
+
+filteredDisputes.map(function (dispute) {
               const isResolved =
                 dispute.status === "Resolved";
 
@@ -1868,7 +3104,23 @@ React.createElement(
                 {
                   key: dispute._id
                 },
+React.createElement(
+  "td",
+  null,
 
+  showDisputeCheckboxes && !dispute.isDeleted
+  ? React.createElement("input", {
+      type: "checkbox",
+      checked: selectedDisputes.includes(String(dispute._id)),
+      onChange: function (event) {
+        toggleDisputeSelection(
+          String(dispute._id),
+          event.target.checked
+        );
+      }
+    })
+  : "—"
+),
                 React.createElement(
                   "td",
                   null,
@@ -1896,7 +3148,33 @@ React.createElement(
                   dispute.description ||
                     "No description"
                 ),
+               React.createElement(
+  "td",
+  null,
 
+  Array.isArray(dispute.attachments) &&
+  dispute.attachments.length > 0
+
+    ? React.createElement(
+        "button",
+        {
+          type: "button",
+          className: "admin-user-action-btn unblock",
+          onClick: function () {
+            setSelectedDisputeImages(
+              dispute.attachments.filter(function (file) {
+                return file.preview;
+              })
+            );
+          }
+        },
+        "📎 View Photos (" +
+          dispute.attachments.length +
+          ")"
+      )
+
+    : "No Attachments"
+),
                 React.createElement(
                   "td",
                   null,
@@ -1922,236 +3200,706 @@ React.createElement(
                     "—"
                 ),
 
-                React.createElement(
-                  "td",
-                  null,
+               React.createElement(
+  "td",
+  null,
 
-                  isResolved
+  React.createElement(
+  "div",
+  {
+    className: "admin-dispute-actions",
+    style: {
+      display: "flex",
+      flexDirection: "row",
+      flexWrap: "nowrap",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: "10px",
+      whiteSpace: "nowrap",
+      minWidth: "max-content",
+      width: "max-content"
+    }
+  },
+    dispute.isDeleted
 
-                    ? React.createElement(
-                        "span",
-                        {
-                          className:
-                            "admin-protected-label"
-                        },
-                        "✅ Resolved"
-                      )
+      ? React.createElement(
+          "span",
+          { className: "admin-protected-label" },
+          "🗄️ Archived"
+        )
 
-                    : React.createElement(
-                        "button",
-                        {
-                          className:
-                            "admin-user-action-btn unblock",
-                          onClick:
-                            function () {
-                              resolveDispute(
-                                dispute
-                              );
-                            }
-                        },
-                        "✅ Resolve"
-                      )
-                )
+      : isResolved
+
+        ? React.createElement(
+            "span",
+            { className: "admin-protected-label" },
+            "✅ Resolved"
+          )
+
+        : dispute.status === "Rejected"
+
+          ? React.createElement(
+              "span",
+              { className: "admin-protected-label" },
+              "❌ Rejected"
+            )
+
+          : React.createElement(
+              React.Fragment,
+              null,
+
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className: "admin-user-action-btn unblock",
+                  onClick: function () {
+                    resolveDispute(dispute);
+                  }
+                },
+                "✅ Resolve"
+              ),
+
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className: "admin-user-action-btn delete",
+                  onClick: function () {
+                    rejectDispute(dispute);
+                  }
+                },
+                "❌ Reject"
+              )
+            ),
+
+    Array.isArray(dispute.resolutionHistory) &&
+    dispute.resolutionHistory.length > 0 &&
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          className: "admin-user-action-btn unblock",
+          onClick: function () {
+            setSelectedDisputeHistory(dispute);
+          }
+        },
+        "📜 View History"
+      )
+  )
+)
               );
             })
           )
         )
       )
 ),
-    
+React.createElement(
+  "section",
+  {
+    id: "reported-listings",
+    className: "admin-section"
+  },
+
+  React.createElement(
+    "h2",
+    null,
+    "Reported Listings"
+  ),
+
+  React.createElement(
+    "p",
+    null,
+    "Review listings reported by users for inappropriate content."
+  ),
+  React.createElement(
+  "div",
+  {
+    className: "admin-report-bulk-actions"
+  },
+
+  React.createElement(
+    "label",
+    null,
+
+    React.createElement("input", {
+      type: "checkbox",
+      checked:
+        reportedListings.length > 0 &&
+        selectedReports.length === reportedListings.length,
+      onChange: toggleSelectAllReports
+    }),
+
+    " Select All"
+  ),
+
+  selectedReports.length > 0 &&
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "admin-user-action-btn delete",
+        onClick: deleteSelectedReports
+      },
+      selectedReports.length === reportedListings.length
+        ? "🗑️ Delete All"
+        : "🗑️ Delete Selected"
+    )
+),
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-reported-listings"
+    },
+
+    reportedListings.length === 0
+      ? React.createElement(
+          "p",
+          null,
+          "No reported listings found."
+        )
+      : reportedListings.map(function (report) {
+          return React.createElement(
+            "div",
+            {
+              key: report._id,
+              className: "admin-reported-card"
+            },
+React.createElement("input", {
+  type: "checkbox",
+  checked: selectedReports.includes(String(report._id)),
+  onChange: function () {
+    toggleReportSelection(String(report._id));
+  }
+}),
+            React.createElement(
+              "h3",
+              null,
+              report.listingTitle || "Untitled Listing"
+            ),
+
+            React.createElement(
+              "p",
+              null,
+              "Reason: " + report.reason
+            ),
+
+            React.createElement(
+              "p",
+              null,
+              "Reported By: " + report.reporter
+            ),
+
+            React.createElement(
+              "p",
+              null,
+              "Listing Owner: " + report.owner
+            ),
+
+            React.createElement(
+              "p",
+              null,
+              "Status: " + report.status
+            ),
+
+            React.createElement(
+              "p",
+              null,
+              "Description: " + (report.description || "No description")
+            ),
+            React.createElement(
+  "div",
+  { className: "reported-listing-actions" },
+
+  report.status === "Pending"
+    ? React.createElement(
+        React.Fragment,
+        null,
+
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: function () {
+              updateReportedListing(report._id, "Reviewed");
+            }
+          },
+          "Mark as Reviewed"
+        ),
+
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: function () {
+              updateReportedListing(report._id, "Removed");
+            }
+          },
+          "Remove Listing"
+        ),
+
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            onClick: function () {
+              updateReportedListing(report._id, "Rejected");
+            }
+          },
+          "Reject Report"
+        )
+      )
+    : React.createElement(
+        "p",
+        null,
+        "This report has already been reviewed."
+      )
+)
+          );
+        })
+  )
+),
+React.createElement(
+  "div",
+  {
+    className: "admin-section-card",
+    id: "swap-activities"
+  },
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-section-header"
+    },
 
     React.createElement(
       "div",
-      {
-        className: "admin-section-card"
-      },
+      null,
 
       React.createElement(
+        "h2",
+        null,
+        "Swap History & Status Tracking"
+      ),
+
+      React.createElement(
+        "p",
+        null,
+        "Monitor swap requests, agreements and exchange progress."
+      )
+    ),
+
+    React.createElement(
+      "span",
+      {
+        className: "admin-section-count"
+      },
+      swapRequests.length + " Requests"
+    )
+  ),
+    React.createElement(
+  "div",
+  {
+    className: "admin-swap-summary-grid"
+  },
+
+  ["All", "Accepted", "Pending", "Completed"].map(
+    function (filter) {
+      return React.createElement(
         "div",
         {
-          className: "admin-section-header"
+          key: filter,
+          className:
+            swapStatusFilter === filter
+              ? "admin-swap-summary-card active"
+              : "admin-swap-summary-card",
+          onClick: function () {
+            setSwapStatusFilter(filter);
+          },
+          role: "button",
+          tabIndex: 0,
+          onKeyDown: function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+              setSwapStatusFilter(filter);
+            }
+          }
         },
 
         React.createElement(
-          "div",
+          "strong",
           null,
-
-          React.createElement(
-            "h2",
-            null,
-            "Swap Requests"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            "Monitor swap requests between users."
-          )
+          getSwapFilterCount(filter)
         ),
 
         React.createElement(
           "span",
-          {
-            className: "admin-section-count"
-          },
-          swapRequests.length +
-            " Requests"
+          null,
+          filter
         )
-      ),
+      );
+    }
+  )
+),
+  React.createElement(
+    "div",
+    {
+      className: "admin-swap-status-filters"
+    },
 
-      swapRequests.length === 0
-        ? React.createElement(
-            "div",
-            {
-              className: "admin-empty-state"
-            },
-            "No swap requests available."
-          )
-        : React.createElement(
-            "div",
-            {
-              className: "admin-table-wrapper"
-            },
+    ["Rejected", "Courier", "Local Exchange", "Not Selected"].map(
+      function (filter) {
+        return React.createElement(
+          "button",
+          {
+            key: filter,
+            type: "button",
+            className:
+              swapStatusFilter === filter
+                ? "admin-swap-filter-btn active"
+                : "admin-swap-filter-btn",
+            onClick: function () {
+              setSwapStatusFilter(filter);
+            }
+          },
+
+          filter + " (" + getSwapFilterCount(filter) + ")"
+        );
+      }
+    )
+  ),
+    filteredSwapRequests.length === 0
+    ? React.createElement(
+        "div",
+        {
+          className: "admin-empty-state"
+        },
+        "No matching swap requests available."
+      )
+
+    : React.createElement(
+        "div",
+        {
+          className: "admin-table-wrapper"
+        },
+
+        React.createElement(
+          "table",
+          {
+            className: "admin-table"
+          },
+
+          React.createElement(
+            "thead",
+            null,
 
             React.createElement(
-              "table",
-              {
-                className: "admin-table"
-              },
-
-              React.createElement(
-                "thead",
-                null,
-
-                React.createElement(
-                  "tr",
-                  null,
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Clothing"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Requester"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Owner"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Status"
-                  ),
-
-                  React.createElement(
-                    "th",
-                    null,
-                    "Agreement"
-                  )
-                )
-              ),
-
-              React.createElement(
-                "tbody",
-                null,
-
-                swapRequests
-                  .slice(0, 10)
-                  .map(function (request) {
-                    const agreement =
-                      getAgreementStatus(
-                        request
-                      );
-
-                    return React.createElement(
-                      "tr",
-                      {
-                        key: request._id
-                      },
-
-                      React.createElement(
-                        "td",
-                        null,
-                        getRequestClothing(
-                          request
-                        )
-                      ),
-
-                      React.createElement(
-                        "td",
-                        null,
-                        getRequesterName(
-                          request
-                        )
-                      ),
-
-                      React.createElement(
-                        "td",
-                        null,
-                        getRequestOwner(
-                          request
-                        )
-                      ),
-
-                      React.createElement(
-                        "td",
-                        null,
-
-                        React.createElement(
-                          "span",
-                          {
-                            className:
-                              getStatusClass(
-                                request.status
-                              )
-                          },
-                          request.status ||
-                            "Unknown"
-                        )
-                      ),
-
-                      React.createElement(
-                        "td",
-                        null,
-
-                        React.createElement(
-                          "span",
-                          {
-                            className:
-                              getStatusClass(
-                                agreement
-                              )
-                          },
-                          agreement
-                        )
-                      )
-                    );
-                  })
-              )
+              "tr",
+              null,
+              React.createElement("th", null, "Clothing"),
+              React.createElement("th", null, "Requester"),
+              React.createElement("th", null, "Owner"),
+              React.createElement("th", null, "Request Date"),
+              React.createElement("th", null, "Status"),
+              React.createElement("th", null, "Agreement"),
+              React.createElement("th", null, "Exchange Method"),
+React.createElement("th", null, "Completion Status"),
+React.createElement("th", null, "Pending Confirmation By")
             )
           ),
 
-      swapRequests.length > 10 &&
-        React.createElement(
-          "div",
-          {
-            className: "admin-table-note"
-          },
-          "Showing latest 10 swap requests."
-        )
-    ),
+          React.createElement(
+            "tbody",
+            null,
 
-    
+            filteredSwapRequests
+              .slice(0, 10)
+              .map(function (request) {
+                const displayStatus = getAdminSwapStatus(request);
+                const agreement = getAgreementStatus(request);
+
+                const completion =
+                  request.completionStatus ||
+                  (displayStatus === "Completed"
+                    ? "Completed"
+                    : "Not Started");
+                    const pendingConfirmationBy =
+  request.completionStatus === "Completed" ||
+  (request.ownerCompleted === true &&
+    request.requesterCompleted === true)
+    ? "—"
+    : request.ownerCompleted === true
+      ? getRequesterName(request)
+      : request.requesterCompleted === true
+        ? getRequestOwner(request)
+        : request.status === "Accepted"
+          ? getRequestOwner(request) + ", " + getRequesterName(request)
+          : "—";
+
+                const requestDate = request.createdAt
+                  ? new Date(request.createdAt).toLocaleString(
+                      "en-IN",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      }
+                    )
+                  : "Not available";
+
+                return React.createElement(
+                  "tr",
+                  {
+                    key: request._id
+                  },
+
+                  React.createElement("td", null, getRequestClothing(request)),
+                  React.createElement("td", null, getRequesterName(request)),
+                  React.createElement("td", null, getRequestOwner(request)),
+                  React.createElement("td", null, requestDate),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    React.createElement(
+                      "span",
+                      {
+                        className: getStatusClass(displayStatus)
+                      },
+                      displayStatus
+                    )
+                  ),
+
+                  React.createElement("td", null, agreement),
+                  React.createElement("td", null, request.exchangeMethod || "Not Selected"),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    React.createElement(
+                      "span",
+                      {
+                        className: getStatusClass(completion)
+                      },
+                      completion
+                    )
+                  ),
+                  React.createElement(
+  "td",
+  null,
+  pendingConfirmationBy
+)
+                );
+              })
+          )
+        )
+      ),
+
+  filteredSwapRequests.length > 10 &&
+    React.createElement(
+      "div",
+      {
+        className: "admin-table-note"
+      },
+      "Showing latest 10 filtered swap requests."
+    )
+),
+selectedDisputeImages.length > 0 &&
+React.createElement(
+  "div",
+  {
+    className: "admin-image-modal-overlay",
+    onClick: function () {
+      setSelectedDisputeImages([]);
+    }
+  },
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-image-modal",
+      onClick: function (event) {
+        event.stopPropagation();
+      }
+    },
 
     React.createElement(
+      "div",
+      {
+        className: "admin-image-modal-header"
+      },
+
+      React.createElement(
+        "h3",
+        null,
+        "Complaint Attachments (" +
+          selectedDisputeImages.length +
+          ")"
+      ),
+
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: function () {
+            setSelectedDisputeImages([]);
+          }
+        },
+        "✕"
+      )
+    ),
+
+    React.createElement(
+      "div",
+      {
+        className: "admin-image-gallery"
+      },
+
+      selectedDisputeImages.map(function (file, index) {
+        return React.createElement(
+          "div",
+          {
+            className: "admin-image-gallery-item",
+            key: index
+          },
+
+          React.createElement("img", {
+            src: file.preview,
+            alt: file.name || "Complaint attachment"
+          }),
+
+          React.createElement(
+            "span",
+            null,
+            file.name || "Attachment " + (index + 1)
+          )
+        );
+      })
+    )
+  )
+),
+selectedDisputeHistory &&
+  React.createElement(
+    "div",
+    {
+      className: "admin-modal-overlay",
+      onClick: function () {
+        setSelectedDisputeHistory(null);
+      }
+    },
+
+    React.createElement(
+      "div",
+      {
+        className: "admin-modal-content",
+        onClick: function (event) {
+          event.stopPropagation();
+        }
+      },
+
+      React.createElement(
+        "h3",
+        null,
+        "📜 Dispute History"
+      ),
+
+      React.createElement(
+        "p",
+        null,
+        "Reported By: ",
+        selectedDisputeHistory.reportedBy || "Unknown"
+      ),
+
+      React.createElement(
+        "p",
+        null,
+        "Reported Against: ",
+        selectedDisputeHistory.reportedAgainst || "Not specified"
+      ),
+
+      React.createElement(
+        "p",
+        null,
+        "Current Status: ",
+        selectedDisputeHistory.isDeleted
+          ? "Archived"
+          : selectedDisputeHistory.status
+      ),
+
+      React.createElement(
+        "p",
+        null,
+        "Admin Note: ",
+        selectedDisputeHistory.adminNote || "No admin note"
+      ),
+
+      React.createElement(
+        "h4",
+        null,
+        "Action Timeline"
+      ),
+
+      Array.isArray(selectedDisputeHistory.resolutionHistory) &&
+      selectedDisputeHistory.resolutionHistory.length > 0
+        ? selectedDisputeHistory.resolutionHistory.map(function (history, index) {
+            return React.createElement(
+              "div",
+              {
+                key: index,
+                className: "admin-history-item"
+              },
+
+              React.createElement(
+                "strong",
+                null,
+                history.action
+              ),
+
+              React.createElement(
+                "p",
+                null,
+                "Admin: ",
+                history.adminName || history.adminEmail || "Unknown"
+              ),
+
+              React.createElement(
+                "p",
+                null,
+                "Date: ",
+                history.actionDate
+                  ? new Date(history.actionDate).toLocaleString()
+                  : "Not available"
+              ),
+
+              React.createElement(
+                "p",
+                null,
+                "Note: ",
+                history.adminNote || "No note"
+              )
+            );
+          })
+        : React.createElement(
+            "p",
+            null,
+            "No history available."
+          ),
+
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          onClick: function () {
+            setSelectedDisputeHistory(null);
+          }
+        },
+        "Close"
+      )
+    )
+  ),
+React.createElement(
       "div",
       {
         className: "admin-info-footer"

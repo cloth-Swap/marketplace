@@ -19,8 +19,15 @@ const shipmentSchema = new mongoose.Schema(
       required: true,
       trim: true
     },
+    
+receiverEmail: {
+  type: String,
+  trim: true,
+  lowercase: true,
+  default: ""
+},
 
-    pickupAddress: {
+ pickupAddress: {
       type: String,
       default: "",
       trim: true
