@@ -16192,7 +16192,7 @@ video + div button:last-child {
   gap: 8px;
   flex-wrap: wrap;
 }
-* Main button */
+/* Main button */
 .admin-user-action-btn {
   display: inline-flex;
   align-items: center;
