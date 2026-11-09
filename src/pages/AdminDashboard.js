@@ -6,7 +6,7 @@ import html2pdf from "html2pdf.js";
 import "./AdminDashboard.css";
 
 const h = React.createElement;
-const API = "http://localhost:5000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const MENU = [
   ["overview", "Dashboard Overview", "▦"],
