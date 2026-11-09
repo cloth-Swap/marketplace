@@ -4,6 +4,72 @@ const API_URL =
 
 let refreshPromise = null;
 
+/* ================= API RESPONSE CACHE ================= */
+
+const apiResponseCache = new Map();
+
+function getCachedResponse(cacheKey) {
+  const cached = apiResponseCache.get(cacheKey);
+
+  if (!cached) {
+    return null;
+  }
+
+  if (Date.now() > cached.expiresAt) {
+    apiResponseCache.delete(cacheKey);
+    return null;
+  }
+
+  return new Response(cached.body, {
+    status: cached.status,
+    statusText: cached.statusText,
+    headers: cached.headers
+  });
+}
+
+export async function apiFetchCached(
+  url,
+  options = {},
+  ttl = 30000
+) {
+  const method = (options.method || "GET").toUpperCase();
+
+  if (method !== "GET") {
+    return apiFetch(url, options);
+  }
+
+  const email =
+    localStorage.getItem("clothswapUserEmail") ||
+    localStorage.getItem("clothswapEmail") ||
+    "";
+
+  const cacheKey =
+    email.trim().toLowerCase() + "::" + url;
+
+  const cachedResponse = getCachedResponse(cacheKey);
+
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  const response = await apiFetch(url, options);
+
+  if (response.ok) {
+    const body = await response.clone().text();
+
+    apiResponseCache.set(cacheKey, {
+      body: body,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Array.from(response.headers.entries()),
+      expiresAt: Date.now() + ttl
+    });
+  }
+
+  return response;
+}
+
+
 /* ================= REFRESH ACCESS TOKEN ================= */
 export async function refreshAccessToken() {
 

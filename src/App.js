@@ -40,6 +40,8 @@ function App() {
     const [sessionReady, setSessionReady] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
 const [termsCheckReady, setTermsCheckReady] = useState(false);
+const [termsCheckedEmail, setTermsCheckedEmail] = useState("");
+const [termsCheckedAt, setTermsCheckedAt] = useState(0);
     /* ================= AUTO SESSION RESTORE ================= */
 
  useEffect(function () {
@@ -71,7 +73,12 @@ const [termsCheckReady, setTermsCheckReady] = useState(false);
 }, []);
 /* ================= MANDATORY TERMS PROTECTION ================= */
 
+
+/* ================= MANDATORY TERMS PROTECTION ================= */
+
 useEffect(function () {
+  let cancelled = false;
+
   async function checkMandatoryTerms() {
     if (!sessionReady) {
       return;
@@ -82,8 +89,15 @@ useEffect(function () {
 
     const currentPath = location.pathname;
 
+    if (!isLoggedIn) {
+      setTermsAccepted(false);
+      setTermsCheckedEmail("");
+      setTermsCheckedAt(0);
+      setTermsCheckReady(true);
+      return;
+    }
+
     if (
-      !isLoggedIn ||
       currentPath === "/login" ||
       currentPath === "/register" ||
       currentPath === "/terms-conditions"
@@ -92,7 +106,23 @@ useEffect(function () {
       return;
     }
 
+    const currentEmail =
+      localStorage.getItem("clothswapUserEmail") ||
+      localStorage.getItem("clothswapEmail") ||
+      "";
+
+    const cacheIsValid =
+      termsAccepted &&
+      currentEmail === termsCheckedEmail &&
+      Date.now() - termsCheckedAt < 5 * 60 * 1000;
+
+    if (cacheIsValid) {
+      setTermsCheckReady(true);
+      return;
+    }
+
     setTermsCheckReady(false);
+    setTermsAccepted(false);
 
     try {
       const response = await apiFetch(
@@ -104,78 +134,142 @@ useEffect(function () {
 
       const data = await response.json();
 
+      if (cancelled) return;
+
       if (response.ok && data.success && data.accepted === true) {
         setTermsAccepted(true);
+        setTermsCheckedEmail(currentEmail);
+        setTermsCheckedAt(Date.now());
       } else {
         setTermsAccepted(false);
+        setTermsCheckedEmail("");
+        setTermsCheckedAt(0);
       }
 
     } catch (error) {
+      if (cancelled) return;
+
       console.error("Mandatory Terms Check Error:", error);
       setTermsAccepted(false);
+      setTermsCheckedEmail("");
+      setTermsCheckedAt(0);
 
     } finally {
-      setTermsCheckReady(true);
+      if (!cancelled) {
+        setTermsCheckReady(true);
+      }
     }
   }
 
   checkMandatoryTerms();
 
+  return function () {
+    cancelled = true;
+  };
+
 }, [sessionReady, location.pathname]);
-  /* ================= AUTOMATIC BLOCK CHECK ================= */
+  
+/* ================= AUTOMATIC BLOCK CHECK ================= */
 
-  useEffect(function () {
-    let isRedirecting = false;
+useEffect(function () {
+  let isRedirecting = false;
+  let isChecking = false;
 
-    async function checkAccountStatus() {
-      const isLoggedIn =
-        localStorage.getItem("clothswapLoggedIn") === "true";
+  async function checkAccountStatus() {
+    const isLoggedIn =
+      localStorage.getItem("clothswapLoggedIn") === "true";
 
-if (!sessionReady || !isLoggedIn || isRedirecting) {
-  return;
-}
-      try {
-        const response = await apiFetch(
-          `${API_URL}/api/auth/status`,
-          {
-            method: "GET"
-          }
-        );
-
-        if (response.status === 403) {
-          const data = await response.json();
-
-          if (
-            data.message === "Your account has been blocked." ||
-            data.message === "Your account has been blocked"
-          ) {
-            isRedirecting = true;
-
-            localStorage.removeItem("clothswapToken");
-            localStorage.removeItem("clothswapLoggedIn");
-            localStorage.removeItem("clothswapIsAdmin");
-
-            window.alert("Your account has been blocked.");
-
-            window.location.href = "/login";
-          }
-        }
-      } catch (error) {
-        console.error("Account Status Check Error:", error);
-      }
+    if (
+      !sessionReady ||
+      !isLoggedIn ||
+      isRedirecting ||
+      isChecking
+    ) {
+      return;
     }
 
-    checkAccountStatus();
+    isChecking = true;
 
-    const interval = setInterval(
-      checkAccountStatus,
-      2000
+    try {
+      const response = await apiFetch(
+        `${API_URL}/api/auth/status`,
+        {
+          method: "GET"
+        }
+      );
+
+      if (response.status === 403) {
+        const data = await response.json();
+
+        if (
+          data.message === "Your account has been blocked." ||
+          data.message === "Your account has been blocked"
+        ) {
+          isRedirecting = true;
+
+          localStorage.removeItem("clothswapToken");
+          localStorage.removeItem("clothswapLoggedIn");
+          localStorage.removeItem("clothswapIsAdmin");
+
+          window.alert("Your account has been blocked.");
+
+          window.location.href = "/login";
+        }
+      }
+
+    } catch (error) {
+      console.error("Account Status Check Error:", error);
+
+    } finally {
+      isChecking = false;
+    }
+  }
+
+  checkAccountStatus();
+
+  // Check again when user returns to the website
+  function handleVisibilityChange() {
+    if (document.visibilityState === "visible") {
+      checkAccountStatus();
+    }
+  }
+
+  function handleWindowFocus() {
+    checkAccountStatus();
+  }
+
+  document.addEventListener(
+    "visibilitychange",
+    handleVisibilityChange
+  );
+
+  window.addEventListener(
+    "focus",
+    handleWindowFocus
+  );
+
+  // Check account status every 60 seconds
+  const interval = setInterval(
+    checkAccountStatus,
+    60000
+  );
+
+  return function () {
+    clearInterval(interval);
+
+    document.removeEventListener(
+      "visibilitychange",
+      handleVisibilityChange
     );
 
-    return function () {
-      clearInterval(interval);
-    };
+    window.removeEventListener(
+      "focus",
+      handleWindowFocus
+    );
+  };
+
 }, [sessionReady]);
+
   // CEO Dashboard route check
   const isCEODashboard =
     location.pathname === "/admin-dashboard";

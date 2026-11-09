@@ -333,16 +333,18 @@ function Navbar() {
   }, []);
 
 
-  useEffect(
-    function () {
-      updateLoginStatus();
-      updateNotificationCount();
-      setMenuOpen(false);
-      setShowSearchResults(false);
-      setSearchText("");
-    },
-    [location.pathname]
-  );
+ 
+useEffect(
+  function () {
+    updateLoginStatus();
+
+    setMenuOpen(false);
+    setShowSearchResults(false);
+    setSearchText("");
+  },
+  [location.pathname]
+);
+
 
 
   function closeMenu() {

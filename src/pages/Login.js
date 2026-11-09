@@ -186,16 +186,18 @@ console.log("GOOGLE BUTTON READY:", !!googleButtonRef.current);
         auto_select: false
       });
 
-      window.google.accounts.id.renderButton(
-        googleButtonRef.current,
-        {
-          theme: "outline",
-          size: "large",
-          width: 360,
-          text: "continue_with",
-          shape: "pill"
-        }
-      );
+    window.google.accounts.id.renderButton(
+  googleButtonRef.current,
+  {
+    type: "standard",
+    theme: "outline",
+    size: "large",
+    width: 190,
+    text: "signin_with",
+    shape: "pill",
+    logo_alignment: "left"
+  }
+);
     };
 
     if (
@@ -1121,8 +1123,9 @@ React.createElement(
           React.createElement(
             "form",
             {
-              onSubmit: handleLogin
-            },
+  onSubmit: handleLogin,
+  autoComplete: "off"
+},
 
             React.createElement(
               "div",
@@ -1139,20 +1142,21 @@ React.createElement(
                 "Username"
               ),
 
-              React.createElement("input", {
-                type: "text",
-                autoComplete: "off",
-                className:
-                  "clothswap-input",
-                placeholder:
-                  "Enter your username",
-                value: username,
-                onChange: function (event) {
-                  setUsername(
-                    event.target.value
-                  );
-                }
-              })
+             React.createElement("input", {
+  type: "text",
+  name: "clothswap-login-username",
+  autoComplete: "new-password",
+  readOnly: true,
+  onFocus: function (event) {
+    event.target.removeAttribute("readonly");
+  },
+  className: "clothswap-input",
+  placeholder: "Enter your username",
+  value: username,
+  onChange: function (event) {
+    setUsername(event.target.value);
+  }
+})
             ),
 
             React.createElement(
@@ -1170,20 +1174,21 @@ React.createElement(
                 "Email address"
               ),
 
-              React.createElement("input", {
-                type: "email",
-                autoComplete: "off",
-                className:
-                  "clothswap-input",
-                placeholder:
-                  "you@example.com",
-                value: email,
-                onChange: function (event) {
-                  setEmail(
-                    event.target.value
-                  );
-                }
-              })
+             React.createElement("input", {
+  type: "email",
+  name: "clothswap-login-email",
+  autoComplete: "new-password",
+  readOnly: true,
+  onFocus: function (event) {
+    event.target.removeAttribute("readonly");
+  },
+  className: "clothswap-input",
+  placeholder: "you@example.com",
+  value: email,
+  onChange: function (event) {
+    setEmail(event.target.value);
+  }
+})
             ),
 
             React.createElement(

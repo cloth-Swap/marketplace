@@ -218,25 +218,18 @@ navigate("/login");
           );
 
 
-          window.google.accounts.id.renderButton(
-            googleButtonRef.current,
-            {
-              theme:
-                "outline",
-
-              size:
-                "large",
-
-              width:
-                360,
-
-              text:
-                "continue_with",
-
-              shape:
-                "pill"
-            }
-          );
+        window.google.accounts.id.renderButton(
+  googleButtonRef.current,
+  {
+    type: "standard",
+    theme: "outline",
+    size: "large",
+    width: 190,
+    text: "signin_with",
+    shape: "pill",
+    logo_alignment: "left"
+  }
+);
         };
 
 
