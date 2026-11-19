@@ -1,7 +1,78 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API_URL, { apiFetch } from "../api";
 
+function getCurrentUserEmail() {
+  const possibleKeys = [
+    "clothswapUserEmail",
+    "clothSwapUserEmail",
+    "clothswapEmail",
+    "clothSwapEmail",
+    "userEmail"
+  ];
+
+  for (let i = 0; i < possibleKeys.length; i++) {
+    const value = localStorage.getItem(possibleKeys[i]);
+
+    if (value && value.trim()) {
+      return value.trim().toLowerCase();
+    }
+  }
+
+  const possibleUserKeys = [
+    "clothswapUser",
+    "clothSwapUser",
+    "user"
+  ];
+
+  for (let i = 0; i < possibleUserKeys.length; i++) {
+    try {
+      const savedUser = JSON.parse(
+        localStorage.getItem(possibleUserKeys[i]) || "null"
+      );
+
+      if (savedUser && savedUser.email) {
+        return savedUser.email.trim().toLowerCase();
+      }
+    } catch (error) {
+      // Ignore invalid saved user data
+    }
+  }
+
+  return "";
+}
+
+function normalize(value) {
+  return String(value || "").trim().toLowerCase();
+}
+const dashboardDataCache = {};
+
+function getDashboardCacheKey() {
+  const email = getCurrentUserEmail();
+
+  return "clothswapDashboardCache_" +
+    normalize(email);
+}
+
+const dashboardStorageKey = getDashboardCacheKey();
+
+try {
+  const savedDashboardCache = localStorage.getItem(
+    dashboardStorageKey
+  );
+
+  if (savedDashboardCache) {
+    const parsedCache = JSON.parse(savedDashboardCache);
+
+    if (parsedCache && typeof parsedCache === "object") {
+      dashboardDataCache[normalize(getCurrentUserEmail())] =
+        parsedCache;
+    }
+  }
+} catch (error) {
+  console.log("Dashboard cache read error:", error);
+}
 function Dashboard() {
   const [userName, setUserName] = useState(
     localStorage.getItem("clothSwapUserName") ||
@@ -11,175 +82,247 @@ function Dashboard() {
 
   const [clothes, setClothes] = useState([]);
   const [swapRequests, setSwapRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationLoading, setNotificationLoading] = useState(false);
-  useEffect(function () {
-    const savedUser =
-      localStorage.getItem("clothSwapUserName") ||
-      localStorage.getItem("clothswapUserName");
+ const [clothesLoading, setClothesLoading] = useState(true);
+const [swapRequestsLoading, setSwapRequestsLoading] = useState(true);
+const [notifications, setNotifications] = useState([]);
+const [notificationLoading, setNotificationLoading] = useState(false);  
 
-    if (savedUser) {
-      setUserName(savedUser);
-    }
+  const currentUserEmail = getCurrentUserEmail();
+  const dashboardCacheKey = normalize(currentUserEmail);
 
-    loadDashboardData();
-    loadSenderNotifications();
-  }, []);
+ useEffect(function () {
+  const cachedData = dashboardDataCache[dashboardCacheKey];
 
-  async function loadDashboardData() {
-  try {
-    const clothesResponse = await apiFetch(
-  `${API_URL}/api/clothes`
-);
+if (cachedData) {
+  if (Array.isArray(cachedData.clothes)) {
+    setClothes(cachedData.clothes);
+    setClothesLoading(false);
+  }
 
-    const clothesData =
-      await clothesResponse.json();
-
-    if (Array.isArray(clothesData)) {
-      setClothes(clothesData);
-    } else if (
-      clothesData &&
-      Array.isArray(clothesData.clothes)
-    ) {
-      setClothes(clothesData.clothes);
-    } else {
-      setClothes([]);
-    }
-
-    const requestsResponse = await apiFetch(
-  `${API_URL}/api/swap-requests`
-);
-
-    const requestsData =
-      await requestsResponse.json();
-
-    if (Array.isArray(requestsData)) {
-      setSwapRequests(requestsData);
-    } else if (
-      requestsData &&
-      Array.isArray(requestsData.requests)
-    ) {
-      setSwapRequests(requestsData.requests);
-    } else {
-      setSwapRequests([]);
-    }
-  } catch (error) {
-    console.log(
-      "Dashboard data loading error:",
-      error
-    );
-
-    setClothes([]);
-    setSwapRequests([]);
-  } finally {
-    setLoading(false);
+  if (Array.isArray(cachedData.swapRequests)) {
+    setSwapRequests(cachedData.swapRequests);
+    setSwapRequestsLoading(false);
   }
 }
+  const savedUser =
+    localStorage.getItem("clothSwapUserName") ||
+    localStorage.getItem("clothswapUserName");
 
-async function loadSenderNotifications() {
+  if (savedUser) {
+    setUserName(savedUser);
+  }
+
+  loadClothesData();
+  loadSwapRequestsData();
+  loadSenderNotifications();
+}, []);
+async function loadClothesData() {
   try {
-    const currentUser =
-      localStorage.getItem("clothSwapUserName") ||
-      localStorage.getItem("clothswapUserName") ||
-      "";
-
-    if (!currentUser) {
-      setNotifications([]);
-      return;
-    }
-
-    setNotificationLoading(true);
-
-    const response = await apiFetch(
-  `${API_URL}/api/shipments/notifications/` +
-  encodeURIComponent(currentUser)
-);
-
-    const data = await response.json();
+    const response = await apiFetch(API_URL + "/api/clothes");
 
     if (!response.ok) {
-      setNotifications([]);
-      return;
+      throw new Error("Failed to load clothes");
     }
 
-    if (
-      data &&
-      Array.isArray(data.notifications)
-    ) {
-      setNotifications(
-        data.notifications
-      );
-    } else {
-      setNotifications([]);
-    }
+  const data = await response.json();
 
-  } catch (error) {
-    console.log(
-      "Notification loading error:",
-      error
+const clothesData = Array.isArray(data) ? data : [];
+setClothes(clothesData);
+
+setClothes(clothesData);
+
+if (dashboardCacheKey) {
+  dashboardDataCache[dashboardCacheKey] = {
+    ...(dashboardDataCache[dashboardCacheKey] || {}),
+clothes: clothesData.map(function (item) {
+  return {
+    ...item,
+    image:
+      typeof item.image === "string" &&
+      item.image.startsWith("data:")
+        ? ""
+        : item.image
+  };
+})  };
+
+  try {
+    localStorage.setItem(
+      dashboardStorageKey,
+      JSON.stringify(dashboardDataCache[dashboardCacheKey])
     );
-
-    setNotifications([]);
-
-  } finally {
-    setNotificationLoading(false);
+  } catch (error) {
+    console.log("Dashboard clothes cache save error:", error);
   }
 }
-  const normalizedUser =
-    (userName || "").trim().toLowerCase();
+  } catch (error) {
+    console.error("Clothes loading error:", error);
+  } finally {
+    setClothesLoading(false);
+  }
+}
+
+async function loadSwapRequestsData() {
+  try {
+    const url =
+      API_URL +
+      "/api/swap-requests?userEmail=" +
+      encodeURIComponent(currentUserEmail);
+
+    const response = await apiFetch(url);
+
+    if (!response.ok) {
+      throw new Error("Failed to load swap requests");
+    }
+
+   const data = await response.json();
+
+const requestsData = Array.isArray(data) ? data : [];
+
+setSwapRequests(requestsData);
+
+if (dashboardCacheKey) {
+  dashboardDataCache[dashboardCacheKey] = {
+    ...(dashboardDataCache[dashboardCacheKey] || {}),
+    swapRequests: requestsData
+  };
+
+  try {
+    localStorage.setItem(
+      dashboardStorageKey,
+      JSON.stringify(dashboardDataCache[dashboardCacheKey])
+    );
+  } catch (error) {
+    console.log("Dashboard swap requests cache save error:", error);
+  }
+}
+  } catch (error) {
+    console.error("Swap requests loading error:", error);
+    setSwapRequests([]);
+  } finally {
+    setSwapRequestsLoading(false);
+  }
+}
+
+  async function loadSenderNotifications() {
+    try {
+      const currentUser =
+        localStorage.getItem("clothSwapUserName") ||
+        localStorage.getItem("clothswapUserName") ||
+        "";
+
+      if (!currentUser) {
+        setNotifications([]);
+        return;
+      }
+
+      setNotificationLoading(true);
+
+      const response = await apiFetch(
+        `${API_URL}/api/shipments/notifications/` +
+        encodeURIComponent(currentUser)
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setNotifications([]);
+        return;
+      }
+
+      if (data && Array.isArray(data.notifications)) {
+        setNotifications(data.notifications);
+      } else {
+        setNotifications([]);
+      }
+
+    } catch (error) {
+      console.log("Notification loading error:", error);
+      setNotifications([]);
+
+    } finally {
+      setNotificationLoading(false);
+    }
+  }
+
+  const normalizedUser = normalize(userName);
+  const normalizedUserEmail = normalize(currentUserEmail);
 
   const myListings = clothes.filter(function (item) {
+    const ownerEmail = normalize(item.ownerEmail);
+    const ownerName = normalize(item.owner);
+
     return (
-      item.owner &&
-      item.owner.trim().toLowerCase() ===
-        normalizedUser
+      (normalizedUserEmail && ownerEmail === normalizedUserEmail) ||
+      (normalizedUser && ownerName === normalizedUser)
     );
   });
 
-  const sentRequests = swapRequests.filter(
-    function (request) {
-      return (
-        request.requester &&
-        request.requester.trim().toLowerCase() ===
-          normalizedUser
-      );
-    }
-  );
+  const sentRequests = swapRequests.filter(function (request) {
+    const requesterEmail = normalize(request.requesterEmail);
+    const requesterName = normalize(request.requester);
 
-  const receivedRequests = swapRequests.filter(
-    function (request) {
-      return (
-        request.owner &&
-        request.owner.trim().toLowerCase() ===
-          normalizedUser
-      );
-    }
-  );
+    return (
+      (normalizedUserEmail &&
+        requesterEmail === normalizedUserEmail) ||
+      (normalizedUser && requesterName === normalizedUser)
+    );
+  });
 
-  const acceptedSwaps = swapRequests.filter(
-    function (request) {
-      return (
-        request.status === "Accepted" &&
+  const receivedRequests = swapRequests.filter(function (request) {
+    const ownerEmail = normalize(request.ownerEmail);
+    const ownerName = normalize(request.owner);
+
+    return (
+      (normalizedUserEmail && ownerEmail === normalizedUserEmail) ||
+      (normalizedUser && ownerName === normalizedUser)
+    );
+  });
+
+  const acceptedSwaps = swapRequests.filter(function (request) {
+    const requesterEmail = normalize(request.requesterEmail);
+    const ownerEmail = normalize(request.ownerEmail);
+
+    const requesterName = normalize(request.requester);
+    const ownerName = normalize(request.owner);
+
+    const isCurrentUser =
+      (normalizedUserEmail &&
         (
-          (
-            request.requester &&
-            request.requester
-              .trim()
-              .toLowerCase() ===
-              normalizedUser
-          ) ||
-          (
-            request.owner &&
-            request.owner
-              .trim()
-              .toLowerCase() ===
-              normalizedUser
-          )
-        )
-      );
-    }
-  );
+          requesterEmail === normalizedUserEmail ||
+          ownerEmail === normalizedUserEmail
+        )) ||
+      (normalizedUser &&
+        (
+          requesterName === normalizedUser ||
+          ownerName === normalizedUser
+        ));
+
+    return (
+      request.completionStatus === "Completed" &&
+      isCurrentUser
+    );
+  });
+
+  const recentRequests = swapRequests.filter(function (request) {
+    const requesterEmail = normalize(request.requesterEmail);
+    const ownerEmail = normalize(request.ownerEmail);
+
+    const requesterName = normalize(request.requester);
+    const ownerName = normalize(request.owner);
+
+    return (
+      (normalizedUserEmail &&
+        (
+          requesterEmail === normalizedUserEmail ||
+          ownerEmail === normalizedUserEmail
+        )) ||
+      (normalizedUser &&
+        (
+          requesterName === normalizedUser ||
+          ownerName === normalizedUser
+        ))
+    );
+  });
 
   return React.createElement(
     "div",
@@ -188,7 +331,6 @@ async function loadSenderNotifications() {
     React.createElement(
       "div",
       { className: "container py-4 py-md-5" },
-
 
       React.createElement(
         "div",
@@ -220,7 +362,6 @@ async function loadSenderNotifications() {
         )
       ),
 
-
       React.createElement(
         "div",
         { className: "dashboard-profile-card mb-4" },
@@ -228,20 +369,14 @@ async function loadSenderNotifications() {
         React.createElement(
           "div",
           { className: "dashboard-avatar" },
-          userName
-            ? userName.charAt(0).toUpperCase()
-            : "U"
+          userName ? userName.charAt(0).toUpperCase() : "U"
         ),
 
         React.createElement(
           "div",
           { className: "dashboard-profile-info" },
 
-          React.createElement(
-            "h2",
-            null,
-            userName
-          ),
+          React.createElement("h2", null, userName),
 
           React.createElement(
             "p",
@@ -260,11 +395,9 @@ async function loadSenderNotifications() {
         )
       ),
 
-
       React.createElement(
         "div",
         { className: "row g-3 mb-4" },
-
 
         React.createElement(
           "div",
@@ -283,7 +416,7 @@ async function loadSenderNotifications() {
             React.createElement(
               "div",
               { className: "dashboard-stat-number" },
-              myListings.length
+              clothesLoading ? "..." : myListings.length
             ),
 
             React.createElement(
@@ -293,7 +426,6 @@ async function loadSenderNotifications() {
             )
           )
         ),
-
 
         React.createElement(
           "div",
@@ -312,7 +444,7 @@ async function loadSenderNotifications() {
             React.createElement(
               "div",
               { className: "dashboard-stat-number" },
-              sentRequests.length
+              swapRequestsLoading ? "..." : sentRequests.length
             ),
 
             React.createElement(
@@ -322,7 +454,6 @@ async function loadSenderNotifications() {
             )
           )
         ),
-
 
         React.createElement(
           "div",
@@ -341,7 +472,7 @@ async function loadSenderNotifications() {
             React.createElement(
               "div",
               { className: "dashboard-stat-number" },
-              receivedRequests.length
+              swapRequestsLoading ? "..." : receivedRequests.length
             ),
 
             React.createElement(
@@ -369,7 +500,7 @@ async function loadSenderNotifications() {
             React.createElement(
               "div",
               { className: "dashboard-stat-number" },
-              acceptedSwaps.length
+              swapRequestsLoading ? "..." : acceptedSwaps.length
             ),
 
             React.createElement(
@@ -381,71 +512,57 @@ async function loadSenderNotifications() {
         )
       ),
 
+      notifications.length > 0
+        ? React.createElement(
+            "div",
+            {
+              className: "dashboard-courier-notification"
+            },
 
-notifications.length > 0
-  ? React.createElement(
-      "div",
-      {
-        className:
-          "dashboard-courier-notification"
-      },
+            React.createElement(
+              "div",
+              {
+                className: "dashboard-courier-notification-icon"
+              },
+              "🚚"
+            ),
 
-      React.createElement(
-        "div",
-        {
-          className:
-            "dashboard-courier-notification-icon"
-        },
-        "🚚"
-      ),
+            React.createElement(
+              "div",
+              {
+                className: "dashboard-courier-notification-content"
+              },
 
-      React.createElement(
-        "div",
-        {
-          className:
-            "dashboard-courier-notification-content"
-        },
+              React.createElement(
+                "strong",
+                null,
+                "Courier Delivery Update"
+              ),
 
-        React.createElement(
-          "strong",
-          null,
-          "Courier Delivery Update"
-        ),
+              React.createElement(
+                "p",
+                null,
+                notifications[0].senderNotification ||
+                (
+                  "✅ Your parcel has been received by " +
+                  (notifications[0].receiver || "the receiver") +
+                  "."
+                )
+              ),
 
-        React.createElement(
-          "p",
-          null,
-          notifications[0]
-            .senderNotification ||
-            (
-              "✅ Your parcel has been received by " +
-              (
-                notifications[0]
-                  .receiver ||
-                "the receiver"
-              ) +
-              "."
+              React.createElement(
+                "small",
+                null,
+                "Tracking ID: " +
+                (notifications[0].trackingId || "N/A")
+              )
             )
-        ),
-
-        React.createElement(
-          "small",
-          null,
-          "Tracking ID: " +
-            (
-              notifications[0]
-                .trackingId ||
-              "N/A"
-            )
-        )
-      )
-    )
-  : null,
+          )
+        : null,
 
       React.createElement(
         "div",
         { className: "row g-4" },
-
 
         React.createElement(
           "div",
@@ -454,15 +571,13 @@ notifications.length > 0
           React.createElement(
             "div",
             {
-              className:
-                "dashboard-section-card h-100"
+              className: "dashboard-section-card h-100"
             },
 
             React.createElement(
               "div",
               {
-                className:
-                  "dashboard-section-header"
+                className: "dashboard-section-header"
               },
 
               React.createElement(
@@ -486,36 +601,30 @@ notifications.length > 0
                 Link,
                 {
                   to: "/list-clothes",
-                  className:
-                    "dashboard-view-link"
+                  className: "dashboard-view-link"
                 },
                 "Add New"
               )
             ),
 
-            loading
-              ? React.createElement(
-                  "p",
-                  {
-                    className:
-                      "dashboard-empty-text"
-                  },
-                  "Loading..."
-                )
+           clothesLoading
+  ? React.createElement(
+      "p",
+      { className: "dashboard-empty-text" },
+      "Loading..."
+    )
 
               : myListings.length === 0
               ? React.createElement(
                   "div",
                   {
-                    className:
-                      "dashboard-empty-box"
+                    className: "dashboard-empty-box"
                   },
 
                   React.createElement(
                     "div",
                     {
-                      className:
-                        "dashboard-empty-icon"
+                      className: "dashboard-empty-icon"
                     },
                     "👕"
                   ),
@@ -536,8 +645,7 @@ notifications.length > 0
                     Link,
                     {
                       to: "/list-clothes",
-                      className:
-                        "dashboard-primary-btn"
+                      className: "dashboard-primary-btn"
                     },
                     "List Your First Item"
                   )
@@ -546,78 +654,61 @@ notifications.length > 0
               : React.createElement(
                   "div",
                   {
-                    className:
-                      "dashboard-list"
+                    className: "dashboard-list"
                   },
 
-                  myListings
-                    .slice(0, 4)
-                    .map(function (item) {
+                  myListings.slice(0, 4).map(function (item) {
+                    return React.createElement(
+                      "div",
+                      {
+                        className: "dashboard-list-item",
+                        key: item._id || item.id
+                      },
 
-                      return React.createElement(
+                      React.createElement(
+                        "img",
+                        {
+                          src:
+                            item.image ||
+                            "https://via.placeholder.com/100x100?text=Cloth",
+                          alt: item.title || "Clothing",
+                          className: "dashboard-item-image"
+                        }
+                      ),
+
+                      React.createElement(
                         "div",
                         {
-                          className:
-                            "dashboard-list-item",
-                          key:
-                            item._id ||
-                            item.id
+                          className: "dashboard-item-details"
                         },
 
                         React.createElement(
-                          "img",
-                          {
-                            src:
-                              item.image ||
-                              "https://via.placeholder.com/100x100?text=Cloth",
-                            alt:
-                              item.title ||
-                              "Clothing",
-                            className:
-                              "dashboard-item-image"
-                          }
+                          "h3",
+                          null,
+                          item.title || "Untitled Item"
                         ),
 
                         React.createElement(
-                          "div",
+                          "p",
+                          null,
+                          item.category || "Clothing",
+                          " • Size ",
+                          item.size || "N/A"
+                        ),
+
+                        React.createElement(
+                          "span",
                           {
-                            className:
-                              "dashboard-item-details"
+                            className: "dashboard-status"
                           },
-
-                          React.createElement(
-                            "h3",
-                            null,
-                            item.title ||
-                              "Untitled Item"
-                          ),
-
-                          React.createElement(
-                            "p",
-                            null,
-                            item.category ||
-                              "Clothing",
-                            " • Size ",
-                            item.size ||
-                              "N/A"
-                          ),
-
-                          React.createElement(
-                            "span",
-                            {
-                              className:
-                                "dashboard-status"
-                            },
-                            item.status ||
-                              "Available"
-                          )
+                          item.status || "Available"
                         )
-                      );
-                    })
+                      )
+                    );
+                  })
                 )
           )
         ),
-
 
         React.createElement(
           "div",
@@ -633,8 +724,7 @@ notifications.length > 0
             React.createElement(
               "div",
               {
-                className:
-                  "dashboard-section-header"
+                className: "dashboard-section-header"
               },
 
               React.createElement(
@@ -658,38 +748,32 @@ notifications.length > 0
                 Link,
                 {
                   to: "/swap-requests",
-                  className:
-                    "dashboard-view-link"
+                  className: "dashboard-view-link"
                 },
                 "View All"
               )
             ),
 
-            loading
-              ? React.createElement(
-                  "p",
-                  {
-                    className:
-                      "dashboard-empty-text"
-                  },
-                  "Loading..."
-                )
+           swapRequestsLoading
+  ? React.createElement(
+      "p",
+      {
+        className: "dashboard-empty-text"
+      },
+      "Loading..."
+    )
 
-              : sentRequests.length === 0 &&
-                receivedRequests.length === 0
-
+              : recentRequests.length === 0
               ? React.createElement(
                   "div",
                   {
-                    className:
-                      "dashboard-empty-box"
+                    className: "dashboard-empty-box"
                   },
 
                   React.createElement(
                     "div",
                     {
-                      className:
-                        "dashboard-empty-icon"
+                      className: "dashboard-empty-icon"
                     },
                     "🕒"
                   ),
@@ -710,8 +794,7 @@ notifications.length > 0
                     Link,
                     {
                       to: "/browse",
-                      className:
-                        "dashboard-primary-btn"
+                      className: "dashboard-primary-btn"
                     },
                     "Explore Clothes"
                   )
@@ -720,144 +803,99 @@ notifications.length > 0
               : React.createElement(
                   "div",
                   {
-                    className:
-                      "dashboard-recent-list"
+                    className: "dashboard-recent-list"
                   },
 
-                  swapRequests
-                    .filter(function (request) {
+                  recentRequests.slice(0, 5).map(function (request) {
+                    const isSent =
+                      normalize(request.requesterEmail) === normalizedUserEmail ||
+                      normalize(request.requester) === normalizedUser;
 
-                      return (
-                        (
-                          request.requester &&
-                          request.requester
-                            .trim()
-                            .toLowerCase() ===
-                            normalizedUser
-                        ) ||
-                        (
-                          request.owner &&
-                          request.owner
-                            .trim()
-                            .toLowerCase() ===
-                            normalizedUser
-                        )
-                      );
-                    })
-                    .slice(0, 5)
-                    .map(function (request) {
+                    const activityTitle =
+                      request.status === "Accepted"
+                        ? "Swap request accepted"
+                        : request.status === "Rejected"
+                        ? "Swap request rejected"
+                        : isSent
+                        ? "Swap request sent"
+                        : "New swap request received";
 
-                      const isSent =
-                        request.requester &&
-                        request.requester
-                          .trim()
-                          .toLowerCase() ===
-                          normalizedUser;
+                    const activityText =
+                      request.clothingTitle || "Clothing item";
 
-                      const activityTitle =
-                        request.status ===
-                        "Accepted"
-                          ? "Swap request accepted"
-                          : request.status ===
-                            "Rejected"
-                          ? "Swap request rejected"
-                          : isSent
-                          ? "Swap request sent"
-                          : "New swap request received";
+                    const activityIcon =
+                      request.status === "Accepted"
+                        ? "✅"
+                        : request.status === "Rejected"
+                        ? "❌"
+                        : isSent
+                        ? "📤"
+                        : "📥";
 
-                      const activityText =
-                        request.clothingTitle ||
-                        "Clothing item";
+                    return React.createElement(
+                      "div",
+                      {
+                        className: "dashboard-recent-item",
+                        key: request._id || request.id
+                      },
 
-                      const activityIcon =
-                        request.status ===
-                        "Accepted"
-                          ? "✅"
-                          : request.status ===
-                            "Rejected"
-                          ? "❌"
-                          : isSent
-                          ? "📤"
-                          : "📥";
-
-                      return React.createElement(
+                      React.createElement(
                         "div",
                         {
-                          className:
-                            "dashboard-recent-item",
-                          key:
-                            request._id ||
-                            request.id
+                          className: "dashboard-recent-icon"
+                        },
+                        activityIcon
+                      ),
+
+                      React.createElement(
+                        "div",
+                        {
+                          className: "dashboard-recent-info"
                         },
 
                         React.createElement(
-                          "div",
-                          {
-                            className:
-                              "dashboard-recent-icon"
-                          },
-                          activityIcon
-                        ),
-
-                        React.createElement(
-                          "div",
-                          {
-                            className:
-                              "dashboard-recent-info"
-                          },
-
-                          React.createElement(
-                            "strong",
-                            null,
-                            activityTitle
-                          ),
-
-                          React.createElement(
-                            "span",
-                            null,
-                            activityText
-                          ),
-
-                          React.createElement(
-                            "small",
-                            null,
-                            isSent
-                              ? "You sent this request"
-                              : "You received this request"
-                          )
+                          "strong",
+                          null,
+                          activityTitle
                         ),
 
                         React.createElement(
                           "span",
-                          {
-                            className:
-                              "dashboard-recent-status " +
-                              (
-                                request.status ||
-                                "Pending"
-                              )
-                                .toLowerCase()
-                                .replace(
-                                  " ",
-                                  "-"
-                                )
-                          },
-                          request.status ||
-                            "Pending"
+                          null,
+                          activityText
+                        ),
+
+                        React.createElement(
+                          "small",
+                          null,
+                          isSent
+                            ? "You sent this request"
+                            : "You received this request"
                         )
-                      );
-                    })
+                      ),
+
+                      React.createElement(
+                        "span",
+                        {
+                          className:
+                            "dashboard-recent-status " +
+                            (request.status || "Pending")
+                              .toLowerCase()
+                              .replace(" ", "-")
+                        },
+                        request.status || "Pending"
+                      )
+                    );
+                  })
                 )
           )
         )
       ),
 
-
       React.createElement(
         "div",
         {
-          className:
-            "dashboard-quick-actions mt-4"
+          className: "dashboard-quick-actions mt-4"
         },
 
         React.createElement(
@@ -869,31 +907,23 @@ notifications.length > 0
         React.createElement(
           "div",
           {
-            className:
-              "row g-3 mt-1"
+            className: "row g-3 mt-1"
           },
-
 
           React.createElement(
             "div",
             {
-              className:
-                "col-12 col-md-4"
+              className: "col-12 col-md-4"
             },
 
             React.createElement(
               Link,
               {
                 to: "/browse",
-                className:
-                  "dashboard-action-card"
+                className: "dashboard-action-card"
               },
 
-              React.createElement(
-                "span",
-                null,
-                "🔎"
-              ),
+              React.createElement("span", null, "🔎"),
 
               React.createElement(
                 "div",
@@ -914,27 +944,20 @@ notifications.length > 0
             )
           ),
 
-
           React.createElement(
             "div",
             {
-              className:
-                "col-12 col-md-4"
+              className: "col-12 col-md-4"
             },
 
             React.createElement(
               Link,
               {
                 to: "/swap-requests",
-                className:
-                  "dashboard-action-card"
+                className: "dashboard-action-card"
               },
 
-              React.createElement(
-                "span",
-                null,
-                "🔄"
-              ),
+              React.createElement("span", null, "🔄"),
 
               React.createElement(
                 "div",
@@ -955,27 +978,20 @@ notifications.length > 0
             )
           ),
 
-
           React.createElement(
             "div",
             {
-              className:
-                "col-12 col-md-4"
+              className: "col-12 col-md-4"
             },
 
             React.createElement(
               Link,
               {
                 to: "/chat",
-                className:
-                  "dashboard-action-card"
+                className: "dashboard-action-card"
               },
 
-              React.createElement(
-                "span",
-                null,
-                "💬"
-              ),
+              React.createElement("span", null, "💬"),
 
               React.createElement(
                 "div",

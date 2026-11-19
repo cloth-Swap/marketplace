@@ -166,127 +166,110 @@ navigate("/login");
     };
 
 
-  /* =====================================================
-     GOOGLE SCRIPT
-  ===================================================== */
+ 
+useEffect(function () {
+  let cancelled = false;
+  let scriptElement = null;
 
-  useEffect(
-    function () {
+  const initializeGoogle = function () {
+    if (
+      cancelled ||
+      !window.google ||
+      !window.google.accounts ||
+      !googleButtonRef.current
+    ) {
+      return;
+    }
 
-      const initializeGoogle =
-        function () {
+    const clientId =
+      import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+    if (!clientId) {
+      setError(
+        "Google Client ID is missing. Please check the frontend .env file."
+      );
+      return;
+    }
+
+    // Update callback for the currently open page.
+    window.__clothSwapGoogleCallback =
+      handleGoogleResponse;
+
+    // Initialize only once for this Google Client ID.
+    if (
+      window.__clothSwapGoogleClientId !== clientId
+    ) {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: function (response) {
           if (
-            !window.google ||
-            !window.google.accounts ||
-            !googleButtonRef.current
+            typeof window.__clothSwapGoogleCallback ===
+            "function"
           ) {
-            return;
+            window.__clothSwapGoogleCallback(response);
           }
+        },
+        auto_select: false
+      });
 
+      window.__clothSwapGoogleClientId = clientId;
+    }
 
-          const clientId =
-            import.meta.env
-              .VITE_GOOGLE_CLIENT_ID;
+    googleButtonRef.current.innerHTML = "";
 
-
-          if (!clientId) {
-
-            setError(
-              "Google Client ID is missing. Please check the frontend .env file."
-            );
-
-            return;
-          }
-
-
-          googleButtonRef.current.innerHTML =
-            "";
-
-
-          window.google.accounts.id.initialize(
-            {
-              client_id:
-                clientId,
-
-              callback:
-                handleGoogleResponse,
-
-              auto_select:
-                false
-            }
-          );
-
-
-        window.google.accounts.id.renderButton(
-  googleButtonRef.current,
-  {
-    type: "standard",
-    theme: "outline",
-    size: "large",
-    width: 190,
-    text: "signin_with",
-    shape: "pill",
-    logo_alignment: "left"
-  }
-);
-        };
-
-
-      if (
-        window.google &&
-        window.google.accounts
-      ) {
-
-        initializeGoogle();
-
-        return;
+    window.google.accounts.id.renderButton(
+      googleButtonRef.current,
+      {
+        type: "standard",
+        theme: "outline",
+        size: "medium",
+        width: 360,
+        text: "signin_with",
+        shape: "pill",
+        logo_alignment: "left"
       }
+    );
+  };
 
+  if (
+    window.google &&
+    window.google.accounts
+  ) {
+    initializeGoogle();
+  } else {
+    scriptElement = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
 
-      const existingScript =
-        document.querySelector(
-          'script[src="https://accounts.google.com/gsi/client"]'
-        );
+    if (!scriptElement) {
+      scriptElement = document.createElement("script");
 
-
-      if (existingScript) {
-
-        existingScript.addEventListener(
-          "load",
-          initializeGoogle
-        );
-
-        return;
-      }
-
-
-      const script =
-        document.createElement(
-          "script"
-        );
-
-
-      script.src =
+      scriptElement.src =
         "https://accounts.google.com/gsi/client";
 
-      script.async =
-        true;
+      scriptElement.async = true;
+      scriptElement.defer = true;
 
-      script.defer =
-        true;
+      document.head.appendChild(scriptElement);
+    }
 
-      script.onload =
-        initializeGoogle;
+    scriptElement.addEventListener(
+      "load",
+      initializeGoogle
+    );
+  }
 
+  return function () {
+    cancelled = true;
 
-      document.head.appendChild(
-        script
+    if (scriptElement) {
+      scriptElement.removeEventListener(
+        "load",
+        initializeGoogle
       );
-
-    },
-    []
-  );
+    }
+  };
+}, []);
 
 
   /* =====================================================

@@ -425,3 +425,150 @@
     flex-direction: column;
   }
 }
+
+/* ================================
+   ADMIN COURIER CONTROL
+================================ */
+
+.cs-admin-courier-mode,
+.cs-admin-manual-controls {
+  margin: 22px 0;
+  padding: 22px;
+  border: 1px solid #eadcf0;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 245, 251, 0.96),
+    rgba(246, 240, 255, 0.96)
+  );
+  box-shadow: 0 5px 18px rgba(125, 75, 145, 0.08);
+}
+
+.cs-admin-courier-mode h4,
+.cs-admin-manual-controls h4 {
+  margin: 0 0 8px;
+  color: #713b83;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.cs-admin-courier-mode p {
+  margin: 0 0 15px;
+  color: #806d89;
+  font-size: 13px;
+}
+
+.cs-admin-mode-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cs-admin-mode-buttons button {
+  min-width: 145px;
+  padding: 11px 20px;
+  border: 1px solid #dfcce8;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #70477e;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cs-admin-mode-buttons button:hover {
+  border-color: #bd82d2;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(145, 83, 165, 0.12);
+}
+
+.cs-admin-mode-buttons button.active {
+  color: #ffffff;
+  border-color: transparent;
+  background: linear-gradient(120deg, #e65c9c, #9b61c5);
+  box-shadow: 0 5px 14px rgba(190, 88, 166, 0.22);
+}
+
+.cs-admin-mode-buttons button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cs-admin-manual-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cs-admin-manual-controls select,
+.cs-admin-manual-controls input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 13px 15px;
+  border: 1px solid #e2d3e9;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #493653;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cs-admin-manual-controls select:focus,
+.cs-admin-manual-controls input:focus {
+  border-color: #bd79cf;
+  box-shadow: 0 0 0 3px rgba(189, 121, 207, 0.13);
+}
+
+.cs-admin-manual-controls input::placeholder {
+  color: #a99aad;
+}
+
+.cs-admin-manual-controls button {
+  align-self: flex-start;
+  min-width: 190px;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(120deg, #e65c9c, #9b61c5);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 5px 13px rgba(190, 88, 166, 0.2);
+  transition: all 0.2s ease;
+}
+
+.cs-admin-manual-controls button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 17px rgba(190, 88, 166, 0.28);
+}
+
+.cs-admin-manual-controls button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .cs-admin-courier-mode,
+  .cs-admin-manual-controls {
+    padding: 16px;
+    margin: 16px 0;
+    border-radius: 14px;
+  }
+
+  .cs-admin-mode-buttons {
+    flex-direction: column;
+  }
+
+  .cs-admin-mode-buttons button {
+    width: 100%;
+  }
+
+  .cs-admin-manual-controls button {
+    width: 100%;
+  }
+}

@@ -1,27 +1,102 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API_URL from "../api";
+let locationMatchingCache = null;
+
+try {
+  const savedCache = localStorage.getItem(
+    "clothswapNearbyCache"
+  );
+
+  locationMatchingCache = savedCache
+    ? JSON.parse(savedCache)
+    : null;
+
+  if (!Array.isArray(locationMatchingCache)) {
+    locationMatchingCache = null;
+  }
+} catch (error) {
+  locationMatchingCache = null;
+}
 
 function LocationMatching() {
-  const [clothes, setClothes] = useState([]);
   const [location, setLocation] = useState("All");
   const [category, setCategory] = useState("All");
-  const [loading, setLoading] = useState(true);
+  const [wishlist, setWishlist] = useState([]);
+  const [swapMessage, setSwapMessage] = useState("");
 
-  useEffect(function () {
-    loadClothes();
-  }, []);
+  const [clothes, setClothes] = useState(
+    Array.isArray(locationMatchingCache)
+      ? locationMatchingCache
+      : []
+  );
+
+     const [loading, setLoading] = useState(
+    !Array.isArray(locationMatchingCache)
+  );
+useEffect(function () {
+  try {
+    const savedWishlist = JSON.parse(
+      localStorage.getItem("clothSwapWishlist") || "[]"
+    );
+  
+    setWishlist(
+      Array.isArray(savedWishlist) ? savedWishlist : []
+    );
+  } catch (error) {
+    console.log("Wishlist load error:", error);
+    setWishlist([]);
+  }
+}, []);
+
+ useEffect(function () {
+  if (Array.isArray(locationMatchingCache)) {
+    setClothes(locationMatchingCache);
+    setLoading(false);
+  }
+
+  loadClothes();
+}, []);
 
   function loadClothes() {
     fetch(`${API_URL}/api/clothes`)
       .then(function (response) {
         return response.json();
       })
-      .then(function (data) {
-        const items = data.clothes || data || [];
-        setClothes(items);
-        setLoading(false);
-      })
+     .then(function (data) {
+  const items = Array.isArray(data.clothes)
+    ? data.clothes
+    : Array.isArray(data)
+    ? data
+    : [];
+
+  locationMatchingCache = items;
+
+  try {
+    const cacheForStorage = items.map(function (item) {
+      const cachedItem = { ...item };
+
+      if (
+        cachedItem.image &&
+        String(cachedItem.image).startsWith("data:")
+      ) {
+        delete cachedItem.image;
+      }
+
+      return cachedItem;
+    });
+
+    localStorage.setItem(
+      "clothswapNearbyCache",
+      JSON.stringify(cacheForStorage)
+    );
+  } catch (error) {
+    console.log("Nearby cache save error:", error);
+  }
+
+  setClothes(items);
+  setLoading(false);
+})
       .catch(function (error) {
         console.error("Location matching error:", error);
         setLoading(false);
@@ -49,7 +124,112 @@ function LocationMatching() {
         .filter(Boolean)
     )
   ];
+function isInWishlist(itemId) {
+  return wishlist.some(function (item) {
+    return String(item._id || item.id) === String(itemId);
+  });
+}
+function toggleWishlist(item) {
+  const isLoggedIn =
+    localStorage.getItem("clothswapLoggedIn") === "true";
 
+  if (!isLoggedIn) {
+    setSwapMessage("Please login to add clothes to your wishlist.");
+
+    setTimeout(function () {
+      window.location.href = "/login";
+    }, 900);
+
+    return;
+  }
+
+  const itemId = item._id || item.id;
+  if (!itemId) return;
+
+  function getSmallWishlistItem(clothing) {
+    const smallItem = {
+      _id: String(clothing._id || clothing.id),
+      title: clothing.title || clothing.name || "Clothing Item",
+      name: clothing.name || clothing.title || "Clothing Item",
+      category: clothing.category || "Fashion",
+      brand: clothing.brand || "",
+      size: clothing.size || "N/A",
+      condition: clothing.condition || "Good",
+      location: clothing.location || "",
+      price: clothing.price || 0,
+      value: clothing.value || 0,
+      status: clothing.status || "Available",
+      owner: clothing.owner || "",
+      ownerEmail: clothing.ownerEmail || ""
+    };
+
+    if (
+      clothing.image &&
+      !String(clothing.image).startsWith("data:")
+    ) {
+      smallItem.image = clothing.image;
+    }
+
+    return smallItem;
+  }
+
+  let savedWishlist = [];
+
+  try {
+    savedWishlist = JSON.parse(
+      localStorage.getItem("clothSwapWishlist") || "[]"
+    );
+
+    if (!Array.isArray(savedWishlist)) {
+      savedWishlist = [];
+    }
+  } catch (error) {
+    savedWishlist = [];
+  }
+
+  savedWishlist = savedWishlist
+    .filter(function (savedItem) {
+      return savedItem && (savedItem._id || savedItem.id);
+    })
+    .map(getSmallWishlistItem);
+
+  const alreadySaved = savedWishlist.some(function (savedItem) {
+    return String(savedItem._id || savedItem.id) === String(itemId);
+  });
+
+  let updatedWishlist;
+
+  if (alreadySaved) {
+    updatedWishlist = savedWishlist.filter(function (savedItem) {
+      return String(savedItem._id || savedItem.id) !== String(itemId);
+    });
+
+    setSwapMessage("Removed from your wishlist.");
+  } else {
+    updatedWishlist = savedWishlist.concat([
+      getSmallWishlistItem(item)
+    ]);
+
+    setSwapMessage("Added to your wishlist ❤️");
+  }
+
+  try {
+    localStorage.setItem(
+      "clothSwapWishlist",
+      JSON.stringify(updatedWishlist)
+    );
+
+    setWishlist(updatedWishlist);
+    window.dispatchEvent(new Event("wishlistUpdated"));
+  } catch (error) {
+    console.error("Wishlist save error:", error);
+    setSwapMessage("Unable to save wishlist. Please try again.");
+  }
+
+  setTimeout(function () {
+    setSwapMessage("");
+  }, 2500);
+}
   const filteredClothes = clothes.filter(function (item) {
     const locationMatch =
       location === "All" ||
@@ -67,7 +247,40 @@ function LocationMatching() {
   return React.createElement(
     "div",
     { className: "location-matching-page" },
+    swapMessage &&
+  React.createElement(
+    "div",
+    {
+      className: "swap-toast swap-toast-success"
+    },
 
+    React.createElement(
+      "div",
+      { className: "swap-toast-icon" },
+      "✓"
+    ),
+
+    React.createElement(
+      "div",
+      { className: "swap-toast-content" },
+
+      React.createElement("strong", null, "Success"),
+
+      React.createElement("span", null, swapMessage)
+    ),
+
+    React.createElement(
+      "button",
+      {
+        className: "swap-toast-close",
+        type: "button",
+        onClick: function () {
+          setSwapMessage("");
+        }
+      },
+      "×"
+    )
+  ),
     React.createElement(
       "div",
       { className: "location-matching-container" },
@@ -277,14 +490,32 @@ function LocationMatching() {
                     {
                       className: "location-image-wrapper"
                     },
-
-                    React.createElement("img", {
-                      src: itemImage,
-                      alt: itemName,
-                      className: "location-clothing-image"
-                    })
-                  ),
-
+React.createElement(
+  "button",
+  {
+    type: "button",
+    className:
+      "browse-wishlist-btn " +
+      (isInWishlist(itemId)
+        ? "browse-wishlist-active"
+        : ""),
+    onClick: function () {
+      toggleWishlist(item);
+    },
+    title: isInWishlist(itemId)
+      ? "Remove from wishlist"
+      : "Add to wishlist"
+  },
+  isInWishlist(itemId) ? "♥" : "♡"
+),
+                   React.createElement("img", {
+  src: itemImage,
+  alt: itemName,
+  className: "location-clothing-image",
+  loading: "lazy",
+  decoding: "async"
+                   })
+                ),
                 React.createElement(
                   "div",
                   {

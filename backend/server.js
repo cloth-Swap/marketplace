@@ -1,5 +1,7 @@
   const express = require("express");
   const mongoose = require("mongoose");
+  const http = require("http");
+const { Server } = require("socket.io");
   const bcrypt = require("bcryptjs");
   const jwt = require("jsonwebtoken");
   const cors = require("cors");
@@ -323,9 +325,205 @@ async function checkHandToHandDeadlines() {
   }
 }
 
+let courierReceiverDeadlineCheckRunning = false;
+
+async function checkCourierReceiverDeadlines() {
+  if (courierReceiverDeadlineCheckRunning) {
+    return;
+  }
+
+  courierReceiverDeadlineCheckRunning = true;
+
+  try {
+    const now = Date.now();
+
+    const shipments = await Shipment.find({
+      deliveryConfirmed: true,
+      deliveredAt: { $ne: null }
+    });
+
+    for (const shipment of shipments) {
+      try {
+        const request = await SwapRequest.findById(
+          shipment.swapRequestId
+        );
+
+        if (
+          !request ||
+          request.status !== "Accepted" ||
+          !["Courier", "Courier Delivery"].includes(
+            request.exchangeMethod
+          ) ||
+          request.completionStatus === "Completed"
+        ) {
+          continue;
+        }
+
+        // Only the parcel receiver is responsible for confirmation.
+        const receiverEmail = String(
+          shipment.receiverEmail || request.requesterEmail || ""
+        ).trim().toLowerCase();
+
+        if (!receiverEmail) {
+          continue;
+        }
+
+        // Receiver has already completed their confirmation.
+        if (request.requesterCompleted === true) {
+          if (shipment.receiverConfirmationOverdue) {
+            shipment.receiverConfirmationOverdue = false;
+            await shipment.save();
+          }
+          continue;
+        }
+
+        const deliveredAt = new Date(shipment.deliveredAt).getTime();
+
+        if (!Number.isFinite(deliveredAt)) {
+          continue;
+        }
+
+        const elapsedHours =
+          (now - deliveredAt) / (60 * 60 * 1000);
+
+        // 24-hour reminder to receiver only.
+        if (
+          elapsedHours >= 24 &&
+          !shipment.receiverReminder24Sent
+        ) {
+          await sendHandToHandDeadlineNotification(
+            receiverEmail,
+            request,
+            "Courier Swap Reminder",
+            "Your courier parcel has been delivered. Please complete your swap confirmation.",
+            "courier_receiver_reminder"
+          );
+
+          shipment.receiverReminder24Sent = true;
+          await shipment.save();
+        }
+
+        // 36-hour final reminder to receiver only.
+        if (
+          elapsedHours >= 36 &&
+          !shipment.receiverReminder36Sent
+        ) {
+          await sendHandToHandDeadlineNotification(
+            receiverEmail,
+            request,
+            "Final Courier Swap Reminder",
+            "Your courier swap confirmation is still pending. Please complete it within the next 12 hours.",
+            "courier_receiver_final_reminder"
+          );
+
+          shipment.receiverReminder36Sent = true;
+          await shipment.save();
+        }
+
+        // At 48 hours, check whether receiver has a pending dispute.
+        if (
+          elapsedHours >= 48 &&
+          !shipment.receiverConfirmationOverdue
+        ) {
+          const pendingDispute = await Dispute.findOne({
+            swapRequestId: request._id,
+            reporterEmail: receiverEmail,
+            status: "Pending"
+          });
+
+          if (!pendingDispute) {
+            shipment.receiverConfirmationOverdue = true;
+
+            await shipment.save();
+
+            await sendHandToHandDeadlineNotification(
+              receiverEmail,
+              request,
+              "Courier Swap Confirmation Overdue",
+              "Your courier swap confirmation is overdue. Your ClothSwap activities are temporarily restricted until you complete the confirmation or raise a genuine dispute.",
+              "courier_receiver_overdue"
+            );
+          }
+        }
+
+      } catch (shipmentError) {
+        console.error(
+          "Courier receiver deadline error for shipment:",
+          shipment._id,
+          shipmentError
+        );
+      }
+    }
+
+  } catch (error) {
+    console.error(
+      "Courier receiver deadline scheduler error:",
+      error
+    );
+
+  } finally {
+    courierReceiverDeadlineCheckRunning = false;
+  }
+}
+
 
 const CURRENT_TERMS_VERSION = "1.0";
   const app = express();
+  const server = http.createServer(app);
+  const io = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true
+  }
+});
+app.set("io", io);
+// SECURE SOCKET.IO AUTHENTICATION
+io.use(async function (socket, next) {
+  try {
+    const token = socket.handshake.auth?.token;
+
+    if (!token) {
+      return next(new Error("Authentication required"));
+    }
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+
+    const user = await User.findById(
+      decoded.userId
+    ).select("-password");
+
+    if (!user || user.status === "Blocked") {
+      return next(new Error("Account unavailable"));
+    }
+
+    socket.user = user;
+
+    next();
+
+  } catch (error) {
+    next(new Error("Invalid or expired authentication token"));
+  }
+});
+
+// USER-SPECIFIC SOCKET ROOMS
+io.on("connection", function (socket) {
+  const userId = String(socket.user._id);
+  const userEmail = String(socket.user.email || "")
+    .trim()
+    .toLowerCase();
+
+  socket.join("user:" + userId);
+
+  if (userEmail) {
+    socket.join("email:" + userEmail);
+  }
+
+  console.log("User connected to ClothSwap real-time service");
+});
   const googleClient = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID
   );
@@ -744,7 +942,74 @@ async function requireNoHandToHandOverdue(req, res, next) {
     });
   }
 }
+// Restrict only Courier receivers whose confirmation is overdue.
+async function requireNoCourierReceiverOverdue(req, res, next) {
+  try {
+    const userEmail = String(req.user.email || "")
+      .trim()
+      .toLowerCase();
 
+    if (!userEmail) {
+      return res.status(401).json({
+        success: false,
+        message: "User information not found"
+      });
+    }
+
+    const overdueShipments = await Shipment.find({
+      receiverEmail: userEmail,
+      receiverConfirmationOverdue: true,
+      deliveryConfirmed: true
+    });
+
+    for (const shipment of overdueShipments) {
+      const request = await SwapRequest.findById(
+        shipment.swapRequestId
+      );
+
+      if (
+        !request ||
+        request.requesterCompleted === true ||
+        request.completionStatus === "Completed"
+      ) {
+        continue;
+      }
+
+      const pendingDispute = await Dispute.findOne({
+        swapRequestId: request._id,
+        reporterEmail: userEmail,
+        status: "Pending"
+      });
+
+      // A pending dispute exempts this receiver from restriction.
+      if (pendingDispute) {
+        continue;
+      }
+
+      return res.status(403).json({
+        success: false,
+        code: "COURIER_RECEIVER_CONFIRMATION_OVERDUE",
+        message:
+          "Your Courier swap confirmation is overdue. Complete your confirmation or raise a dispute if you have a genuine issue.",
+        swapRequestId: String(request._id),
+        clothingTitle: request.clothingTitle
+      });
+    }
+
+    return next();
+
+  } catch (error) {
+    console.error(
+      "Courier receiver overdue restriction error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to verify your Courier confirmation status."
+    });
+  }
+}
 // CHECK LOGGED-IN USER ACCOUNT STATUS
 app.get("/api/auth/status", requireAuth, function (req, res) {
   return res.status(200).json({
@@ -782,40 +1047,137 @@ app.get("/api/auth/status", requireAuth, function (req, res) {
     });
   });
 
-  app.get("/api/clothes", async function (req, res) {
-    try {
-      const clothes = await Clothing.find({
-        status: "Available",
-        $and: [
-          {
-            $or: [
-              { isDeleted: false },
-              { isDeleted: { $exists: false } }
-            ]
-          },
-          {
-            $or: [
-              { listingStatus: "Available" },
-              { listingStatus: { $exists: false } }
-            ]
-          }
-        ]
-      }).sort({
-        createdAt: -1
-      });
 
-      res.json(clothes);
+app.get("/api/clothes", async function (req, res) {
+  try {
+const clothes = await Clothing.find({
+  status: "Available",
+  $and: [
+    {
+      $or: [
+        { isDeleted: false },
+        { isDeleted: { $exists: false } }
+      ]
+    },
+    {
+      $or: [
+        { listingStatus: "Available" },
+        { listingStatus: { $exists: false } }
+      ]
+    }
+  ]
+})
+.select("title name image category brand size condition location owner ownerEmail price")
+.sort({
+  createdAt: -1
+});
 
-    } catch (error) {
-      console.error("Failed to fetch clothes:", error);
+    const sellerEmails = [
+      ...new Set(
+        clothes
+          .map(function (item) {
+            return String(item.ownerEmail || "")
+              .trim()
+              .toLowerCase();
+          })
+          .filter(Boolean)
+      )
+    ];
 
-      res.status(500).json({
+    const sellers = await User.find({
+      email: { $in: sellerEmails }
+    }).select("name email profilePhoto");
+
+    const sellerMap = {};
+
+    sellers.forEach(function (seller) {
+      sellerMap[String(seller.email).toLowerCase()] = {
+        name: seller.name || "ClothSwap User",
+        profilePhoto: seller.profilePhoto || ""
+      };
+    });
+
+    const clothesWithSeller = clothes.map(function (item) {
+      const clothing = item.toObject();
+
+      const email = String(item.ownerEmail || "")
+        .trim()
+        .toLowerCase();
+
+      const seller = sellerMap[email];
+
+      clothing.sellerName =
+        seller ? seller.name : (item.owner || "ClothSwap User");
+
+      clothing.sellerProfilePhoto =
+        seller ? seller.profilePhoto : "";
+
+      return clothing;
+    });
+
+    res.json(clothesWithSeller);
+
+  } catch (error) {
+    console.error("Failed to fetch clothes:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch clothes",
+      error: error.message
+    });
+  }
+});
+
+app.get("/api/clothes/:id", async function (req, res) {
+  try {
+    const id = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
         success: false,
-        message: "Failed to fetch clothes",
-        error: error.message
+        message: "Invalid clothing ID"
       });
     }
-  });
+
+    const clothing = await Clothing.findOne({
+      _id: id,
+      status: "Available",
+      $and: [
+        {
+          $or: [
+            { isDeleted: false },
+            { isDeleted: { $exists: false } }
+          ]
+        },
+        {
+          $or: [
+            { listingStatus: "Available" },
+            { listingStatus: { $exists: false } }
+          ]
+        }
+      ]
+    });
+
+    if (!clothing) {
+      return res.status(404).json({
+        success: false,
+        message: "Clothing not found"
+      });
+    }
+
+    return res.json(clothing);
+
+  } catch (error) {
+    console.error("Fetch single clothing error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch clothing",
+      error: error.message
+    });
+  }
+});
+
   app.post("/api/auth/accept-terms", requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -895,8 +1257,9 @@ app.get(
 // CREATE NEW CLOTHING LISTING
 app.post(
   "/api/clothes",
-  requireAuth,
-  requireNoHandToHandOverdue,
+ requireAuth,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async (req, res) => {
   try {
     const {
@@ -1919,26 +2282,26 @@ app.delete(
         }
       }
 
-      const [
-        totalUsers,
-        activeUsers,
-        totalListings,
-        totalSwaps,
-        completedSwaps,
-        recentActivities,
-        monthlySwaps,
-        monthlyListings,
-        monthlyUsers
-      ] = await Promise.all([
+ const [
+  totalUsers,
+  activeUserEmails,
+  totalListings,
+  totalSwaps,
+  completedSwaps,
+  recentActivities,
+  monthlySwaps,
+  monthlyListings,
+  monthlyUsers
+] = await Promise.all([
 
-        // Total Users
-        User.countDocuments(dateFilter),
+       // Total Users - All Registered Users
+User.countDocuments({}),
 
-        // Active Users
-        UserActivity.distinct("userEmail", {
-          ...dateFilter,
-          userEmail: { $nin: ["", null] }
-        }),
+// Active Users - Unique Emails from Activity
+UserActivity.distinct("userEmail", {
+  ...dateFilter,
+  userEmail: { $nin: ["", null] }
+}),
 
         // Total Listings
         Clothing.countDocuments({
@@ -2017,14 +2380,17 @@ app.delete(
 
       ]);
 
-      const activeUserCount = activeUsers.length;
+      const activeUserCount = activeUserEmails.length > 0
+  ? await User.countDocuments({
+      email: { $in: activeUserEmails }
+    })
+  : 0;
 
-      const swapCompletionRate = totalSwaps > 0
-        ? Number(
-            ((completedSwaps / totalSwaps) * 100).toFixed(2)
-          )
-        : 0;
-
+    const swapCompletionRate = totalSwaps > 0
+  ? Number(
+      ((completedSwaps / totalSwaps) * 100).toFixed(2)
+    )
+  : 0;
       return res.json({
         success: true,
         analytics: {
@@ -2052,6 +2418,357 @@ app.delete(
     }
   }
 );
+
+app.get(
+  "/api/admin/dashboard/trends",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const {
+  period = "month",
+  year
+} = req.query;
+
+      const validPeriods = ["7days", "month", "year"];
+
+      if (!validPeriods.includes(period)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid trend period"
+        });
+      }
+
+      const now = new Date();
+
+      // Project starting month: September 2026
+      const projectStart = new Date("2026-09-01T00:00:00+05:30");
+
+      let startDate;
+      let format;
+
+      if (period === "7days") {
+        startDate = new Date(now);
+        startDate.setDate(startDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+
+        format = "%Y-%m-%d";
+      } else if (period === "month") {
+        startDate = projectStart;
+        format = "%Y-%m";
+      } else {
+  const selectedYear = Number(year) || now.getFullYear();
+
+  if (
+    !Number.isInteger(selectedYear) ||
+    selectedYear < 2026 ||
+    selectedYear > now.getFullYear() + 5
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid selected year"
+    });
+  }
+
+  startDate = new Date(
+    `${selectedYear}-01-01T00:00:00+05:30`
+  );
+
+  format = "%Y-%m";
+}
+
+     const match = {
+  createdAt: {
+    $gte: startDate,
+    $lte: period === "year"
+      ? new Date(
+          Math.min(
+            new Date(
+              `${Number(year) || now.getFullYear() + 1}-12-31T23:59:59+05:30`
+            ).getTime(),
+            now.getTime()
+          )
+        )
+      : now
+  }
+};
+
+      async function getTrend(Model) {
+        return await Model.aggregate([
+          { $match: match },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: format,
+                  date: "$createdAt",
+                  timezone: "Asia/Kolkata"
+                }
+              },
+              count: { $sum: 1 }
+            }
+          },
+          { $sort: { _id: 1 } }
+        ]);
+      }
+    
+      async function getSwapStatusDistribution() {
+  return await SwapRequest.aggregate([
+    { $match: match },
+    {
+      $addFields: {
+        chartStatus: {
+          $switch: {
+            branches: [
+              {
+                case: {
+                  $or: [
+                    { $eq: ["$completionStatus", "Completed"] },
+                    { $eq: ["$agreementStatus", "Completed"] }
+                  ]
+                },
+                then: "Completed"
+              },
+              {
+                case: { $eq: ["$status", "Pending"] },
+                then: "Pending"
+              },
+              {
+                case: { $eq: ["$status", "Accepted"] },
+                then: "Accepted"
+              },
+              {
+                case: { $eq: ["$status", "Rejected"] },
+                then: "Rejected"
+              }
+            ],
+            default: "Other"
+          }
+        }
+      }
+    },
+    {
+      $match: {
+        chartStatus: {
+          $in: ["Pending", "Accepted", "Rejected", "Completed"]
+        }
+      }
+    },
+    {
+      $group: {
+        _id: "$chartStatus",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+}
+async function getClothingCategoryDistribution() {
+  return await Clothing.aggregate([
+   {
+  $match: {
+    isDeleted: { $ne: true },
+    listingStatus: { $ne: "Removed" },
+    category: { $nin: [null, ""] }
+  }
+},
+    {
+      $group: {
+        _id: "$category",
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { count: -1 }
+    }
+  ]);
+}
+async function getCompletedSwapTrend() {
+  return await SwapRequest.aggregate([
+    {
+      $match: {
+        ...match,
+        $or: [
+          { completionStatus: "Completed" },
+          { agreementStatus: "Completed" }
+        ]
+      }
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: {
+            format: format,
+            date: "$createdAt",
+            timezone: "Asia/Kolkata"
+          }
+        },
+        count: { $sum: 1 }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+}
+async function getTopPerformingCategories() {
+  const allSwapRecords = await SwapRequest.find({})
+  .select("status agreementStatus completionStatus clothingId")
+  .limit(20);
+
+console.log(
+  "ALL SWAP RECORDS:",
+  JSON.stringify(allSwapRecords, null, 2)
+);
+  return await SwapRequest.aggregate([
+    {
+      $match: {
+        ...match,
+        $or: [
+          { completionStatus: "Completed" },
+          { agreementStatus: "Completed" }
+        ]
+      }
+    },
+    {
+      $lookup: {
+        from: "clothings",
+        localField: "clothingId",
+        foreignField: "_id",
+        as: "clothing"
+      }
+    },
+    {
+      $unwind: "$clothing"
+    },
+    {
+      $match: {
+        "clothing.category": { $nin: [null, ""] }
+      }
+    },
+    {
+      $group: {
+        _id: "$clothing.category",
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $sort: { count: -1 }
+    },
+    {
+      $limit: 5
+    }
+  ]);
+}
+const [
+  users,
+  listings,
+  swaps,
+  completedSwaps,
+  swapStatusDistribution,
+  clothingCategoryDistribution,
+  userActivityTrend,
+  topPerformingCategories
+] = await Promise.all([
+  getTrend(User),
+  getTrend(Clothing),
+  getTrend(SwapRequest),
+  getCompletedSwapTrend(),
+  getSwapStatusDistribution(),
+  getClothingCategoryDistribution(),
+  getTrend(UserActivity),
+  getTopPerformingCategories()
+]);
+
+     // Generate all date labels, including months with zero records.
+const labels = [];
+
+if (period === "7days") {
+  const date = new Date(startDate);
+
+  while (date <= now) {
+    labels.push(date.toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata"
+    }));
+
+    date.setDate(date.getDate() + 1);
+  }
+
+} else if (period === "month") {
+  const date = new Date(startDate);
+
+  while (date <= now) {
+    labels.push(
+      date.getFullYear() + "-" +
+      String(date.getMonth() + 1).padStart(2, "0")
+    );
+
+    date.setMonth(date.getMonth() + 1);
+  }
+
+} else {
+  const selectedYear = Number(year) || now.getFullYear();
+
+  for (let month = 1; month <= 12; month++) {
+    labels.push(
+      `${selectedYear}-${String(month).padStart(2, "0")}`
+    );
+  }
+}
+      function fillTrend(data) {
+        const dataMap = {};
+
+        data.forEach(function (item) {
+          dataMap[item._id] = item.count;
+        });
+
+        return labels.map(function (label) {
+          return {
+            label: label,
+            count: dataMap[label] || 0
+          };
+        });
+      }
+
+     return res.json({
+  success: true,
+  period,
+  trends: {
+    users: fillTrend(users),
+    listings: fillTrend(listings),
+    swaps: fillTrend(swaps),
+    completedSwaps: fillTrend(completedSwaps),
+    userActivityTrend: fillTrend(userActivityTrend),
+
+    topPerformingCategories: topPerformingCategories.map(function (item) {
+  return {
+    label: item._id,
+    count: item.count
+  };
+}),
+
+    swapStatusDistribution: swapStatusDistribution.map(function (item) {
+      return {
+        label: item._id,
+        count: item.count
+      };
+    }),
+    clothingCategoryDistribution: clothingCategoryDistribution.map(function (item) {
+  return {
+    label: item._id,
+    count: item.count
+  };
+})
+  }
+});
+    } catch (error) {
+      console.error("Dashboard trends error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to load dashboard trends",
+        error: error.message
+      });
+    }
+  }
+);
+
 app.get("/api/admin/users", requireAdmin, async function (req, res) {
   try {
     const users = await User.find()
@@ -2164,6 +2881,11 @@ app.put("/api/admin/users/:id/status", requireAdmin, async function (req, res) {
   // REVOKE ALL REFRESH SESSIONS WHEN USER IS BLOCKED
 
   if (status === "Blocked") {
+    // DISCONNECT ALL ACTIVE SOCKET CONNECTIONS
+if (status === "Blocked") {
+  io.in("user:" + String(user._id))
+    .disconnectSockets(true);
+}
     await RefreshSession.updateMany(
       {
         userId: user._id,
@@ -2237,15 +2959,149 @@ app.put("/api/admin/users/:id/status", requireAdmin, async function (req, res) {
   }),
 
 
-app.delete(
+app.put(
   "/api/clothes/:id",
   requireAuth,
-  requireNoHandToHandOverdue,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
+  async function (req, res) {
+    try {
+      const id = req.params.id;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid listing ID"
+        });
+      }
+
+      const clothing = await Clothing.findById(id);
+
+      if (!clothing) {
+        return res.status(404).json({
+          success: false,
+          message: "Listing not found"
+        });
+      }
+
+      // Only the listing owner can edit it
+      if (
+        String(clothing.ownerEmail).toLowerCase() !==
+        String(req.user.email).toLowerCase()
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not allowed to edit this listing"
+        });
+      }
+
+      // Do not edit removed or swapped listings
+      if (
+        clothing.isDeleted ||
+        clothing.listingStatus === "Removed" ||
+        clothing.listingStatus === "Swapped" ||
+        clothing.status === "Swapped"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "This listing cannot be edited"
+        });
+      }
+
+      // Prevent editing while a swap request is active
+      const activeRequest = await SwapRequest.findOne({
+        clothingId: clothing._id,
+        status: { $in: ["Pending", "Accepted"] }
+      });
+
+      if (activeRequest) {
+        return res.status(400).json({
+          success: false,
+          message: "This listing cannot be edited while a swap request is pending or accepted"
+        });
+      }
+
+      const {
+        title,
+        brand,
+        category,
+        size,
+        condition,
+        location,
+        price,
+        description,
+        image
+      } = req.body;
+
+      // Validate required fields
+      if (
+        !title ||
+        !title.trim() ||
+        !category ||
+        !category.trim() ||
+        !size ||
+        !size.trim() ||
+        !condition ||
+        !condition.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Please fill all required fields"
+        });
+      }
+
+      const updatedPrice = Number(price);
+
+      if (!Number.isFinite(updatedPrice) || updatedPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid price"
+        });
+      }
+
+      // Update only editable fields
+      clothing.title = title.trim();
+      clothing.brand = brand || "";
+      clothing.category = category.trim();
+      clothing.size = size.trim();
+      clothing.condition = condition.trim();
+      clothing.location = location || "";
+      clothing.price = updatedPrice;
+      clothing.description = description || "";
+
+      // Keep existing image if no new image is provided
+      if (image !== undefined && image !== "") {
+        clothing.image = image;
+      }
+
+      await clothing.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Listing updated successfully",
+        listing: clothing
+      });
+
+    } catch (error) {
+      console.error("Update listing error:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to update listing"
+      });
+    }
+  }
+);
+
+app.delete(
+  "/api/clothes/:id",
+ requireAuth,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async (req, res) => {
         try {
       const id = req.params.id;
-      const user = req.body.user;
-
+const user = req.body?.user || req.user;
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
@@ -2296,10 +3152,72 @@ app.delete(
       });
     }
   }),
+
+  /* =========================================
+   GET MY CLOTHING LISTINGS
+========================================= */
+
+app.get("/api/my-listings", requireAuth, async (req, res) => {
+  try {
+    const userEmail = String(req.user.email || "")
+      .trim()
+      .toLowerCase();
+
+    const clothes = await Clothing.find({
+      ownerEmail: userEmail
+    }).sort({ createdAt: -1 });
+
+    const listings = await Promise.all(
+      clothes.map(async (clothing) => {
+        const requests = await SwapRequest.find({
+          clothingId: clothing._id
+        }).sort({ createdAt: -1 });
+
+        let availabilityStatus = "Available";
+
+        if (clothing.isDeleted || clothing.listingStatus === "Removed") {
+          availabilityStatus = "Removed";
+        } else if (
+          clothing.listingStatus === "Swapped" ||
+          clothing.status === "Swapped"
+        ) {
+          availabilityStatus = "Swapped";
+        }  else if (
+  requests.some((r) =>
+    r.status === "Pending" ||
+    r.status === "Accepted"
+  )
+) {
+  availabilityStatus = "Pending Request";
+}
+
+        return {
+          ...clothing.toObject(),
+          availabilityStatus,
+          requests
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      listings
+    });
+
+  } catch (error) {
+    console.error("MY LISTINGS ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to load your listings"
+    });
+  }
+});
 app.post(
   "/api/swap-requests",
-  requireAuth,
-  requireNoHandToHandOverdue,
+ requireAuth,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async (req, res) => {
       try {
 
@@ -2369,22 +3287,17 @@ const requesterEmailFromUser =
               "You cannot request your own clothing"
           });
         }
-      const existingRequest = await SwapRequest.findOne({
+     const existingRequest = await SwapRequest.findOne({
   clothingId: clothing._id,
   requesterEmail: requesterEmailFromUser
 });
 
-
-        if (existingRequest) {
-
-          return res.status(400).json({
-            success: false,
-            message:
-              "You already sent a request for this clothing"
-          });
-        }
-
-
+if (existingRequest) {
+  return res.status(400).json({
+    success: false,
+    message: "You have already sent a swap request for this clothing item."
+  });
+}
 
         const swapRequest =
           new SwapRequest({
@@ -2593,22 +3506,19 @@ const requesterEmailFromUser =
             "i"
           );
 
-
-        const requests =
-          await SwapRequest.find({
-            $or: [
-              {
-                ownerEmail:
-                  emailRegex
-              },
-              {
-                requesterEmail:
-                  emailRegex
-              }
-            ]
-          }).sort({
-            createdAt: -1
-          });
+const requests =
+  await SwapRequest.find({
+    $or: [
+      {
+        ownerEmail: emailRegex
+      },
+      {
+        requesterEmail: emailRegex
+      }
+    ]
+  }).sort({
+    createdAt: -1
+  });
 
 
         console.log(
@@ -2659,17 +3569,7 @@ const requesterEmailFromUser =
             .sort({
               createdAt: -1
             });
-            console.log(
-  "ADMIN SWAP STATUS CHECK:",
-  requests.map(function (request) {
-    return {
-      id: request._id,
-      clothingTitle: request.clothingTitle,
-      completionStatus: request.completionStatus,
-      agreementStatus: request.agreementStatus
-    };
-  })
-);
+          
 
         return res.json(requests);
 
@@ -2698,7 +3598,8 @@ const requesterEmailFromUser =
   app.put(
   "/api/swap-requests/:id",
   requireAuth,
-  requireNoHandToHandOverdue,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async function (req, res) {
       try {
 
@@ -2793,6 +3694,34 @@ const requesterEmailFromUser =
 
 
         await request.save();
+        // REAL-TIME SWAP REQUEST UPDATE
+const io = req.app.get("io");
+
+if (io) {
+  const requesterEmail = String(
+    request.requesterEmail || ""
+  ).trim().toLowerCase();
+
+  const ownerEmail = String(
+    request.ownerEmail || ""
+  ).trim().toLowerCase();
+
+  io.to("email:" + requesterEmail).emit(
+    "swap-request-updated",
+    {
+      requestId: String(request._id),
+      status: request.status
+    }
+  );
+
+  io.to("email:" + ownerEmail).emit(
+    "swap-request-updated",
+    {
+      requestId: String(request._id),
+      status: request.status
+    }
+  );
+}
   if (
     status === "Accepted" &&
     !wasAlreadyAccepted
@@ -2902,7 +3831,8 @@ const requesterEmailFromUser =
  app.put(
   "/api/swap-requests/:id/agree",
   requireAuth,
-  requireNoHandToHandOverdue,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async function (req, res) {
 
       try {
@@ -3114,7 +4044,8 @@ const requesterEmailFromUser =
 app.put(
   "/api/swap-requests/:id/exchange-method",
   requireAuth,
-  requireNoHandToHandOverdue,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async function (req, res) {
       try {
         const { exchangeMethod, user } = req.body;
@@ -3301,14 +4232,24 @@ app.put(
     request.requesterCompleted = true;
   }
 
-    
-  if (request.ownerCompleted && request.requesterCompleted) {
-    request.completionStatus = "Completed";
-    request.agreementStatus = "Completed";
-    await Clothing.findByIdAndDelete(request.clothingId);
-  } else {
-    request.completionStatus = "Waiting for Both";
+ if (request.ownerCompleted && request.requesterCompleted) {
+  request.completionStatus = "Completed";
+  request.agreementStatus = "Completed";
+
+  // Keep clothing record for My Listings and Admin history
+  const clothing = await Clothing.findById(request.clothingId);
+
+  if (clothing) {
+    clothing.status = "Swapped";
+    clothing.listingStatus = "Swapped";
+    clothing.swappedAt = new Date();
+
+    await clothing.save();
   }
+
+} else {
+  request.completionStatus = "Waiting for Both";
+}
 
   await request.save();
 
@@ -3394,11 +4335,12 @@ app.put(
     }
   ),
 
-// DELETE SWAP REQUEST
+// DELETE SWAP REQUEST - SOFT DELETE
 app.delete(
   "/api/swap-requests/:id",
-  requireAuth,
-  requireNoHandToHandOverdue,
+ requireAuth,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async function (req, res) {
     try {
       const id = req.params.id;
@@ -3412,27 +4354,24 @@ app.delete(
 
       const request = await SwapRequest.findById(id);
 
-      if (!request) {
+      if (!request || request.isDeleted === true) {
         return res.status(404).json({
           success: false,
           message: "Swap request not found"
         });
       }
 
-      const currentUserEmail =
-        String(req.user.email || "")
-          .trim()
-          .toLowerCase();
+      const currentUserEmail = String(req.user.email || "")
+        .trim()
+        .toLowerCase();
 
-      const ownerEmail =
-        String(request.ownerEmail || "")
-          .trim()
-          .toLowerCase();
+      const ownerEmail = String(request.ownerEmail || "")
+        .trim()
+        .toLowerCase();
 
-      const requesterEmail =
-        String(request.requesterEmail || "")
-          .trim()
-          .toLowerCase();
+      const requesterEmail = String(request.requesterEmail || "")
+        .trim()
+        .toLowerCase();
 
       if (
         currentUserEmail !== ownerEmail &&
@@ -3444,12 +4383,26 @@ app.delete(
         });
       }
 
-      await SwapRequest.findByIdAndDelete(id);
+      // Preserve request and save deletion history
+      if (!Array.isArray(request.deletedFor)) {
+  request.deletedFor = [];
+}
 
-      return res.json({
-        success: true,
-        message: "Swap request deleted successfully"
-      });
+if (!request.deletedFor.includes(currentUserEmail)) {
+  request.deletedFor.push(currentUserEmail);
+}
+
+request.deletedBy = req.user.name || "";
+request.deletedByEmail = currentUserEmail;
+request.deletedAt = new Date();
+
+await request.save();
+
+     return res.json({
+  success: true,
+  message: "Swap request deleted successfully",
+  request: request
+});
 
     } catch (error) {
       console.error("Delete swap request error:", error);
@@ -3463,6 +4416,47 @@ app.delete(
   }
 );
 
+
+// =========================================
+// ADMIN - GET REMOVED CLOTHING HISTORY
+// =========================================
+
+app.get(
+  "/api/admin/clothes",
+  requireAdmin,
+  async function (req, res) {
+    try {
+      const clothes = await Clothing.find({
+        $or: [
+          { isDeleted: true },
+          { listingStatus: "Removed" }
+        ]
+      }).sort({
+        deletedAt: -1,
+        createdAt: -1
+      });
+
+      res.set("Cache-Control", "no-store");
+
+      return res.json({
+        success: true,
+        clothes: clothes
+      });
+
+    } catch (error) {
+      console.error(
+        "Fetch removed clothing history error:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch removed listings",
+        error: error.message
+      });
+    }
+  }
+);
   app.delete(
     "/api/admin/clothes/:id",
     requireAdmin,
@@ -3476,7 +4470,16 @@ app.delete(
             message: "Invalid clothing ID"
           });
         }
+const removalReason = String(
+  req.body?.removalReason || ""
+).trim();
 
+if (!removalReason) {
+  return res.status(400).json({
+    success: false,
+    message: "Removal reason is required"
+  });
+}
         const clothing = await Clothing.findById(id);
 
         if (!clothing) {
@@ -3501,6 +4504,7 @@ app.delete(
         clothing.status = "Removed";
         clothing.deletedAt = new Date();
         clothing.deletedBy = req.user.email;
+        clothing.removalReason = removalReason;
 
         await clothing.save();
 
@@ -3633,8 +4637,9 @@ function isClothSwapRelatedMessage(message) {
 
   app.post(
   "/api/messages",
-  requireAuth,
-  requireNoHandToHandOverdue,
+ requireAuth,
+requireNoHandToHandOverdue,
+requireNoCourierReceiverOverdue,
   async function (req, res) {
     try {
       const { swapRequestId, sender, text } = req.body;
@@ -4068,6 +5073,202 @@ if (!isClothSwapRelatedMessage(text)) {
     }
   );
 
+// GET: Logged-in user's personal profile
+
+app.get("/api/user/profile", requireAuth, async function (req, res) {
+  try {
+    const user = await User.findById(req.user._id).select(
+      "name email location profilePhoto bio profileCompleted createdAt"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    const completedSwaps = await SwapRequest.countDocuments({
+      $or: [
+        { requesterEmail: user.email },
+        { ownerEmail: user.email }
+      ],
+      completionStatus: "Completed"
+    });
+
+    return res.json({
+      success: true,
+      profile: {
+        ...user.toObject(),
+        completedSwaps: completedSwaps
+      }
+    });
+
+  } catch (error) {
+    console.error("Get Profile Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load profile"
+    });
+  }
+});
+
+
+
+// PUT: Update logged-in user's personal profile
+app.put("/api/user/profile", requireAuth, async function (req, res) {
+  try {
+    const { name, location, bio, profilePhoto } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name is required"
+      });
+    }
+
+    if (!location || !location.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Location is required"
+      });
+    }
+
+    if (bio && bio.length > 250) {
+      return res.status(400).json({
+        success: false,
+        message: "Bio cannot exceed 250 characters"
+      });
+    }
+
+    if (
+      profilePhoto !== undefined &&
+      typeof profilePhoto !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid profile photo"
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    user.name = name.trim();
+    user.location = location.trim();
+    user.bio = bio ? bio.trim() : "";
+
+    if (profilePhoto !== undefined) {
+      user.profilePhoto = profilePhoto;
+    }
+
+    user.profileCompleted = true;
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      profile: {
+        name: user.name,
+        email: user.email,
+        location: user.location,
+        profilePhoto: user.profilePhoto,
+        bio: user.bio,
+        profileCompleted: user.profileCompleted,
+        createdAt: user.createdAt
+      }
+    });
+
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update profile"
+    });
+  }
+});
+
+app.get("/api/clothes/:id/seller-profile", async function (req, res) {
+  try {
+    const clothing = await Clothing.findById(req.params.id);
+
+    if (!clothing || !clothing.ownerEmail) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller not found."
+      });
+    }
+
+    const seller = await User.findOne({
+      email: clothing.ownerEmail.toLowerCase()
+    }).select("name email location profilePhoto bio createdAt");
+
+    if (!seller) {
+      return res.status(404).json({
+        success: false,
+        message: "Seller profile not found."
+      });
+    }
+
+    const completedSwaps = await SwapRequest.countDocuments({
+      $or: [
+        { requesterEmail: seller.email },
+        { ownerEmail: seller.email }
+      ],
+      completionStatus: "Completed"
+    });
+
+   const listings = await Clothing.find({
+  ownerEmail: seller.email,
+  _id: { $ne: clothing._id },
+  status: "Available",
+  $and: [
+    {
+      $or: [
+        { isDeleted: false },
+        { isDeleted: { $exists: false } }
+      ]
+    },
+    {
+      $or: [
+        { listingStatus: "Available" },
+        { listingStatus: { $exists: false } }
+      ]
+    }
+  ]
+}).select("title brand category size condition location price description image status createdAt");
+    return res.json({
+      success: true,
+      seller: {
+        name: seller.name,
+        location: seller.location,
+        profilePhoto: seller.profilePhoto,
+        bio: seller.bio,
+        memberSince: seller.createdAt,
+        completedSwaps: completedSwaps
+      },
+      listings: listings
+    });
+
+  } catch (error) {
+    console.error("Seller profile error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to load seller profile."
+    });
+  }
+});
+
 
   app.post("/api/users", async function (req, res) {
     try {
@@ -4220,6 +5421,14 @@ setInterval(function () {
 // Also check once immediately after database connection.
 checkHandToHandDeadlines();
 
+// Run Courier receiver deadline checks every minute.
+setInterval(function () {
+  checkCourierReceiverDeadlines();
+}, 60 * 1000);
+
+// Also check once immediately after database connection.
+checkCourierReceiverDeadlines();
+
 
       console.log(
         "MongoDB connected successfully!"
@@ -4363,15 +5572,14 @@ checkHandToHandDeadlines();
   app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "online" });
   });
-      app.listen(
-        PORT,
-        function () {
-
-          console.log(
-            `ClothSwap Backend running on http://localhost:${PORT}`
-          );
-        }
-      );
+     server.listen(
+  PORT,
+  function () {
+    console.log(
+      `ClothSwap Backend running on http://localhost:${PORT}`
+    );
+  }
+);
 
     })
     .catch(function (error) {

@@ -53,7 +53,25 @@ acceptedTermsAt: {
   type: Date,
   default: null
 },
+
+profilePhoto: {
+  type: String,
+  default: ""
+},
+
+bio: {
+  type: String,
+  default: "",
+  trim: true,
+  maxlength: 250
+},
+
+profileCompleted: {
+  type: Boolean,
+  default: false
+},
   },
+
   {
     timestamps: true
   }

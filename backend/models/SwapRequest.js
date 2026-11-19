@@ -119,6 +119,44 @@ requesterEmail: {
     },
     // Hand-to-Hand 48 Hours Confirmation System
 
+    // Courier 48 Hours Confirmation System
+
+    courierExchangeStartedAt: {
+      type: Date,
+      default: null
+    },
+
+    ownerCourierReminder24Sent: {
+      type: Boolean,
+      default: false
+    },
+
+    requesterCourierReminder24Sent: {
+      type: Boolean,
+      default: false
+    },
+
+    ownerCourierReminder36Sent: {
+      type: Boolean,
+      default: false
+    },
+
+    requesterCourierReminder36Sent: {
+      type: Boolean,
+      default: false
+    },
+
+    ownerCourierConfirmationOverdue: {
+      type: Boolean,
+      default: false
+    },
+
+    requesterCourierConfirmationOverdue: {
+      type: Boolean,
+      default: false
+    },
+
+
 handToHandExchangeStartedAt: {
   type: Date,
   default: null
@@ -162,7 +200,32 @@ requesterConfirmationOverdue: {
         "Completed"
       ],
       default: "Not Started"
-    }
+    },
+    // Swap Request Deleted History
+
+isDeleted: {
+  type: Boolean,
+  default: false
+},
+
+deletedBy: {
+  type: String,
+  default: ""
+},
+
+deletedByEmail: {
+  type: String,
+  default: ""
+},
+deletedFor: {
+  type: [String],
+  default: []
+},
+
+deletedAt: {
+  type: Date,
+  default: null
+}
   },
 
   {

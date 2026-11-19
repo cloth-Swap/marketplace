@@ -8,6 +8,49 @@ function ItemDetails() {
   const navigate = useNavigate();
 
   const [item, setItem] = useState(null);
+  const [sellerProfile, setSellerProfile] = useState(null);
+const [sellerProfileLoading, setSellerProfileLoading] = useState(false);
+useEffect(() => {
+  if (!item || !(item._id || item.id)) return;
+
+  let cancelled = false;
+
+  async function loadSellerProfile() {
+    setSellerProfileLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/clothes/${item._id || item.id}/seller-profile`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Unable to load seller profile");
+      }
+
+      if (!cancelled) {
+        setSellerProfile(data.seller);
+      }
+    } catch (error) {
+      console.error("Seller profile error:", error);
+
+      if (!cancelled) {
+        setSellerProfile(null);
+      }
+    } finally {
+      if (!cancelled) {
+        setSellerProfileLoading(false);
+      }
+    }
+  }
+
+  loadSellerProfile();
+
+  return function () {
+    cancelled = true;
+  };
+}, [item]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -50,76 +93,148 @@ function ItemDetails() {
     }
   }
 
-  async function loadItem() {
-    setLoading(true);
-    setError("");
+ 
+async function loadItem() {
+  setLoading(true);
+  setError("");
 
-    try {
-      const response = await fetch(`${API_URL}/api/clothes`);
-
-      if (!response.ok) {
-        throw new Error("Unable to load clothes.");
-      }
-
-      const data = await response.json();
-      const clothes = data.clothes || data || [];
-
-      const selectedItem = clothes.find(
-        (cloth) =>
-          String(cloth._id || cloth.id) === String(id)
-      );
-
-      if (!selectedItem) {
-        setError("Clothing item not found.");
-      } else {
-        setItem(selectedItem);
-      }
-    } catch (err) {
-      console.error(err);
-      setError(
-        "Cannot connect to server. Make sure backend is running."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function addToWishlist() {
-    if (!item) return;
-
-    let wishlist = [];
-
-    try {
-      const saved = localStorage.getItem("clothSwapWishlist");
-      wishlist = saved ? JSON.parse(saved) : [];
-
-      if (!Array.isArray(wishlist)) {
-        wishlist = [];
-      }
-    } catch (error) {
-      wishlist = [];
-    }
-
-    const itemId = item._id || item.id;
-
-    const alreadyExists = wishlist.some(
-      (wishlistItem) =>
-        String(wishlistItem._id || wishlistItem.id) === String(itemId)
+  try {
+    const response = await fetch(
+      `${API_URL}/api/clothes/${id}`
     );
 
-    if (alreadyExists) return;
+    if (!response.ok) {
+      throw new Error("Unable to load clothing item.");
+    }
 
-    wishlist.push(item);
+    const data = await response.json();
+
+    const selectedItem =
+      data.clothing ||
+      data.item ||
+      data;
+
+    if (
+      !selectedItem ||
+      !(selectedItem._id || selectedItem.id)
+    ) {
+      setItem(null);
+      setError("Clothing item not found.");
+    } else {
+      setItem(selectedItem);
+    }
+
+  } catch (err) {
+    console.error("Item loading error:", err);
+
+    setError(
+      "Cannot connect to server. Make sure backend is running."
+    );
+  } finally {
+    setLoading(false);
+  }
+}
+
+ function addToWishlist() {
+  if (!item) return;
+
+  const itemId = item._id || item.id;
+  if (!itemId) return;
+
+  function getSmallWishlistItem(clothing) {
+    const smallItem = {
+      _id: String(clothing._id || clothing.id),
+      title: clothing.title || clothing.name || "Clothing Item",
+      name: clothing.name || clothing.title || "Clothing Item",
+      category: clothing.category || "Fashion",
+      brand: clothing.brand || "",
+      size: clothing.size || "N/A",
+      condition: clothing.condition || "Good",
+      location: clothing.location || "",
+      price: clothing.price || 0,
+      value: clothing.value || 0,
+      status: clothing.status || "Available",
+      owner: clothing.owner || "",
+      ownerEmail: clothing.ownerEmail || ""
+    };
+
+    // Base64 image localStorage માં save નહીં થાય
+    if (
+      clothing.image &&
+      !String(clothing.image).startsWith("data:")
+    ) {
+      smallItem.image = clothing.image;
+    }
+
+    return smallItem;
+  }
+
+  try {
+    let savedWishlist = JSON.parse(
+      localStorage.getItem("clothSwapWishlist") || "[]"
+    );
+
+    if (!Array.isArray(savedWishlist)) {
+      savedWishlist = [];
+    }
+
+    savedWishlist = savedWishlist
+      .filter(function (savedItem) {
+        return savedItem && (savedItem._id || savedItem.id);
+      })
+      .map(getSmallWishlistItem);
+
+    const alreadySaved = savedWishlist.some(function (savedItem) {
+      return String(savedItem._id || savedItem.id) === String(itemId);
+    });
+
+    if (!alreadySaved) {
+      savedWishlist.push(getSmallWishlistItem(item));
+    }
 
     localStorage.setItem(
       "clothSwapWishlist",
-      JSON.stringify(wishlist)
+      JSON.stringify(savedWishlist)
     );
 
     setIsWishlisted(true);
-    window.dispatchEvent(new Event("wishlistUpdated"));
-  }
 
+    window.dispatchEvent(new Event("wishlistUpdated"));
+  } catch (error) {
+    console.error("Wishlist save error:", error);
+  }
+}
+
+function removeFromWishlist() {
+  if (!item) return;
+
+  const itemId = item._id || item.id;
+
+  try {
+    let savedWishlist = JSON.parse(
+      localStorage.getItem("clothSwapWishlist") || "[]"
+    );
+
+    if (!Array.isArray(savedWishlist)) {
+      savedWishlist = [];
+    }
+
+    const updatedWishlist = savedWishlist.filter(function (savedItem) {
+      return String(savedItem._id || savedItem.id) !== String(itemId);
+    });
+
+    localStorage.setItem(
+      "clothSwapWishlist",
+      JSON.stringify(updatedWishlist)
+    );
+
+    setIsWishlisted(false);
+
+    window.dispatchEvent(new Event("wishlistUpdated"));
+  } catch (error) {
+    console.error("Wishlist remove error:", error);
+  }
+}
   function removeFromWishlist() {
     if (!item) return;
 
@@ -582,23 +697,65 @@ function ItemDetails() {
               )
             ),
 
-            /* OWNER */
+       /* SELLER PROFILE */
 
-            React.createElement(
-              "div",
-              { className: "item-owner-box" },
-              React.createElement(
-                "div",
-                { className: "item-owner-icon" },
-                "👤"
-              ),
-              React.createElement(
-                "div",
-                null,
-                React.createElement("small", null, "Listed by"),
-                React.createElement("strong", null, owner)
-              )
-            ),
+React.createElement(
+  "div",
+  {
+    className: "item-owner-box",
+    onClick: function () {
+      navigate("/profile/" + (item._id || item.id));
+    },
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: "14px",
+      padding: "14px 18px",
+      borderRadius: "14px",
+      cursor: "pointer",
+      background: "#fff8fc",
+      border: "1px solid #f0d9eb"
+    }
+  },
+
+  sellerProfile && sellerProfile.profilePhoto
+    ? React.createElement("img", {
+        src: sellerProfile.profilePhoto,
+        alt: "Seller",
+        style: {
+          width: "52px",
+          height: "52px",
+          borderRadius: "50%",
+          objectFit: "cover"
+        }
+      })
+    : React.createElement(
+        "div",
+        {
+          className: "item-owner-icon",
+          style: {
+            width: "52px",
+            height: "52px",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }
+        },
+        "👤"
+      ),
+
+  React.createElement(
+    "strong",
+    {
+      style: {
+        fontSize: "16px",
+        color: "#49334c"
+      }
+    },
+    sellerProfile ? sellerProfile.name : owner
+  )
+),
 
             /* ACTION BUTTONS */
 

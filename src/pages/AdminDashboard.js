@@ -66,6 +66,21 @@ function AdminDashboard() {
 
   const [activeMenu, setActiveMenu] = useState("overview");
   const [analytics, setAnalytics] = useState({});
+  const [trends, setTrends] = useState({
+  users: [],
+  listings: [],
+  swaps: [],
+  completedSwaps: [],
+  swapStatusDistribution: [],
+  userActivityTrend: [],
+  topPerformingCategories: []
+});
+
+const [trendPeriod, setTrendPeriod] = useState("month");
+
+const [selectedTrendYear, setSelectedTrendYear] = useState(
+  new Date().getFullYear()
+);
   const [users, setUsers] = useState([]);
   const [listings, setListings] = useState([]);
   const [swaps, setSwaps] = useState([]);
@@ -122,7 +137,37 @@ const [systemStatus, setSystemStatus] = useState("Checking...");
 
     return data;
   }
+async function loadTrends(
+  selectedPeriod = trendPeriod,
+  selectedYear = selectedTrendYear
+) {
+  try {
+    const params = new URLSearchParams();
 
+    params.set("period", selectedPeriod);
+
+    if (selectedPeriod === "year") {
+      params.set("year", String(selectedYear));
+    }
+
+    const data = await request(
+      `/api/admin/dashboard/trends?${params.toString()}`
+    );
+    console.log(
+  "Swap Status Distribution:",
+  data.trends?.swapStatusDistribution
+);
+   setTrends(data.trends || {
+  users: [],
+  listings: [],
+  swaps: [],
+  completedSwaps: [],
+  swapStatusDistribution: []
+});
+  } catch (error) {
+    console.error("Failed to load dashboard trends:", error);
+  }
+}
   function isSwapCompleted(swap) {
   return swap.completionStatus === "Completed";
 }
@@ -197,12 +242,20 @@ useEffect(() => {
     setError("");
 
     try {
-     if (section === "overview" || section === "reports") {
+    if (section === "overview") {
   await Promise.all([
     loadAnalytics(),
     loadSwaps()
   ]);
-}else if (section === "users") {
+} else if (section === "reports") {
+  await Promise.all([
+    loadAnalytics(),
+    loadSwaps(),
+    loadListings(),
+    loadUsers()
+  ]);
+}
+else if (section === "users") {
         await loadUsers();
       } else if (section === "listings") {
         await loadListings();
@@ -263,7 +316,11 @@ useEffect(() => {
       loadSection(activeMenu);
     }
   }, [activeMenu]);
-
+useEffect(() => {
+  if (activeMenu === "overview") {
+    loadTrends();
+  }
+}, [activeMenu, trendPeriod, selectedTrendYear]);
   useEffect(() => {
     if (activeMenu === "overview" || activeMenu === "reports") {
       loadSection(activeMenu);
@@ -377,7 +434,19 @@ useEffect(() => {
       h("small", null, "ClothSwap platform")
     );
   }
-
+function percentageStatCard(label, value, icon, color) {
+  return h("article", {
+    className: "cs-ceo-stat-card",
+    key: label
+  },
+    h("div", {
+      className: `cs-ceo-stat-icon ${color}`
+    }, icon),
+    h("p", null, label),
+    h("strong", null, `${Number(value || 0).toFixed(1)}%`),
+    h("small", null, "ClothSwap platform")
+  );
+}
   function table(headersList, rows) {
     return h("div", { className: "cs-ceo-table-wrap" },
       h("table", { className: "cs-ceo-table" },
@@ -421,11 +490,42 @@ useEffect(() => {
   }
 
   function renderOverview() {
+      const totalUsers = Number(analytics.totalUsers || 0);
+  const activeUsers = Number(analytics.activeUsers || 0);
+
+  const engagementRate = totalUsers > 0
+    ? (activeUsers / totalUsers) * 100
+    : 0;
+
+  const totalSwapRequests = Number(analytics.totalSwaps || 0);
+
+ const completedSwapRequests = swaps.filter(function (swap) {
+  return (
+    swap.completionStatus === "Completed" ||
+    swap.agreementStatus === "Completed"
+  );
+}).length;
+
+  const conversionRate = totalSwapRequests > 0
+    ? (completedSwapRequests / totalSwapRequests) * 100
+    : 0;
     return h(React.Fragment, null,
       heading("Dashboard Overview", "Monitor your ClothSwap platform at a glance."),
       h("div", { className: "cs-ceo-stats-grid" },
         statCard("Total Users", analytics.totalUsers, "♙", "purple"),
         statCard("Active Users", analytics.activeUsers, "◉", "blue"),
+        percentageStatCard(
+  "User Engagement Rate",
+  engagementRate,
+  "📈",
+  "green"
+),
+percentageStatCard(
+  "Swap Request Conversion Rate",
+  conversionRate,
+  "⇄",
+  "pink"
+),
         statCard("Clothing Listings", analytics.totalListings, "♧", "green"),
         statCard("Swap Requests", analytics.totalSwaps, "⇄", "orange"),
         statCard(
@@ -440,12 +540,1053 @@ useEffect(() => {
         chart("Monthly Listings", analytics.monthlyListings),
         chart("Monthly Users", analytics.monthlyUsers)
       ),
-      h("section", { className: "cs-ceo-card" },
+   
+h("div", { className: "cs-ceo-overview-analytics-grid" },
+
+  // Chart 1 - Full width
+  h("section", { className: "cs-ceo-card cs-overview-main-chart" },
+    h("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "12px",
+        marginBottom: "18px"
+      }
+    },
+      h("div", null,
+        h("h3", null, "Monthly Platform Growth")
+      ),
+
+      h("div", {
+        style: {
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap"
+        }
+      },
+        h("select", {
+          value: trendPeriod,
+          onChange: e => setTrendPeriod(e.target.value)
+        },
+          h("option", { value: "7days" }, "7 Days"),
+          h("option", { value: "month" }, "Month"),
+          h("option", { value: "year" }, "Year")
+        ),
+
+        trendPeriod === "year"
+          ? h("select", {
+              value: selectedTrendYear,
+              onChange: e => setSelectedTrendYear(Number(e.target.value))
+            },
+              ...Array.from(
+                {
+                  length: new Date().getFullYear() + 5 - 2026 + 1
+                },
+                (_, index) => 2026 + index
+              ).map(year =>
+                h("option", {
+                  key: year,
+                  value: year
+                }, year)
+              )
+            )
+          : null
+      )
+    ),
+
+    lineChart("Platform Growth", [
+      { name: "Users", data: trends.users },
+      { name: "Listings", data: trends.listings },
+      { name: "Swaps", data: trends.swaps }
+    ])
+  ),
+
+  barChart("Swap Requests vs Completed Swaps", [
+    {
+      name: "Total Requests",
+      data: trends.swaps || []
+    },
+    {
+      name: "Completed Swaps",
+      data: trends.completedSwaps || []
+    }
+  ]),
+
+  doughnutChart(
+    "Swap Status Distribution",
+    trends.swapStatusDistribution || []
+  ),
+
+  pieChart(
+    "Clothing Category Distribution",
+    trends.clothingCategoryDistribution || []
+  ),
+
+  areaChart(
+    "User Activity Trend",
+    trends.userActivityTrend || []
+  ),
+
+horizontalBarChart(
+  "Top Performing Clothing Categories",
+  trends.topPerformingCategories || []
+)
+),
+
+// Platform Performance - Outside chart grid
+h("section", { className: "cs-ceo-card" },
   h("h3", null, "Platform Performance"),
   h("p", null, `Swap Completion Rate: ${analytics.swapCompletionRate || 0}%`)
 )
+
     );
   }
+
+function lineChart(title, datasets) {
+  const chartWidth = 900;
+  const chartHeight = 320;
+  const left = 65;
+  const right = 65;
+  const top = 30;
+  const bottom = 75;
+
+  const firstData = datasets[0] ? datasets[0].data || [] : [];
+
+  const allValues = datasets.reduce(function (values, series) {
+    return values.concat(
+      (series.data || []).map(function (item) {
+        return Number(item.count ?? item.total ?? item.value ?? 0);
+      })
+    );
+  }, []);
+
+  const rawMax = Math.max(0, ...allValues);
+  const maxValue = Math.max(4, Math.ceil(rawMax / 4) * 4);
+
+  const getX = function (index) {
+    const count = Math.max(firstData.length - 1, 1);
+    return left + index * (
+      (chartWidth - left - right) / count
+    );
+  };
+
+  const getY = function (value) {
+    return chartHeight - bottom -
+      (value / maxValue) * (chartHeight - top - bottom);
+  };
+
+  const colors = ["#8b5cf6", "#16a34a", "#ec4899"];
+
+ 
+function getLabel(item) {
+  const raw = item.label || item.date || item.month || item._id || "";
+
+  if (trendPeriod === "year") {
+    const value = String(raw);
+
+    const monthMatch = value.match(
+      /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i
+    );
+
+    if (monthMatch) {
+      return monthMatch[1];
+    }
+
+    const dateMatch = value.match(/^(\d{4})-(\d{1,2})/);
+
+    if (dateMatch) {
+      return new Date(
+        Number(dateMatch[1]),
+        Number(dateMatch[2]) - 1,
+        1
+      ).toLocaleDateString("en-IN", {
+        month: "short"
+      });
+    }
+  }
+
+  if (typeof raw === "object") {
+    if (raw.month && raw.year) {
+      return new Date(
+        Number(raw.year),
+        Number(raw.month) - 1,
+        1
+      ).toLocaleDateString("en-IN", {
+        month: "short",
+        year: "numeric"
+      });
+    }
+    return String(raw.year || "");
+  }
+
+  const value = String(raw);
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const parts = value.split("-");
+    return Number(parts[2]) + " " +
+      new Date(Number(parts[0]), Number(parts[1]) - 1)
+        .toLocaleDateString("en-IN", { month: "short" });
+  }
+
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    const parts = value.split("-");
+    return new Date(Number(parts[0]), Number(parts[1]) - 1)
+      .toLocaleDateString("en-IN", {
+        month: "short",
+        year: "numeric"
+      });
+  }
+
+  return value;
+}
+
+
+  const labelStep = trendPeriod === "year"
+  ? 1
+  : Math.max(1, Math.ceil(firstData.length / 8));
+
+  return h("section", {
+    className: "cs-ceo-card",
+    style: {
+      padding: "22px",
+      overflow: "hidden"
+    }
+  },
+    h("h3", null, title),
+
+    h("div", {
+      style: {
+        width: "100%",
+        overflowX: "auto"
+      }
+    },
+      h("svg", {
+        viewBox: `0 0 ${chartWidth} ${chartHeight}`,
+        style: {
+          width: "100%",
+          minWidth: "550px",
+          height: "auto",
+          display: "block"
+        }
+      },
+
+        // Y-axis grid and value labels
+        [0, 1, 2, 3, 4].map(function (step) {
+          const value = maxValue - (step * maxValue / 4);
+          const y = top + step * (
+            (chartHeight - top - bottom) / 4
+          );
+
+          return h("g", { key: "grid-" + step },
+            h("line", {
+              x1: left,
+              y1: y,
+              x2: chartWidth - right,
+              y2: y,
+              stroke: "#e9e3ef",
+              strokeDasharray: "5 5"
+            }),
+            h("text", {
+              x: left - 12,
+              y: y + 4,
+              textAnchor: "end",
+              fontSize: 12,
+              fill: "#777"
+            }, String(value))
+          );
+        }),
+
+        // Data lines and points
+        datasets.map(function (series, seriesIndex) {
+          const points = (series.data || []).map(function (item, index) {
+            const value = Number(
+              item.count ?? item.total ?? item.value ?? 0
+            );
+
+            return `${getX(index)},${getY(value)}`;
+          }).join(" ");
+
+          return h("g", { key: series.name },
+            h("polyline", {
+              points: points,
+              fill: "none",
+              stroke: colors[seriesIndex % colors.length],
+              strokeWidth: 3,
+              strokeLinecap: "round",
+              strokeLinejoin: "round"
+            }),
+
+            (series.data || []).map(function (item, index) {
+              const value = Number(
+                item.count ?? item.total ?? item.value ?? 0
+              );
+
+              return h("circle", {
+  key: series.name + "-" + index,
+  cx: getX(index),
+  cy: getY(value),
+  r: 5,
+  fill: colors[seriesIndex % colors.length],
+  style: {
+    cursor: "pointer"
+  },
+  "aria-label": `${series.name}: ${value}`,
+  children: h("title", null,
+    `${getLabel(item)} | ${series.name}: ${value}`
+  )
+});
+ })
+          );
+        }),
+
+        // X-axis date labels
+        firstData.map(function (item, index) {
+          if (
+            index % labelStep !== 0 &&
+            index !== firstData.length - 1
+          ) {
+            return null;
+          }
+
+          return h("text", {
+            key: "date-" + index,
+            x: getX(index),
+            y: chartHeight - 25,
+            textAnchor:
+              index === 0 ? "start" :
+              index === firstData.length - 1 ? "end" : "middle",
+            fontSize: 12,
+            fill: "#777"
+          }, getLabel(item));
+        })
+      )
+    ),
+
+    // Legend
+    h("div", {
+      style: {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "18px",
+        marginTop: "12px"
+      }
+    },
+      datasets.map(function (series, index) {
+        return h("span", {
+          key: series.name,
+          style: {
+            fontSize: "13px",
+            color: "#666"
+          }
+        },
+          h("span", {
+            style: {
+              display: "inline-block",
+              width: "9px",
+              height: "9px",
+              borderRadius: "50%",
+              background: colors[index % colors.length],
+              marginRight: "6px"
+            }
+          }),
+          series.name
+        );
+      })
+    )
+  );
+}
+
+function barChart(title, datasets) {
+  const chartWidth = 600;
+  const chartHeight = 260;
+  const left = 48;
+  const right = 20;
+  const top = 25;
+  const bottom = 55;
+
+  const firstData = datasets[0] ? datasets[0].data || [] : [];
+
+  const allValues = datasets.reduce(function (values, series) {
+    return values.concat(
+      (series.data || []).map(function (item) {
+        return Number(item.count ?? item.total ?? item.value ?? 0);
+      })
+    );
+  }, []);
+
+  const maxValue = Math.max(1, ...allValues);
+  const tickStep = Math.max(1, Math.ceil(maxValue / 4));
+  const yMax = tickStep * 4;
+
+  const colors = ["#8b5cf6", "#16a34a", "#ec4899"];
+
+  const getX = function (index) {
+    const count = Math.max(firstData.length, 1);
+    const slotWidth = (chartWidth - left - right) / count;
+
+    return left + index * slotWidth + slotWidth / 2;
+  };
+
+  const getY = function (value) {
+    return chartHeight - bottom -
+      (value / yMax) * (chartHeight - top - bottom);
+  };
+
+  function getLabel(item) {
+    const raw = item.label || item.month || item._id || "";
+
+    if (!raw) return "";
+
+    const date = new Date(raw);
+
+    if (/^\d{4}-\d{2}$/.test(String(raw))) {
+      const parts = String(raw).split("-");
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, 1)
+  .toLocaleDateString("en-IN", {
+    month: "short"
+  });
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(String(raw))) {
+      return date.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short"
+      });
+    }
+
+    return String(raw);
+  }
+
+  const slotWidth =
+    (chartWidth - left - right) / Math.max(firstData.length, 1);
+
+  const groupWidth = Math.min(44, slotWidth * 0.65);
+  const barWidth = Math.min(
+    22,
+    groupWidth / Math.max(datasets.length, 1)
+  );
+
+  return h("section", {
+    className: "cs-ceo-card",
+    style: {
+      padding: "22px",
+      overflow: "hidden"
+    }
+  },
+    h("h3", null, title),
+
+    h("svg", {
+      viewBox: `0 0 ${chartWidth} ${chartHeight}`,
+      style: {
+        width: "100%",
+        height: "auto"
+      }
+    },
+
+      [0, 1, 2, 3, 4].map(function (step) {
+        const value = yMax - step * tickStep;
+        const y = getY(value);
+
+        return h("g", { key: "axis-" + step },
+          h("line", {
+            x1: left,
+            y1: y,
+            x2: chartWidth - right,
+            y2: y,
+            stroke: "#e9e3ef",
+            strokeDasharray: "4 4"
+          }),
+
+          h("text", {
+            x: left - 10,
+            y: y + 4,
+            textAnchor: "end",
+            fontSize: 11,
+            fill: "#777"
+          }, String(value))
+        );
+      }),
+
+      datasets.map(function (series, seriesIndex) {
+        return h("g", { key: series.name },
+          (series.data || []).map(function (item, index) {
+            const value = Number(
+              item.count ?? item.total ?? item.value ?? 0
+            );
+
+            const x =
+              getX(index) -
+              (datasets.length * barWidth) / 2 +
+              seriesIndex * barWidth;
+
+            const y = getY(value);
+
+            return h("rect", {
+              key: series.name + "-" + index,
+              x: x,
+              y: y,
+              width: barWidth - 3,
+              height: Math.max(0, chartHeight - bottom - y),
+              rx: 4,
+              fill: colors[seriesIndex % colors.length]
+            },
+              h("title", null, series.name + ": " + value)
+            );
+          })
+        );
+      }),
+
+      firstData.map(function (item, index) {
+        return h("text", {
+          key: "label-" + index,
+          x: getX(index),
+          y: chartHeight - 20,
+          textAnchor: "middle",
+          fontSize: 11,
+          fill: "#777"
+        }, getLabel(item));
+      })
+    ),
+
+    h("div", {
+      style: {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "18px",
+        marginTop: "12px"
+      }
+    },
+      datasets.map(function (series, index) {
+        return h("span", {
+          key: series.name,
+          style: {
+            fontSize: "13px",
+            color: "#666"
+          }
+        },
+          h("span", {
+            style: {
+              display: "inline-block",
+              width: "9px",
+              height: "9px",
+              borderRadius: "50%",
+              background: colors[index % colors.length],
+              marginRight: "6px"
+            }
+          }),
+          series.name
+        );
+      })
+    )
+  );
+}
+
+function doughnutChart(title, data) {
+  const colors = {
+    Pending: "#f59e0b",
+    Accepted: "#8b5cf6",
+    Rejected: "#ef4444",
+    Completed: "#16a34a"
+  };
+
+  const total = data.reduce(function (sum, item) {
+    return sum + Number(item.count || 0);
+  }, 0);
+
+  let currentAngle = 0;
+
+  const radius = 75;
+  const circumference = 2 * Math.PI * radius;
+
+  return h("section", {
+    className: "cs-ceo-card",
+    style: {
+      padding: "22px",
+      overflow: "hidden"
+    }
+  },
+    h("h3", null, title),
+
+    total === 0
+      ? h("p", {
+          style: {
+            textAlign: "center",
+            color: "#888",
+            padding: "35px 0"
+          }
+        }, "No swap data available")
+      : h("div", {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gap: "25px",
+            padding: "15px 0"
+          }
+        },
+
+        h("svg", {
+          viewBox: "0 0 200 200",
+          style: {
+            width: "190px",
+            maxWidth: "100%",
+            height: "auto"
+          }
+        },
+
+          h("circle", {
+            cx: 100,
+            cy: 100,
+            r: radius,
+            fill: "none",
+            stroke: "#eee8f3",
+            strokeWidth: 25
+          }),
+
+          data.map(function (item, index) {
+            const value = Number(item.count || 0);
+            const dash = (value / total) * circumference;
+            const offset = circumference - currentAngle;
+
+            const circle = h("circle", {
+              key: item.label,
+              cx: 100,
+              cy: 100,
+              r: radius,
+              fill: "none",
+              stroke: colors[item.label] || "#999",
+              strokeWidth: 25,
+strokeDasharray: `${dash} ${circumference - dash}`,
+strokeDashoffset: offset,
+transform: "rotate(-90 100 100)",
+children: h("title", null,
+  `${item.label}: ${value} (${Math.round(value / total * 100)}%)`
+),
+style: {
+  cursor: "pointer",
+  transition: "stroke-width 0.2s ease, opacity 0.2s ease"
+},
+onMouseEnter: function (e) {
+  e.currentTarget.style.strokeWidth = "31";
+  e.currentTarget.style.opacity = "0.85";
+},
+onMouseLeave: function (e) {
+  e.currentTarget.style.strokeWidth = "25";
+  e.currentTarget.style.opacity = "1";
+}
+            });
+
+            currentAngle += dash;
+            return circle;
+          }),
+
+          h("text", {
+            x: 100,
+            y: 96,
+            textAnchor: "middle",
+            fontSize: 25,
+            fontWeight: "bold",
+            fill: "#333"
+          }, String(total)),
+
+          h("text", {
+            x: 100,
+            y: 116,
+            textAnchor: "middle",
+            fontSize: 11,
+            fill: "#888"
+          }, "Total Swaps")
+        ),
+
+        h("div", {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "12px"
+          }
+        },
+          data.map(function (item) {
+            return h("div", {
+              key: item.label,
+              style: {
+                display: "flex",
+                alignItems: "center",
+                gap: "9px",
+                fontSize: "13px",
+                color: "#555"
+              }
+            },
+              h("span", {
+                style: {
+                  width: "11px",
+                  height: "11px",
+                  borderRadius: "50%",
+                  background: colors[item.label] || "#999"
+                }
+              }),
+              `${item.label}: ${item.count} (${Math.round(
+                Number(item.count || 0) / total * 100
+              )}%)`
+            );
+          })
+        )
+      )
+  );
+}
+function pieChart(title, data) {
+  const total = data.reduce(function (sum, item) {
+    return sum + Number(item.count || 0);
+  }, 0);
+
+  if (!total) {
+    return h("section", { className: "cs-ceo-card" },
+      h("h3", null, title),
+      h("p", null, "No category data available")
+    );
+  }
+
+  const colors = [
+    "#e85d9e",
+    "#a85bc7",
+    "#6366f1",
+    "#14b8a6",
+    "#f59e0b",
+    "#ef4444",
+    "#0ea5e9",
+    "#84cc16"
+  ];
+
+  let currentAngle = 0;
+
+  const slices = data.map(function (item, index) {
+    const percentage = Number(item.count || 0) / total;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + percentage * 360;
+
+    currentAngle = endAngle;
+
+    const start = {
+      x: 150 + 110 * Math.cos((startAngle - 90) * Math.PI / 180),
+      y: 150 + 110 * Math.sin((startAngle - 90) * Math.PI / 180)
+    };
+
+    const end = {
+      x: 150 + 110 * Math.cos((endAngle - 90) * Math.PI / 180),
+      y: 150 + 110 * Math.sin((endAngle - 90) * Math.PI / 180)
+    };
+
+    const largeArc = percentage > 0.5 ? 1 : 0;
+
+    const path = percentage >= 0.9999
+      ? "M 150 40 A 110 110 0 1 1 149.99 40 Z"
+      : `M 150 150 L ${start.x} ${start.y} A 110 110 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+
+    return {
+      path: path,
+      color: colors[index % colors.length],
+      label: item.label,
+      count: item.count,
+      percentage: Math.round(percentage * 100)
+    };
+  });
+
+  return h("section", { className: "cs-ceo-card" },
+    h("h3", null, title),
+
+    h("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "30px",
+        flexWrap: "wrap",
+        padding: "15px"
+      }
+    },
+      h("svg", {
+        viewBox: "0 0 300 300",
+        style: {
+          width: "260px",
+          maxWidth: "100%",
+          height: "auto"
+        }
+      },
+        slices.map(function (slice, index) {
+         return h("path", {
+  key: index,
+  d: slice.path,
+ fill: slice.color,
+stroke: "#ffffff",
+strokeWidth: 2,
+style: {
+  cursor: "pointer",
+  transition: "transform 0.2s ease, opacity 0.2s ease",
+  transformBox: "fill-box",
+  transformOrigin: "center"
+},
+onMouseEnter: function (e) {
+  e.currentTarget.style.transform = "scale(1.06)";
+  e.currentTarget.style.opacity = "0.85";
+},
+onMouseLeave: function (e) {
+  e.currentTarget.style.transform = "scale(1)";
+  e.currentTarget.style.opacity = "1";
+}
+},
+  h("title", null,
+    `${slice.label}: ${slice.count} (${slice.percentage}%)`
+  )
+);
+        })
+      ),
+
+      h("div", {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px"
+        }
+      },
+        slices.map(function (slice, index) {
+          return h("div", {
+            key: index,
+            style: {
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              fontSize: "13px"
+            }
+          },
+            h("span", {
+              style: {
+                width: "11px",
+                height: "11px",
+                borderRadius: "3px",
+                background: slice.color
+              }
+            }),
+            `${slice.label}: ${slice.count} (${slice.percentage}%)`
+          );
+        })
+      )
+    )
+  );
+}
+function areaChart(title, data) {
+  const values = data || [];
+  const maxValue = Math.max(
+    1,
+    ...values.map(function (item) {
+      return Number(item.count) || 0;
+    })
+  );
+
+  const width = 900;
+  const height = 320;
+  const left = 55;
+  const right = 25;
+  const top = 25;
+  const bottom = 55;
+
+  const chartWidth = width - left - right;
+  const chartHeight = height - top - bottom;
+
+  const points = values.map(function (item, index) {
+    return {
+      x: left + (values.length <= 1
+        ? chartWidth / 2
+        : (index / (values.length - 1)) * chartWidth),
+      y: top + chartHeight -
+        ((Number(item.count) || 0) / maxValue) * chartHeight,
+      label: item.label,
+      count: Number(item.count) || 0
+    };
+  });
+
+  const linePath = points.map(function (point, index) {
+    return (index === 0 ? "M" : "L") +
+      point.x + " " + point.y;
+  }).join(" ");
+
+  const areaPath = points.length
+    ? linePath +
+      " L " + points[points.length - 1].x + " " +
+      (top + chartHeight) +
+      " L " + points[0].x + " " +
+      (top + chartHeight) + " Z"
+    : "";
+
+  return h("section", { className: "cs-chart-card" },
+    h("h3", null, title),
+
+    h("div", { className: "cs-chart-scroll" },
+      h("svg", {
+        viewBox: "0 0 900 320",
+        role: "img",
+        "aria-label": title
+      },
+        [0, 1, 2, 3, 4].map(function (step) {
+          const y = top + (chartHeight / 4) * step;
+
+          return h("g", { key: "grid-" + step },
+            h("line", {
+              x1: left,
+              y1: y,
+              x2: width - right,
+              y2: y,
+              stroke: "#e8e1ed",
+              strokeDasharray: "4 4"
+            }),
+            h("text", {
+              x: left - 12,
+              y: y + 4,
+              textAnchor: "end",
+              fontSize: "12",
+              fill: "#766b80"
+            }, String(Math.round(maxValue * (4 - step) / 4)))
+          );
+        }),
+
+        h("path", {
+          d: areaPath,
+          fill: "rgba(168, 91, 199, 0.20)",
+          stroke: "none"
+        }),
+
+        h("path", {
+          d: linePath,
+          fill: "none",
+          stroke: "#a85bc7",
+          strokeWidth: "3",
+          strokeLinejoin: "round",
+          strokeLinecap: "round"
+        }),
+
+        points.map(function (point, index) {
+          return h("g", { key: "point-" + index },
+            h("circle", {
+              cx: point.x,
+              cy: point.y,
+              r: 5,
+              fill: "#a85bc7",
+              stroke: "#ffffff",
+              strokeWidth: 2
+            },
+              h("title", null,
+                point.label + ": " + point.count + " active users"
+              )
+            ),
+            h("text", {
+              x: point.x,
+              y: height - 22,
+              textAnchor: "middle",
+              fontSize: "11",
+              fill: "#766b80"
+            }, point.label)
+          );
+        })
+      )
+    )
+  );
+}
+function horizontalBarChart(title, data) {
+  const items = (data || []).filter(function (item) {
+    return item && item.label;
+  });
+
+  const maxValue = Math.max(
+    1,
+    ...items.map(function (item) {
+      return Number(item.count) || 0;
+    })
+  );
+
+  return h(
+    "div",
+    { className: "cs-chart-card" },
+    h("h3", null, title),
+    items.length === 0
+      ? h("p", null, "No category data available")
+      : h(
+          "div",
+          { className: "cs-chart-scroll" },
+          h(
+            "div",
+            {
+              style: {
+                minWidth: "420px",
+                padding: "15px 10px"
+              }
+            },
+            ...items.map(function (item, index) {
+              const count = Number(item.count) || 0;
+              const width = (count / maxValue) * 100;
+
+              return h(
+                "div",
+                {
+                  key: item.label,
+                  style: {
+                    display: "grid",
+                    gridTemplateColumns: "110px 1fr 35px",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "18px"
+                  }
+                },
+                h(
+                  "span",
+                  {
+                    style: {
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#55445e"
+                    }
+                  },
+                  item.label
+                ),
+                h(
+                  "div",
+                  {
+                    style: {
+                      height: "22px",
+                      background: "#f1e8f5",
+                      borderRadius: "7px",
+                      overflow: "hidden"
+                    }
+                  },
+                  h("div", {
+                    title: item.label + ": " + count + " completed swaps",
+                    style: {
+                      width: width + "%",
+                      height: "100%",
+                      borderRadius: "7px",
+                      background:
+                        "linear-gradient(90deg, #a85bc7, #e85d9e)",
+                      transition: "width 0.4s ease"
+                    }
+                  })
+                ),
+                h(
+                  "strong",
+                  {
+                    style: {
+                      fontSize: "13px",
+                      color: "#75458d",
+                      textAlign: "right"
+                    }
+                  },
+                  String(count)
+                )
+              );
+            })
+          )
+        )
+  );
+}
 
   function chart(title, data) {
     const values = data || [];
@@ -678,7 +1819,7 @@ useEffect(() => {
   function renderValueAnalytics() {
     const totalValues = listings.reduce((total, listing) => {
       const value = Number(
-        listing.estimatedValue ?? listing.value ?? listing.price ?? 0
+        listing.price ?? 0
       );
 
       return total + (Number.isFinite(value) ? value : 0);
@@ -701,7 +1842,7 @@ useEffect(() => {
           listings.map(item => h("tr", { key: item._id },
             h("td", null, item.title || item.name || "Clothing"),
             h("td", null, item.category || "—"),
-            h("td", null, `₹${numberText(item.estimatedValue || item.value || item.price)}`)
+            h("td", null, `₹${numberText(item.price)}`)
           ))
         ),
         h("p", null, "Values are based on the value fields available in clothing listings.")
@@ -774,9 +1915,7 @@ useEffect(() => {
 
   function getReportData() {
     const totalValue = listings.reduce((total, item) => {
-      const value = Number(
-        item.estimatedValue ?? item.value ?? item.price ?? 0
-      );
+     const value = Number(item.price ?? 0);
 
       return total + (Number.isFinite(value) ? value : 0);
     }, 0);
@@ -974,9 +2113,7 @@ setExcelExporting(true);
         "CLOTHING LISTINGS",
         ["Clothing", "Category", "Size", "Condition", "Owner", "Estimated Value"],
         listings.map(item => {
-          const value = Number(
-            item.estimatedValue ?? item.value ?? item.price ?? 0
-          );
+         const value = Number(item.price ?? 0);
 
           return [
             item.title || item.name || "Clothing",
@@ -1197,10 +2334,7 @@ setPdfExporting(false);    }
         table(
           ["Clothing", "Category", "Size", "Condition", "Estimated Value"],
           listings.map(item => {
-            const value = Number(
-              item.estimatedValue ?? item.value ?? item.price ?? 0
-            );
-
+           const value = Number(item.price ?? 0);
             return h("tr", { key: item._id },
               h("td", null, item.title || item.name || "Clothing"),
               h("td", null, item.category || "—"),

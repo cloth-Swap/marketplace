@@ -2,12 +2,36 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API_URL, { apiFetch } from "../api.js";
 import CourierTracking from "./CourierTracking.js";
+import socket from "../socket.js";
+let swapRequestsCache = null;
 
+const swapRequestsCacheKey =
+  "clothswapSwapRequestsCache_" +
+  (
+    localStorage.getItem("clothswapUserEmail") ||
+    localStorage.getItem("clothswapEmail") ||
+    ""
+  ).trim().toLowerCase();
+
+try {
+  const savedCache = localStorage.getItem(
+    swapRequestsCacheKey
+  );
+
+  swapRequestsCache = savedCache
+    ? JSON.parse(savedCache)
+    : null;
+
+  if (!Array.isArray(swapRequestsCache)) {
+    swapRequestsCache = null;
+  }
+} catch (error) {
+  swapRequestsCache = null;
+}
 function SwapRequests() {
   const navigate = useNavigate();
 
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("active");
   const [agreeLoading, setAgreeLoading] = useState(null);
   const [completeLoading, setCompleteLoading] = useState(null);
   const [localExchangeForm, setLocalExchangeForm] = useState({});
@@ -16,7 +40,15 @@ function SwapRequests() {
   const [disputeLoading, setDisputeLoading] = useState(null);
 const [raisedDisputes, setRaisedDisputes] = useState([]);
 const [disputesLoaded, setDisputesLoaded] = useState(false);
+const [requests, setRequests] = useState(
+  Array.isArray(swapRequestsCache)
+    ? swapRequestsCache
+    : []
+);
 
+const [loading, setLoading] = useState(
+  !Array.isArray(swapRequestsCache)
+);
   const currentUser =
     localStorage.getItem("clothSwapUserName") ||
     localStorage.getItem("clothswapUserName") ||
@@ -26,11 +58,67 @@ const [disputesLoaded, setDisputesLoaded] = useState(false);
   localStorage.getItem("clothswapEmail") ||
   ""
 ).trim().toLowerCase();
+const isAdmin =
+  localStorage.getItem("clothswapIsAdmin") === "true";
+useEffect(function () {
+  try {
+    const cacheForStorage = requests.map(function (request) {
+      const cachedRequest = { ...request };
+
+      if (
+        cachedRequest.clothingImage &&
+        String(cachedRequest.clothingImage).startsWith("data:")
+      ) {
+        delete cachedRequest.clothingImage;
+      }
+
+      return cachedRequest;
+    });
+
+    localStorage.setItem(
+      swapRequestsCacheKey,
+      JSON.stringify(cacheForStorage)
+    );
+
+    swapRequestsCache = cacheForStorage;
+  } catch (error) {
+    console.log("Swap requests cache save error:", error);
+  }
+}, [requests]);
 
   useEffect(function () {
     fetchRequests();
   }, []);
+/* ================= REAL-TIME SWAP REQUEST UPDATES ================= */
 
+useEffect(function () {
+
+  function handleSwapRequestUpdate(data) {
+    if (!data || !data.requestId) {
+      return;
+    }
+
+    console.log(
+      "Real-time swap request update received:",
+      data
+    );
+
+    fetchRequests();
+  }
+
+  socket.on(
+    "swap-request-updated",
+    handleSwapRequestUpdate
+  );
+
+  return function () {
+    socket.off(
+      "swap-request-updated",
+      handleSwapRequestUpdate
+    );
+  };
+
+}, []);
 useEffect(function () {
   async function fetchMyDisputes() {
     try {
@@ -78,7 +166,6 @@ useEffect(function () {
  
   async function fetchRequests() {
     try {
-      setLoading(true);
 
 
 const response = await fetch(
@@ -94,19 +181,18 @@ const response = await fetch(
 console.log("CURRENT EMAIL:", currentUserEmail);
 console.log("SWAP REQUESTS FROM SERVER:", data);
 
-      if (Array.isArray(data)) {
-        setRequests(data);
-      } else if (Array.isArray(data.requests)) {
-        setRequests(data.requests);
-      } else {
-        setRequests([]);
-      }
+     if (Array.isArray(data)) {
+  setRequests(data);
+} else if (Array.isArray(data.requests)) {
+  setRequests(data.requests);
+} else {
+  console.error("Invalid swap requests response:", data);
+}
     } catch (error) {
-      console.error("Failed to fetch swap requests:", error);
-      setRequests([]);
-    } finally {
-      setLoading(false);
-    }
+  console.error("Failed to fetch swap requests:", error);
+} finally {
+  setLoading(false);
+}
   }
  
 
@@ -408,24 +494,22 @@ const response = await fetch(
           return item._id === id;
         });
 
-      const response = await fetch(
-        
-`${API_URL}/api/swap-requests/${id}/agree`
-,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-               user: currentUser,
-  userEmail:
-    localStorage.getItem("clothswapUserEmail") ||
-    localStorage.getItem("clothswapEmail") ||
-    ""
-})
-        }
-      );
+     const response = await apiFetch(
+  `${API_URL}/api/swap-requests/${id}/agree`,
+  {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      user: currentUser,
+      userEmail:
+        localStorage.getItem("clothswapUserEmail") ||
+        localStorage.getItem("clothswapEmail") ||
+        ""
+    })
+  }
+);
 
       const data = await response.json();
 
@@ -592,11 +676,30 @@ try {
         return;
       }
 
-      setRequests(function (previous) {
-        return previous.filter(function (item) {
-          return item._id !== id;
-        });
-      });
+     setRequests(function (previous) {
+  return previous.map(function (item) {
+    if (item._id === id) {
+      if (data.request) {
+        return data.request;
+      }
+
+      var deletedFor = Array.isArray(item.deletedFor)
+        ? item.deletedFor.slice()
+        : [];
+
+      if (!deletedFor.includes(currentUserEmail)) {
+        deletedFor.push(currentUserEmail);
+      }
+
+      return {
+        ...item,
+        deletedFor: deletedFor
+      };
+    }
+
+    return item;
+  });
+});
     } catch (error) {
       console.error(
         "Delete request error:",
@@ -637,8 +740,8 @@ try {
         });
 
       
-const response = await fetch(
-  `${API_URL}/api/swap-requests/${id}/local-exchange`,
+const response = await apiFetch(
+    `${API_URL}/api/swap-requests/${id}/local-exchange`,
   {
     method: "PUT",
     headers: {
@@ -729,8 +832,8 @@ const response = await fetch(
         });
 
      
-const response = await fetch(
-  `${API_URL}/api/swap-requests/${id}/local-exchange/complete`,
+const response = await apiFetch(
+      `${API_URL}/api/swap-requests/${id}/local-exchange/complete`,
   {
     method: "PUT",
     headers: {
@@ -842,29 +945,20 @@ async function selectExchangeMethod(id, method) {
       return;
     }
 
-    const token =
-      localStorage.getItem("token") ||
-      localStorage.getItem("authToken") ||
-      localStorage.getItem("jwtToken");
-
-    const response = await fetch(
-      `${API_URL}/api/swap-requests/${id}/exchange-method`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token
-            ? { Authorization: "Bearer " + token }
-            : {})
-        },
-        body: JSON.stringify({
-          exchangeMethod: method,
-          user: currentUser,
-          userEmail: currentEmail
-        })
-      }
-    );
-
+   const response = await apiFetch(
+  `${API_URL}/api/swap-requests/${id}/exchange-method`,
+  {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      exchangeMethod: method,
+      user: currentUser,
+      userEmail: currentEmail
+    })
+  }
+);
     const data = await response.json();
 
     if (!response.ok) {
@@ -1863,10 +1957,47 @@ React.createElement(
     );
   }
 
- 
+const activeRequests = requests.filter(function (request) {
+  const deletedFor = Array.isArray(request.deletedFor)
+    ? request.deletedFor.map(function (email) {
+        return String(email).trim().toLowerCase();
+      })
+    : [];
 
-  if (requests.length === 0) {
-    return React.createElement(
+  const isDeletedByCurrentUser =
+    deletedFor.includes(currentUserEmail) ||
+    (
+      request.isDeleted === true &&
+      String(request.deletedByEmail || "").trim().toLowerCase() ===
+        currentUserEmail
+    );
+
+  const isCompleted =
+    request.status === "Completed" ||
+    request.completionStatus === "Completed" ||
+    (
+      request.ownerCompleted === true &&
+      request.requesterCompleted === true
+    );
+
+  const isRejected =
+    request.status === "Rejected" ||
+    request.status === "Cancelled";
+
+  return !isDeletedByCurrentUser && !isCompleted && !isRejected;
+});
+
+const historyRequests = requests.filter(function (request) {
+  return !activeRequests.some(function (activeRequest) {
+    return activeRequest._id === request._id;
+  });
+});
+
+const visibleRequests =
+  activeTab === "active" ? activeRequests : historyRequests;
+
+if (visibleRequests.length === 0) {
+      return React.createElement(
       "div",
       {
         className:
@@ -1899,7 +2030,6 @@ React.createElement(
             "Manage your clothing swap requests, negotiate and confirm your swaps."
           )
         ),
-
         React.createElement(
           "div",
           {
@@ -1919,7 +2049,9 @@ React.createElement(
           React.createElement(
             "h3",
             null,
-            "No Swap Requests Yet"
+            activeTab === "active"
+  ? "No Active Swap Requests"
+  : "No Swap History Yet"
           ),
 
           React.createElement(
@@ -1941,9 +2073,7 @@ React.createElement(
       )
     );
   }
-
-  const requestCards = requests.map(
-    function (request) {
+  const requestCards = visibleRequests.map(function (request) {
      const isOwner =
   request.ownerEmail
     ? request.ownerEmail.toLowerCase() ===
@@ -2352,18 +2482,19 @@ const agreementBox = isSwapCompleted ? null : createAgreementBox(
             ),
 
           request.exchangeMethod === "Courier" && !isSwapCompleted
-  ? React.createElement(CourierTracking, {
-      request: request,
-      shipment: shipments[request._id] || null,
-      onShipmentUpdate: function (updatedShipment) {
-        setShipments(function (previous) {
-          return {
-            ...previous,
-            [request._id]: updatedShipment
-          };
-        });
-      }
-    })
+  ?React.createElement(CourierTracking, {
+  request: request,
+  shipment: shipments[request._id] || null,
+  isAdmin: isAdmin,
+  onShipmentUpdate: function (updatedShipment) {
+    setShipments(function (previous) {
+      return {
+        ...previous,
+        [request._id]: updatedShipment
+      };
+    });
+  }
+})
   : null,
             /* ================= MESSAGE ================= */
 
@@ -2394,7 +2525,6 @@ const agreementBox = isSwapCompleted ? null : createAgreementBox(
                 )
               : null,
 
-            /* ================= AGREEMENT ================= */
 
             agreementBox,
 
@@ -2454,7 +2584,43 @@ const agreementBox = isSwapCompleted ? null : createAgreementBox(
           "Manage your clothing swap requests, negotiate and confirm your swaps."
         )
       ),
+React.createElement(
+  "div",
+  {
+    className: "swap-request-tabs"
+  },
 
+  React.createElement(
+    "button",
+    {
+      type: "button",
+      className:
+        activeTab === "active" ? "active" : "",
+      onClick: function () {
+        setActiveTab("active");
+      }
+    },
+    "Active Requests (" + activeRequests.length + ")"
+  ),
+
+  React.createElement(
+    "button",
+    {
+      type: "button",
+      className:
+        activeTab === "history" ? "active" : "",
+      onClick: function () {
+        setActiveTab("history");
+      }
+    },
+    "Swap History (" + historyRequests.length + ")"
+  
+),
+
+ 
+
+  
+),
       React.createElement(
         "div",
         {

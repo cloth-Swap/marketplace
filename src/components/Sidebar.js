@@ -250,6 +250,11 @@ function Sidebar() {
           "Dashboard",
           "/dashboard"
         ),
+        menuItem(
+  "👕",
+  "My Listings",
+  "/my-listings"
+),
 
         // ADMIN PANEL - OWNER ONLY
 

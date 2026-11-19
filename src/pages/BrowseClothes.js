@@ -1,9 +1,17 @@
 
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import API_URL from "../api";
+let browseClothesCache = null;
+
+try {
+  localStorage.removeItem("clothswapBrowseCache");
+} catch (error) {
+  console.log("Browse cache clear error:", error);
+}
 function BrowseClothes() {
   const navigate = useNavigate();
+  const routerLocation = useLocation();
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
@@ -20,6 +28,7 @@ function BrowseClothes() {
   const [swapMessageType, setSwapMessageType] = useState("success");
   const [swapSendingId, setSwapSendingId] = useState("");
   const [deleteSendingId, setDeleteSendingId] = useState("");
+  const [sentSwapRequests, setSentSwapRequests] = useState([]);
 
 
   const currentUser =
@@ -45,29 +54,120 @@ function BrowseClothes() {
     }
   }, []);
 
+useEffect(function () {
+  function updateWishlist() {
+    try {
+      const savedWishlist = JSON.parse(
+        localStorage.getItem("clothSwapWishlist") || "[]"
+      );
 
+      setWishlist(
+        Array.isArray(savedWishlist) ? savedWishlist : []
+      );
+    } catch (error) {
+      console.log("Wishlist update error:", error);
+      setWishlist([]);
+    }
+  }
+
+  window.addEventListener("wishlistUpdated", updateWishlist);
+
+  return function () {
+    window.removeEventListener("wishlistUpdated", updateWishlist);
+  };
+}, []);
   useEffect(function () {
-    fetch(`${API_URL}/api/clothes`)
-      .then(function (response) {
-        return response.json();
-      })
-      .then(function (data) {
-        if (data.success && Array.isArray(data.clothes)) {
-          setClothes(data.clothes);
-        } else if (Array.isArray(data)) {
-          setClothes(data);
-        } else {
-          setClothes([]);
-        }
-      })
-      .catch(function (error) {
-        console.log("Failed to load clothes:", error);
-      })
-      .finally(function () {
-        setLoading(false);
-      });
-  }, []);
 
+  // Show previously loaded clothes immediately
+  if (Array.isArray(browseClothesCache)) {
+    setClothes(browseClothesCache);
+    setLoading(false);
+  } else {
+    setLoading(true);
+  }
+
+  // Fetch latest clothes in background
+  fetch(`${API_URL}/api/clothes`)
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error("Unable to load clothes");
+      }
+
+      return response.json();
+    })
+    .then(function (data) {
+      let latestClothes = [];
+
+      if (data.success && Array.isArray(data.clothes)) {
+        latestClothes = data.clothes;
+      } else if (Array.isArray(data)) {
+        latestClothes = data;
+      }
+      console.log(
+  "BROWSE CLOTHES PRICE CHECK:",
+  latestClothes.map(function (item) {
+    return {
+      title: item.title,
+      price: item.price,
+      value: item.value,
+      id: item._id
+    };
+  })
+);
+
+     browseClothesCache = latestClothes;
+
+// Browse cache save disabled to prevent localStorage quota error
+setClothes(latestClothes);
+    })
+    .catch(function (error) {
+      console.log("Failed to load clothes:", error);
+    })
+    .finally(function () {
+      setLoading(false);
+    });
+
+}, [routerLocation.pathname]);
+useEffect(function () {
+  if (!isLoggedIn || !currentUser) {
+    setSentSwapRequests([]);
+    return;
+  }
+
+  const userEmail =
+    localStorage.getItem("clothswapUserEmail") ||
+    localStorage.getItem("clothswapEmail") ||
+    "";
+
+  if (!userEmail) {
+    setSentSwapRequests([]);
+    return;
+  }
+
+  fetch(
+    `${API_URL}/api/swap-requests?userEmail=` +
+    encodeURIComponent(userEmail)
+  )
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error("Unable to load swap requests");
+      }
+      return response.json();
+    })
+    .then(function (data) {
+      const requests = Array.isArray(data) ? data : [];
+
+      setSentSwapRequests(
+        requests.filter(function (request) {
+          return String(request.requesterEmail || "").toLowerCase() ===
+            String(userEmail).toLowerCase();
+        })
+      );
+    })
+    .catch(function (error) {
+      console.log("Swap requests load error:", error);
+    });
+}, [isLoggedIn, currentUser]);
 
   function showMessage(type, message) {
     setSwapMessageType(type);
@@ -187,62 +287,113 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
       return String(item._id || item.id) === String(itemId);
     });
   }
+function toggleWishlist(item) {
+  if (!isLoggedIn) {
+    showMessage(
+      "error",
+      "Please login to add clothes to your wishlist."
+    );
 
-  function toggleWishlist(item) {
-    if (!isLoggedIn) {
-      showMessage(
-        "error",
-        "Please login to add clothes to your wishlist."
-      );
+    setTimeout(function () {
+      navigate("/login");
+    }, 900);
 
-      setTimeout(function () {
-        navigate("/login");
-      }, 900);
+    return;
+  }
 
-      return;
+  const itemId = item._id || item.id;
+
+  if (!itemId) return;
+
+  function getSmallWishlistItem(clothing) {
+    const smallItem = {
+      _id: String(clothing._id || clothing.id),
+      title: clothing.title || clothing.name || "Clothing Item",
+      name: clothing.name || clothing.title || "Clothing Item",
+      category: clothing.category || "Fashion",
+      brand: clothing.brand || "",
+      size: clothing.size || "N/A",
+      condition: clothing.condition || "Good",
+      location: clothing.location || "",
+      price: clothing.price || 0,
+      value: clothing.value || 0,
+      status: clothing.status || "Available",
+      owner: clothing.owner || "",
+      ownerEmail: clothing.ownerEmail || ""
+    };
+
+    // Base64 image save નહીં કરવી
+    if (
+      clothing.image &&
+      !String(clothing.image).startsWith("data:")
+    ) {
+      smallItem.image = clothing.image;
     }
 
-    const itemId = item._id || item.id;
+    return smallItem;
+  }
 
-    if (!itemId) {
-      return;
+  let savedWishlist = [];
+
+  try {
+    savedWishlist = JSON.parse(
+      localStorage.getItem("clothSwapWishlist") || "[]"
+    );
+
+    if (!Array.isArray(savedWishlist)) {
+      savedWishlist = [];
     }
+  } catch (error) {
+    savedWishlist = [];
+  }
 
-    let updatedWishlist = [];
+  // જૂના Base64 images દૂર કરીને compact data રાખવો
+  savedWishlist = savedWishlist
+    .filter(function (savedItem) {
+      return savedItem && (savedItem._id || savedItem.id);
+    })
+    .map(getSmallWishlistItem);
 
-    if (isInWishlist(itemId)) {
-      updatedWishlist = wishlist.filter(function (savedItem) {
-        return String(savedItem._id || savedItem.id) !==
-          String(itemId);
-      });
+  const alreadySaved = savedWishlist.some(function (savedItem) {
+    return String(savedItem._id || savedItem.id) === String(itemId);
+  });
 
-      showMessage(
-        "success",
-        "Removed from your wishlist."
-      );
-    } else {
-      updatedWishlist = wishlist.concat([
-        item
-      ]);
+  let updatedWishlist;
 
-      showMessage(
-        "success",
-        "Added to your wishlist ❤️"
-      );
-    }
+  if (alreadySaved) {
+    updatedWishlist = savedWishlist.filter(function (savedItem) {
+      return String(savedItem._id || savedItem.id) !== String(itemId);
+    });
 
-    setWishlist(updatedWishlist);
+    showMessage("success", "Removed from your wishlist.");
+  } else {
+    updatedWishlist = savedWishlist.concat([
+      getSmallWishlistItem(item)
+    ]);
 
+    showMessage("success", "Added to your wishlist ❤️");
+  }
+
+  try {
     localStorage.setItem(
       "clothSwapWishlist",
       JSON.stringify(updatedWishlist)
     );
 
+    setWishlist(updatedWishlist);
+
     window.dispatchEvent(
       new Event("wishlistUpdated")
     );
-  }
+  } catch (error) {
+    console.error("Wishlist save error:", error);
 
+    showMessage(
+      "error",
+      "Unable to save wishlist. Please try again."
+    );
+  }
+}
 
 
   
@@ -323,12 +474,25 @@ function requestSwap(item) {
       return response.json();
     })
     .then(function (data) {
-      if (data.success) {
-        showMessage(
-          "success",
-          "Your request has been sent to the clothing owner."
-        );
-      } else {
+    if (data.success) {
+  setSentSwapRequests(function (previousRequests) {
+    return previousRequests.concat([
+      {
+        clothingId: clothingId,
+        requesterEmail:
+          localStorage.getItem("clothswapUserEmail") ||
+          localStorage.getItem("clothswapEmail") ||
+          ""
+      }
+    ]);
+  });
+
+  showMessage(
+    "success",
+    "Your request has been sent to the clothing owner."
+  );
+}
+ else {
         showMessage(
           "error",
           data.message ||
@@ -401,31 +565,53 @@ function requestSwap(item) {
 
     setDeleteSendingId(String(itemId));
 
-    fetch(
-  `${API_URL}/api/clothes/` +
-    itemId,
-      {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          user: currentUser
-        })
-      }
-    )
+   const token =
+  localStorage.getItem("clothswapToken") ||
+  localStorage.getItem("clothSwapToken");
+
+if (!token) {
+  showMessage(
+    "error",
+    "Your login session has expired. Please login again."
+  );
+
+  setTimeout(function () {
+    navigate("/login");
+  }, 900);
+
+  return;
+}
+
+fetch(
+  `${API_URL}/api/clothes/` + itemId,
+  {
+    method: "DELETE",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify({
+      user: currentUser
+    })
+  }
+)
       .then(function (response) {
         return response.json();
       })
       .then(function (data) {
         if (data.success) {
           setClothes(function (previousClothes) {
-            return previousClothes.filter(function (clothing) {
-              return String(
-                clothing._id || clothing.id
-              ) !== String(itemId);
-            });
-          });
+  const updatedClothes = previousClothes.filter(function (clothing) {
+    return String(
+      clothing._id || clothing.id
+    ) !== String(itemId);
+  });
+
+ browseClothesCache = updatedClothes;
+
+return updatedClothes;
+});
 
           setWishlist(function (previousWishlist) {
             const updated =
@@ -663,54 +849,44 @@ function requestSwap(item) {
                 }
               },
 
-              React.createElement(
-                "option",
-                null,
-                "All"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "Dresses"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "Shirts"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "Jeans"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "Jackets"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "Hoodies"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "T-Shirts"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "Tops"
-              ),
-              React.createElement(
-                "option",
-                null,
-                "Skirts"
-              )
+             React.createElement(
+  "option",
+  { value: "All" },
+  "All"
+),
+
+...[
+  "Dresses",
+  "Shirts",
+  "T-Shirts",
+  "Tops",
+  "Jeans",
+  "Trousers",
+  "Shorts",
+  "Skirts",
+  "Jackets",
+  "Hoodies",
+  "Sweaters",
+  "Coats",
+  "Blazers",
+  "Kurtis",
+  "Sarees",
+  "Lehengas",
+  "Leggings",
+  "Jumpsuits",
+  "Other"
+].map(function (item) {
+  return React.createElement(
+    "option",
+    {
+      key: item,
+      value: item
+    },
+    item
+  );
+})
             )
           ),
-
           /* SIZE */
 
           React.createElement(
@@ -1026,35 +1202,41 @@ function requestSwap(item) {
                 item.name ||
                 "Clothing Item";
 
-              const itemImage =
-                item.image ||
-                "https://via.placeholder.com/800x800?text=No+Image";
+             const itemImage =
+  item.image ||
+  "https://via.placeholder.com/800x800?text=No+Image";
 
-              const itemPrice =
-                item.price ||
-                item.value ||
-                0;
+const itemPrice =
+  item.price ||
+  item.value ||
+  0;
 
-              const itemOwner =
-                item.owner ||
-                "ClothSwap User";
+const itemOwner =
+  item.owner ||
+  "ClothSwap User";
 
-              const itemCategory =
-                item.category ||
-                "Fashion";
+const sellerName =
+  item.sellerName ||
+  itemOwner;
 
-              const itemCondition =
-                item.condition ||
-                "Good";
+const sellerPhoto =
+  item.sellerProfilePhoto || "";
 
-              const itemLocation =
-                item.location ||
-                "Not specified";
+const itemCategory =
+  item.category ||
+  "Fashion";
 
-              const itemSize =
-                item.size ||
-                "N/A";
+const itemCondition =
+  item.condition ||
+  "Good";
 
+const itemLocation =
+  item.location ||
+  "Not specified";
+
+const itemSize =
+  item.size ||
+  "N/A";
               const ownerOfItem =
                 String(itemOwner).toLowerCase() ===
                 String(currentUser).toLowerCase();
@@ -1065,6 +1247,10 @@ function requestSwap(item) {
               const isSending =
                 swapSendingId ===
                 String(itemId);
+                const requestAlreadySent =
+  sentSwapRequests.some(function (request) {
+    return String(request.clothingId) === String(itemId);
+  });
 
               const isDeleting =
                 deleteSendingId ===
@@ -1104,22 +1290,20 @@ function requestSwap(item) {
                           "clothing-image-link"
                       },
 
-                      React.createElement(
-                        "img",
-                        {
-                          src:
-                            itemImage,
-                          alt:
-                            itemName,
-                          className:
-                            "clothing-image",
-                          onError:
-                            function (e) {
-                              e.target.src =
-                                "https://via.placeholder.com/800x800?text=No+Image";
-                            }
-                        }
-                      )
+                     React.createElement(
+  "img",
+  {
+    src: itemImage,
+    alt: itemName,
+    className: "clothing-image",
+    loading: "lazy",
+    decoding: "async",
+    onError: function (e) {
+      e.target.src =
+        "https://via.placeholder.com/800x800?text=No+Image";
+    }
+  }
+)
                     ),
 
                     /* AVAILABLE BADGE */
@@ -1204,16 +1388,53 @@ React.createElement(
   item.brand || "Unbranded"
 ),
 
-// OWNER NAME
+
+// SELLER PROFILE PHOTO + NAME
 React.createElement(
-  "p",
+  "div",
   {
-    className:
-      "clothing-brand"
+    className: "browse-seller-info",
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      marginTop: "10px",
+      marginBottom: "12px"
+    }
   },
-  "👤 ",
-  itemOwner
+
+  React.createElement(
+    "img",
+    {
+      src: sellerPhoto || "https://via.placeholder.com/80?text=User",
+      alt: sellerName,
+      onError: function (e) {
+        e.target.src = "https://via.placeholder.com/80?text=User";
+      },
+      style: {
+        width: "38px",
+        height: "38px",
+        borderRadius: "50%",
+        objectFit: "cover",
+        border: "2px solid #ead5ee",
+        flexShrink: 0
+      }
+    }
+  ),
+
+  React.createElement(
+    "span",
+    {
+      style: {
+        fontSize: "14px",
+        fontWeight: "600",
+        color: "#51445a"
+      }
+    },
+    sellerName
+  )
 ),
+
 
                     React.createElement(
   "div",
@@ -1299,23 +1520,25 @@ React.createElement(
                     ),
 
                     !ownerOfItem &&
-                      React.createElement(
-                        "button",
-                        {
-                          type: "button",
-                          className:
-                            "request-swap-btn",
-                          disabled:
-                            isSending,
-                          onClick:
-                            function () {
-                              requestSwap(item);
-                            }
-                        },
-                        isSending
-                          ? "Sending..."
-                          : "♻️ Request Swap"
-                      ),
+  React.createElement(
+    "button",
+    {
+      type: "button",
+      className:
+        "request-swap-btn",
+      disabled:
+        isSending || requestAlreadySent,
+      onClick:
+        function () {
+          requestSwap(item);
+        }
+    },
+    isSending
+      ? "Sending..."
+      : requestAlreadySent
+        ? "✓ Request Sent"
+        : "♻️ Request Swap"
+  ),
 
                     ownerOfItem &&
                       React.createElement(

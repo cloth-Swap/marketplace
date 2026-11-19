@@ -55,6 +55,11 @@ receiverEmail: {
       default: "ClothSwap Courier",
       trim: true
     },
+    courierMode: {
+  type: String,
+  enum: ["Automatic", "Manual"],
+  default: "Automatic"
+},
 
     trackingId: {
       type: String,
@@ -120,7 +125,23 @@ senderNotified: {
     deliveredAt: {
       type: Date,
       default: null
-    }
+    },
+    // Courier Receiver 48 Hours Confirmation System
+
+receiverReminder24Sent: {
+  type: Boolean,
+  default: false
+},
+
+receiverReminder36Sent: {
+  type: Boolean,
+  default: false
+},
+
+receiverConfirmationOverdue: {
+  type: Boolean,
+  default: false
+}
   },
   {
     timestamps: true

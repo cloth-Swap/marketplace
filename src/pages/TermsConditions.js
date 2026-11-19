@@ -222,6 +222,8 @@ function TermsConditions() {
 );
 
       const data = await response.json();
+      console.log("ACCEPT TERMS RESPONSE:", data);
+console.log("RETURN TO:", returnTo);
 
       if (!response.ok || !data.success) {
         throw new Error(
@@ -229,8 +231,32 @@ function TermsConditions() {
         );
       }
 
-      navigate(returnTo, { replace: true });
+if (
+  localStorage.getItem("clothswapIsAdmin") === "true"
+) {
+  navigate(returnTo, { replace: true });
+} else {
+  try {
+    const response = await apiFetch(
+      `${API_URL}/api/user/profile`
+    );
 
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error("Profile check failed");
+    }
+
+    if (data.profile && data.profile.profileCompleted) {
+      navigate(returnTo, { replace: true });
+    } else {
+      navigate("/create-profile", { replace: true });
+    }
+  } catch (error) {
+    console.log("Profile check error:", error);
+    navigate("/create-profile", { replace: true });
+  }
+}
     } catch (error) {
       console.error("Accept Terms Error:", error);
       setError(error.message || "Something went wrong.");

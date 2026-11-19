@@ -1,9 +1,49 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API_URL, { apiFetch } from "../api";
+import { connectSocket } from "../socket";
+
 
 function Login() {
   const navigate = useNavigate();
+  async function continueAfterTerms(nextPath) {
+  try {
+    // Admin users do not need to create a profile
+    if (
+      localStorage.getItem("clothswapIsAdmin") === "true"
+    ) {
+      navigate(nextPath);
+      return;
+    }
+
+    const response = await apiFetch(
+      `${API_URL}/api/user/profile`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Unable to check profile"
+      );
+    }
+
+    if (
+      data.profile &&
+      data.profile.profileCompleted
+    ) {
+      navigate(nextPath);
+    } else {
+      navigate("/create-profile");
+    }
+
+  } catch (error) {
+    console.log("Profile check error:", error);
+    setError(
+      "Unable to verify your profile. Please try again."
+    );
+  }
+}
   async function checkTermsAndNavigate(nextPath) {
   try {
     const response = await apiFetch(
@@ -21,9 +61,8 @@ function Login() {
       );
       return;
     }
-
-    if (data.accepted) {
-      navigate(nextPath);
+     if (data.accepted) {
+    await continueAfterTerms(nextPath);
     } else {
       navigate("/terms-conditions", {
         state: {
@@ -85,11 +124,7 @@ function Login() {
 
       const googleUser = data.user;
 
-      localStorage.setItem(
-        "clothswapToken",
-        data.token
-      );
-
+     
       const googleName =
         String(googleUser.name || "Google User").trim();
 
@@ -140,6 +175,7 @@ if (googleUser.location) {
     googleUser.location
   );
 }
+connectSocket();
       await checkTermsAndNavigate("/");
 
     } catch (error) {
@@ -154,86 +190,108 @@ if (googleUser.location) {
     }
   };
 
-  useEffect(function () {
-    const initializeGoogle = function () {
 
-      if (
-        !window.google ||
-        !window.google.accounts ||
-        !googleButtonRef.current
-      ) {
-        return;
-      }
+useEffect(function () {
+  let cancelled = false;
+  let scriptElement = null;
 
-      const clientId =
-        import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const initializeGoogle = function () {
+    if (
+      cancelled ||
+      !window.google ||
+      !window.google.accounts ||
+      !googleButtonRef.current
+    ) {
+      return;
+    }
 
-      if (!clientId) {
-        setError(
-          "Google Client ID is missing. Please check the frontend .env file."
-        );
-        return;
-      }
+    const clientId =
+      import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-      googleButtonRef.current.innerHTML = "";
-      
-console.log("GOOGLE CLIENT ID LOADED:", clientId);
-console.log("GOOGLE ORIGIN:", window.location.origin);
-console.log("GOOGLE BUTTON READY:", !!googleButtonRef.current);
+    if (!clientId) {
+      setError(
+        "Google Client ID is missing. Please check the frontend .env file."
+      );
+      return;
+    }
+
+    // Keep the latest page's Google callback.
+    window.__clothSwapGoogleCallback =
+      handleGoogleResponse;
+
+    // Initialize Google only once for this website.
+    if (
+      window.__clothSwapGoogleClientId !== clientId
+    ) {
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: handleGoogleResponse,
+        callback: function (response) {
+          if (
+            typeof window.__clothSwapGoogleCallback ===
+            "function"
+          ) {
+            window.__clothSwapGoogleCallback(response);
+          }
+        },
         auto_select: false
       });
 
-    window.google.accounts.id.renderButton(
-  googleButtonRef.current,
-  {
-    type: "standard",
-    theme: "outline",
-    size: "large",
-    width: 190,
-    text: "signin_with",
-    shape: "pill",
-    logo_alignment: "left"
-  }
-);
-    };
-
-    if (
-      window.google &&
-      window.google.accounts
-    ) {
-      initializeGoogle();
-      return;
+      window.__clothSwapGoogleClientId = clientId;
     }
 
-    const existingScript =
-      document.querySelector(
-        'script[src="https://accounts.google.com/gsi/client"]'
-      );
+    googleButtonRef.current.innerHTML = "";
 
-    if (existingScript) {
-      existingScript.addEventListener(
+    window.google.accounts.id.renderButton(
+      googleButtonRef.current,
+      {
+        type: "standard",
+        theme: "outline",
+        size: "medium",
+        width: 360,
+        text: "signin_with",
+        shape: "pill",
+        logo_alignment: "left"
+      }
+    );
+  };
+
+  if (
+    window.google &&
+    window.google.accounts
+  ) {
+    initializeGoogle();
+  } else {
+    scriptElement = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
+
+    if (!scriptElement) {
+      scriptElement = document.createElement("script");
+      scriptElement.src =
+        "https://accounts.google.com/gsi/client";
+      scriptElement.async = true;
+      scriptElement.defer = true;
+      document.head.appendChild(scriptElement);
+    }
+
+    scriptElement.addEventListener(
+      "load",
+      initializeGoogle
+    );
+  }
+
+  return function () {
+    cancelled = true;
+
+    if (scriptElement) {
+      scriptElement.removeEventListener(
         "load",
         initializeGoogle
       );
-      return;
     }
+  };
+}, []);
 
-    const script =
-      document.createElement("script");
-
-    script.src =
-      "https://accounts.google.com/gsi/client";
-
-    script.async = true;
-    script.defer = true;
-    script.onload = initializeGoogle;
-
-    document.head.appendChild(script);
-
-  }, []);
 
   const handleLogin = async function (event) {
     event.preventDefault();
@@ -328,7 +386,16 @@ console.log("LOGIN USER ROLE:", data.user.role);
         );
       }
 
-      await checkTermsAndNavigate("/dashboard");
+    if (data.user && data.user.location) {
+  localStorage.setItem(
+    "clothswapUserLocation",
+    data.user.location
+  );
+}
+
+connectSocket();
+
+await checkTermsAndNavigate("/dashboard");
 
     } catch (error) {
       console.error(

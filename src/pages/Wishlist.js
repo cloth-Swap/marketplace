@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API_URL from "../api";
 
 function Wishlist() {
   const navigate = useNavigate();
@@ -26,63 +27,98 @@ function Wishlist() {
     };
   }, []);
 
-  function loadWishlist() {
-    const saved = localStorage.getItem(
-      "clothSwapWishlist"
+ async function loadWishlist() {
+  let savedWishlist = [];
+
+  try {
+    savedWishlist = JSON.parse(
+      localStorage.getItem("clothSwapWishlist") || "[]"
     );
 
-    if (!saved) {
-      setWishlist([]);
-      return;
+    if (!Array.isArray(savedWishlist)) {
+      savedWishlist = [];
     }
+  } catch (error) {
+    savedWishlist = [];
+  }
 
-    try {
-      const data = JSON.parse(saved);
+  const updatedWishlist = await Promise.all(
+    savedWishlist.map(async function (item) {
+      const itemId = item._id || item.id;
 
-      if (Array.isArray(data)) {
-        setWishlist(data);
-      } else {
-        setWishlist([]);
+      if (!itemId) return item;
+
+      try {
+        const response = await fetch(
+          `${API_URL}/api/clothes/${itemId}`
+        );
+
+        if (!response.ok) return item;
+
+        const data = await response.json();
+
+        const clothing =
+          data.clothing || data.item || data;
+
+        return {
+          ...item,
+          ...clothing,
+          _id: String(itemId)
+        };
+      } catch (error) {
+        console.error(
+          "Wishlist item loading error:",
+          error
+        );
+
+        return item;
       }
-    } catch (error) {
-      console.error(
-        "Wishlist loading error:",
-        error
-      );
+    })
+  );
 
-      setWishlist([]);
+  setWishlist(updatedWishlist);
+}
+  
+
+ function removeFromWishlist(id) {
+  const updatedWishlist = wishlist.filter(
+    (item) =>
+      String(item._id || item.id) !== String(id)
+  );
+
+  const smallWishlist = updatedWishlist.map(function (item) {
+    const smallItem = { ...item };
+
+    if (
+      smallItem.image &&
+      String(smallItem.image).startsWith("data:")
+    ) {
+      delete smallItem.image;
     }
-  }
 
-  function removeFromWishlist(id) {
-    const updatedWishlist = wishlist.filter(
-      (item) =>
-        String(item._id || item.id) !== String(id)
-    );
+    return smallItem;
+  });
 
-    setWishlist(updatedWishlist);
+  localStorage.setItem(
+    "clothSwapWishlist",
+    JSON.stringify(smallWishlist)
+  );
 
-    localStorage.setItem(
-      "clothSwapWishlist",
-      JSON.stringify(updatedWishlist)
-    );
+  setWishlist(updatedWishlist);
 
-    window.dispatchEvent(
-      new Event("wishlistUpdated")
-    );
-  }
+  window.dispatchEvent(
+    new Event("wishlistUpdated")
+  );
+}
+function clearWishlist() {
+  localStorage.removeItem("clothSwapWishlist");
 
-  function clearWishlist() {
-    localStorage.removeItem(
-      "clothSwapWishlist"
-    );
+  setWishlist([]);
 
-    setWishlist([]);
-
-    window.dispatchEvent(
-      new Event("wishlistUpdated")
-    );
-  }
+  window.dispatchEvent(
+    new Event("wishlistUpdated")
+  );
+}
 
   return React.createElement(
     "div",

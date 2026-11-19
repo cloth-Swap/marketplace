@@ -1,6 +1,6 @@
 
   import React, { useEffect, useRef, useState } from "react";
-  import { useNavigate } from "react-router-dom";
+  import { useNavigate, useLocation } from "react-router-dom";
   import API_URL from "../api";
   import { State, City } from "country-state-city";
 
@@ -38,7 +38,10 @@
   };
 
   function ListClothes() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const routeLocation = useLocation();
+  const editListing = routeLocation.state?.editListing || null;
+  const isEditMode = Boolean(editListing);
 
     const videoRef = useRef(null);
     const streamRef = useRef(null);
@@ -58,11 +61,49 @@
 
     const [selectedStateCode, setSelectedStateCode] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
+
+    // NEW EDIT MODE useEffect — અહીં paste કરવો
+useEffect(function () {
+  if (!editListing) return;
+
+  const savedLocation = editListing.location || "";
+  const parts = savedLocation.split(",").map(function (item) {
+    return item.trim();
+  });
+
+  const savedCity = parts[0] || "";
+  const savedState = parts[1] || "";
+
+  const state = State.getStatesOfCountry("IN").find(
+    function (item) {
+      return item.name.toLowerCase() === savedState.toLowerCase();
+    }
+  );
+
+  setFormData({
+    title: editListing.title || "",
+    brand: editListing.brand || "",
+    category: editListing.category || "",
+    size: editListing.size || "",
+    condition: editListing.condition || "",
+    location: savedLocation,
+    price: editListing.price != null ? String(editListing.price) : "",
+    owner: editListing.owner || "",
+    description: editListing.description || "",
+    image: editListing.image || ""
+  });
+
+  if (state) {
+    setSelectedStateCode(state.isoCode);
+    setSelectedCity(savedCity);
+  }
+}, [editListing]);
+
     useEffect(function () {
     const savedLocation =
       localStorage.getItem("clothswapUserLocation") || "";
 
-    if (!savedLocation) return;
+    if (editListing || !savedLocation) return;
 
     const parts = savedLocation.split(",").map(function (item) {
       return item.trim();
@@ -411,9 +452,9 @@
         console.log("BRAND BEING SENT:", formData.brand);
 
         const response = await fetch(
-    `${API_URL}/api/clothes`,
-    {
-      method: "POST",
+   `${API_URL}/api/clothes${isEditMode ? "/" + editListing._id : ""}`,
+{
+  method: isEditMode ? "PUT" : "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${localStorage.getItem("clothswapToken")}`
@@ -429,6 +470,7 @@
         );
 
   const responseText = await response.text();
+  
 
   let data;
 
@@ -438,7 +480,7 @@
     console.error("Non-JSON server response:", responseText);
 
     throw new Error(
-      "Server returned HTML instead of JSON. Check POST /api/clothes route."
+      "Server returned HTML instead of JSON. Check the clothing API route."
     );
   }
         if (!response.ok || !data.success) {
@@ -446,7 +488,10 @@
             data.message || "Failed to list clothing."
           );
         }
-
+if (isEditMode) {
+  navigate("/my-listings");
+  return;
+}
         setMessage(
           "🎉 Your clothing has been listed successfully!"
         );
@@ -654,7 +699,7 @@
                 color: "#69436f"
               }
             },
-            "List Your Clothing"
+            isEditMode ? "Edit Your Clothing" : "List Your Clothing"
           ),
 
           React.createElement(
@@ -739,13 +784,34 @@
                   style: inputStyle
                 },
 
-                ...["", "Dresses", "Shirts", "Jeans", "Jackets", "Hoodies"].map(function (item) {
-                  return React.createElement(
-                    "option",
-                    { key: item, value: item },
-                    item || "Select Category"
-                  );
-                })
+               ...[
+  "",
+  "Dresses",
+  "Shirts",
+  "T-Shirts",
+  "Tops",
+  "Jeans",
+  "Trousers",
+  "Shorts",
+  "Skirts",
+  "Jackets",
+  "Hoodies",
+  "Sweaters",
+  "Coats",
+  "Blazers",
+  "Kurtis",
+  "Sarees",
+  "Lehengas",
+  "Leggings",
+  "Jumpsuits",
+  "Other"
+].map(function (item) {
+  return React.createElement(
+    "option",
+    { key: item, value: item },
+    item || "Select Category"
+  );
+})
               )
             )
           ),
@@ -1239,7 +1305,9 @@
                 boxShadow: "0 10px 25px rgba(142,68,173,0.25)"
               }
             },
-            loading ? "⏳ Listing..." : "✨ List My Clothing"
+            loading
+  ? (isEditMode ? "⏳ Saving Changes..." : "⏳ Listing...")
+  : (isEditMode ? "💾 Save Changes" : "✨ List My Clothing")
           ),
 
           /* BROWSE BUTTON */

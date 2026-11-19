@@ -7,12 +7,23 @@ import "../style.css";
 
 function AdminPanel() {
   const [clothes, setClothes] = useState([]);
+  const [listingSearch, setListingSearch] = useState("");
+const [listingCategoryFilter, setListingCategoryFilter] = useState("All");
+const [listingLocationFilter, setListingLocationFilter] = useState("All");
+const [listingSortBy, setListingSortBy] = useState("Newest First");
+const [listingPage, setListingPage] = useState(1);
+const [listingPageSize, setListingPageSize] = useState(10);
   const [swapRequests, setSwapRequests] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [listingsLoading, setListingsLoading] = useState(true);
+  const [swapRequestsLoading, setSwapRequestsLoading] = useState(true);
   
   const [disputes, setDisputes] = useState([]);
+  const [disputesLoading, setDisputesLoading] = useState(true);
   const [reportedListings, setReportedListings] = useState([]);
+  const [reportedListingsLoading, setReportedListingsLoading] = useState(true);
+  const [removedClothes, setRemovedClothes] = useState([]);
+const [removedClothesLoading, setRemovedClothesLoading] = useState(true);
   const [selectedReports, setSelectedReports] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [dashboardCounts, setDashboardCounts] = useState(function () {
@@ -40,6 +51,7 @@ const [disputeSearch, setDisputeSearch] = useState("");
 const [selectedDisputes, setSelectedDisputes] = useState([]);
 const [showDisputeCheckboxes, setShowDisputeCheckboxes] = useState(false);
 const [selectedDisputeHistory, setSelectedDisputeHistory] = useState(null);
+const [selectedOverviewHistory, setSelectedOverviewHistory] = useState(null);
 const [selectedDisputeImages, setSelectedDisputeImages] = useState([]);
 const [showReportCheckboxes, setShowReportCheckboxes] = useState(false);
 
@@ -48,6 +60,7 @@ const [showReportCheckboxes, setShowReportCheckboxes] = useState(false);
   loadUsers();
   loadDisputes();
   loadReportedListings();
+  loadRemovedClothes();
 
   const interval = setInterval(() => {
     loadAdminData();
@@ -63,55 +76,52 @@ function updateDashboardCounts(newCounts) {
     };
   });
 }
- async function loadAdminData() {
+ 
+async function loadClothesData() {
   try {
-    const [clothesResponse, requestsResponse] =
-      await Promise.all([
-        fetch(`${API_URL}/api/clothes`),
-
-        fetch(`${API_URL}/api/admin/swap-requests`, {
-          headers: {
-            Authorization:
-              "Bearer " +
-              localStorage.getItem("clothswapToken")
-          }
-        })
-      ]);
-
-    const [clothesData, requestsData] =
-      await Promise.all([
-        clothesResponse.json(),
-        requestsResponse.json()
-      ]);
+    const clothesResponse = await fetch(`${API_URL}/api/clothes`);
+    const clothesData = await clothesResponse.json();
 
     if (clothesResponse.ok) {
       let clothesList = [];
 
       if (Array.isArray(clothesData)) {
         clothesList = clothesData;
-      } else if (
-        clothesData &&
-        Array.isArray(clothesData.clothes)
-      ) {
+      } else if (clothesData && Array.isArray(clothesData.clothes)) {
         clothesList = clothesData.clothes;
       }
 
       setClothes(clothesList);
-
       updateDashboardCounts({
         totalListings: clothesList.length
       });
     }
+  } catch (error) {
+    console.log("Clothes loading error:", error);
+  } finally {
+    setListingsLoading(false);
+  }
+}
+
+async function loadSwapRequestsData() {
+  try {
+    const requestsResponse = await fetch(
+      `${API_URL}/api/admin/swap-requests`,
+      {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("clothswapToken")
+        }
+      }
+    );
+
+    const requestsData = await requestsResponse.json();
 
     if (requestsResponse.ok) {
       let requestsList = [];
 
       if (Array.isArray(requestsData)) {
         requestsList = requestsData;
-      } else if (
-        requestsData &&
-        Array.isArray(requestsData.requests)
-      ) {
+      } else if (requestsData && Array.isArray(requestsData.requests)) {
         requestsList = requestsData.requests;
       }
 
@@ -119,34 +129,22 @@ function updateDashboardCounts(newCounts) {
 
       updateDashboardCounts({
         totalSwapRequests: requestsList.length,
-        pendingRequests: requestsList.filter(
-          function (item) {
-            return item.status === "Pending";
-          }
-        ).length,
-        acceptedRequests: requestsList.filter(
-          function (item) {
-            return item.status === "Accepted";
-          }
-        ).length,
-        rejectedRequests: requestsList.filter(
-          function (item) {
-            return item.status === "Rejected";
-          }
-        ).length,
-        completedSwaps: requestsList.filter(
-          function (item) {
-            return item.completionStatus === "Completed";
-          }
-        ).length
+        pendingRequests: requestsList.filter(item => item.status === "Pending").length,
+        acceptedRequests: requestsList.filter(item => item.status === "Accepted").length,
+        rejectedRequests: requestsList.filter(item => item.status === "Rejected").length,
+        completedSwaps: requestsList.filter(item => item.completionStatus === "Completed").length
       });
     }
-
   } catch (error) {
-    console.log("Admin data loading error:", error);
+    console.log("Swap requests loading error:", error);
   } finally {
-    setLoading(false);
+    setSwapRequestsLoading(false);
   }
+}
+
+function loadAdminData() {
+  loadClothesData();
+  loadSwapRequestsData();
 }
 
   async function loadUsers() {
@@ -240,9 +238,11 @@ updateDashboardCounts({
     } else {
       setDisputes([]);
     }
-  } catch (error) {
+    } catch (error) {
     console.log("Disputes loading error:", error);
     setDisputes([]);
+  } finally {
+    setDisputesLoading(false);
   }
 }
 async function loadReportedListings() {
@@ -269,13 +269,48 @@ async function loadReportedListings() {
     } else {
       setReportedListings([]);
     }
-  } catch (error) {
+   } catch (error) {
     console.log("Reported listings loading error:", error);
     setReportedListings([]);
+  } finally {
+    setReportedListingsLoading(false);
   }
 }
   
+async function loadRemovedClothes() {
+  try {
+    setRemovedClothesLoading(true);
 
+    const response = await fetch(
+      `${API_URL}/api/admin/clothes`,
+      {
+        headers: {
+          Authorization:
+            "Bearer " +
+            localStorage.getItem("clothswapToken")
+        }
+      }
+    );
+
+    const data = await response.json();
+
+    if (
+      response.ok &&
+      data &&
+      Array.isArray(data.clothes)
+    ) {
+      setRemovedClothes(data.clothes);
+    } else {
+      setRemovedClothes([]);
+    }
+
+  } catch (error) {
+    console.log("Removed clothing history error:", error);
+    setRemovedClothes([]);
+  } finally {
+    setRemovedClothesLoading(false);
+  }
+}
   const pendingRequests = swapRequests.filter(function (request) {
     return request.status === "Pending";
   });
@@ -342,9 +377,19 @@ const filteredDisputes = disputes.filter(function (dispute) {
 
   return matchesSearch && matchesStatus;
 });
+
 const filteredSwapRequests = swapRequests.filter(function (request) {
   const status = getAdminSwapStatus(request);
   const method = request.exchangeMethod || "Not Selected";
+
+  // Deleted requests should appear only in Deleted History
+  if (request.isDeleted === true) {
+    return swapStatusFilter === "Deleted History";
+  }
+
+  if (swapStatusFilter === "Deleted History") {
+    return false;
+  }
 
   if (swapStatusFilter === "All") {
     return true;
@@ -371,15 +416,27 @@ const filteredSwapRequests = swapRequests.filter(function (request) {
     return method === "Not Selected";
   }
 
-  return true;
+  return false;
 });
 
 function getSwapFilterCount(filter) {
   if (filter === "All") {
-    return swapRequests.length;
+    return swapRequests.filter(function (request) {
+      return request.isDeleted !== true;
+    }).length;
+  }
+
+  if (filter === "Deleted History") {
+    return swapRequests.filter(function (request) {
+      return request.isDeleted === true;
+    }).length;
   }
 
   return swapRequests.filter(function (request) {
+    if (request.isDeleted === true) {
+      return false;
+    }
+
     const status = getAdminSwapStatus(request);
     const method = request.exchangeMethod || "Not Selected";
 
@@ -406,7 +463,7 @@ function getSwapFilterCount(filter) {
 
     return false;
   }).length;
-}  
+}
   const activeUsers = users.filter(function (user) {
     return user.status === "Active";
   });
@@ -458,12 +515,21 @@ const sortedUsers = [...filteredUsers].sort(function (a, b) {
 
   return 0;
 });
+
+
 async function deleteClothing(id) {
   const confirmDelete = window.confirm(
     "Are you sure you want to remove this clothing listing?"
   );
 
-  if (!confirmDelete) {
+  if (!confirmDelete) return;
+
+  const removalReason = window.prompt(
+    "Please enter the reason for removing this listing:"
+  );
+
+  if (removalReason === null || !removalReason.trim()) {
+    alert("Removal reason is required.");
     return;
   }
 
@@ -474,15 +540,15 @@ async function deleteClothing(id) {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          "Authorization":
-            "Bearer " +
-            localStorage.getItem("clothswapToken")
+          Authorization:
+            "Bearer " + localStorage.getItem("clothswapToken")
         },
         body: JSON.stringify({
           adminEmail:
             localStorage.getItem("clothswapEmail") ||
             localStorage.getItem("clothswapUserEmail") ||
-            ""
+            "",
+          removalReason: removalReason.trim()
         })
       }
     );
@@ -500,12 +566,17 @@ async function deleteClothing(id) {
       });
     });
 
+    await loadRemovedClothes();
+
     alert("Clothing listing removed successfully.");
+
   } catch (error) {
     console.log("Admin delete error:", error);
     alert("Failed to remove clothing listing.");
   }
 }
+
+
  
 
   
@@ -1255,12 +1326,23 @@ function deleteAllResolvedDisputes() {
   deleteSelectedDisputes(resolvedIds);
 }
 
+
 async function updateReportedListing(reportId, status) {
-  if (
-    status === "Removed" &&
-    !window.confirm("Are you sure you want to remove this listing?")
-  ) {
-    return;
+  let adminNote = "";
+
+  if (status === "Removed") {
+    if (!window.confirm("Are you sure you want to remove this listing?")) {
+      return;
+    }
+
+    adminNote = window.prompt(
+      "Please enter the reason for removing this listing:"
+    );
+
+    if (adminNote === null || !adminNote.trim()) {
+      alert("Removal reason is required.");
+      return;
+    }
   }
 
   try {
@@ -1270,10 +1352,12 @@ async function updateReportedListing(reportId, status) {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer " + localStorage.getItem("clothswapToken")
+          Authorization:
+            "Bearer " + localStorage.getItem("clothswapToken")
         },
         body: JSON.stringify({
-          status: status
+          status: status,
+          adminNote: adminNote.trim()
         })
       }
     );
@@ -1292,7 +1376,12 @@ async function updateReportedListing(reportId, status) {
       });
     });
 
+    if (status === "Removed") {
+      await loadRemovedClothes();
+    }
+
     alert("Reported listing updated successfully.");
+
   } catch (error) {
     alert(error.message);
   }
@@ -1463,29 +1552,24 @@ async function deleteSelectedReports() {
 
   
   function getOwnerName(item) {
-    if (!item) {
-      return "Unknown";
-    }
+  if (!item) return "Unknown";
 
-    if (item.ownerName) {
-      return item.ownerName;
-    }
+  if (item.ownerName) return item.ownerName;
+  if (item.userName) return item.userName;
+  if (item.username) return item.username;
 
-    if (item.userName) {
-      return item.userName;
-    }
-
-    if (item.username) {
-      return item.username;
-    }
-
-    if (item.user) {
-      return item.user;
-    }
-
-    return "Unknown";
+  if (typeof item.owner === "string" && item.owner.trim()) {
+    return item.owner;
   }
 
+  if (item.owner && typeof item.owner === "object") {
+    return item.owner.name || item.owner.email || "Unknown";
+  }
+
+  if (item.user) return item.user;
+
+  return "Unknown";
+}
   
   function getLocation(item) {
     if (!item) {
@@ -1652,7 +1736,13 @@ async function deleteSelectedReports() {
 
     return "Not Started";
   }
-
+  function openOverviewHistory(title, items, type) {
+  setSelectedOverviewHistory({
+    title: title,
+    items: items,
+    type: type
+  });
+}
 function getAdminSwapStatus(request) {
   if (isSwapCompleted(request)) {
     return "Completed";
@@ -1660,6 +1750,121 @@ function getAdminSwapStatus(request) {
 
   return request.status || "Unknown";
 }
+// MANAGE LISTINGS FILTERS
+
+const listingCategories = [
+  "Dresses",
+  "Shirts",
+  "T-Shirts",
+  "Tops",
+  "Jeans",
+  "Trousers",
+  "Shorts",
+  "Skirts",
+  "Jackets",
+  "Hoodies",
+  "Sweaters",
+  "Coats",
+  "Blazers",
+  "Kurtis",
+  "Sarees",
+  "Lehengas",
+  "Leggings",
+  "Jumpsuits",
+  "Other"
+];
+const listingLocations = Array.from(
+  new Set(
+    clothes.map(function (item) {
+      return getLocation(item);
+    }).filter(function (location) {
+      return location !== "Not specified";
+    })
+  )
+);
+
+// SEARCH + FILTER
+const filteredClothes = clothes.filter(function (item) {
+  const search = listingSearch.trim().toLowerCase();
+
+  const matchesSearch =
+    String(getClothingTitle(item) || "")
+      .toLowerCase().includes(search) ||
+    String(getOwnerName(item) || "")
+      .toLowerCase().includes(search);
+
+  const matchesCategory =
+    listingCategoryFilter === "All" ||
+    getCategory(item) === listingCategoryFilter;
+
+  const matchesLocation =
+    listingLocationFilter === "All" ||
+    getLocation(item) === listingLocationFilter;
+
+  return matchesSearch && matchesCategory && matchesLocation;
+});
+
+// SORT LISTINGS
+const sortedClothes = [...filteredClothes].sort(function (a, b) {
+  if (listingSortBy === "Newest First") {
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  }
+
+  if (listingSortBy === "Oldest First") {
+    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+  }
+
+  if (listingSortBy === "Name A-Z") {
+    return getClothingTitle(a).localeCompare(getClothingTitle(b));
+  }
+
+  if (listingSortBy === "Name Z-A") {
+    return getClothingTitle(b).localeCompare(getClothingTitle(a));
+  }
+
+  const valueA = Number(
+    a.estimatedValue || a.swapValue || a.value || a.price || 0
+  );
+
+  const valueB = Number(
+    b.estimatedValue || b.swapValue || b.value || b.price || 0
+  );
+
+  if (listingSortBy === "Value Low to High") {
+    return valueA - valueB;
+  }
+
+  if (listingSortBy === "Value High to Low") {
+    return valueB - valueA;
+  }
+
+  return 0;
+});
+
+
+// PAGINATION
+
+const effectiveListingPageSize =
+  listingPageSize === "All"
+    ? Math.max(sortedClothes.length, 1)
+    : listingPageSize;
+
+const totalListingPages =
+  listingPageSize === "All"
+    ? 1
+    : Math.ceil(
+        sortedClothes.length / effectiveListingPageSize
+      );
+
+const currentListingPage = Math.min(
+  listingPage,
+  Math.max(totalListingPages, 1)
+);
+
+const paginatedClothes = sortedClothes.slice(
+  (currentListingPage - 1) * effectiveListingPageSize,
+  currentListingPage * effectiveListingPageSize
+);
 
   return React.createElement(
     "div",
@@ -1732,7 +1937,6 @@ React.createElement(
     { href: "#swap-activities" },
     "Swap Activities"
   ),
-
   React.createElement(
     "a",
     { href: "#dispute-center" },
@@ -1742,6 +1946,11 @@ React.createElement(
   "a",
   { href: "#reported-listings" },
   "Reported Listings"
+),
+React.createElement(
+  "a",
+  { href: "#removed-listings" },
+  "Removal History"
 )
 ),
 
@@ -1753,12 +1962,15 @@ React.createElement(
         
       },
 
-      React.createElement(
-        "div",
-        {
-          className: "admin-stat-card"
-        },
-
+     React.createElement(
+  "div",
+  {
+    className: "admin-stat-card",
+    role: "button",
+    onClick: function () {
+  openOverviewHistory("Total Listings", clothes, "listings");
+}
+  },
         React.createElement(
           "div",
           {
@@ -1792,7 +2004,11 @@ React.createElement(
       React.createElement(
         "div",
         {
-          className: "admin-stat-card"
+          className: "admin-stat-card",
+          role: "button",
+         onClick: function () {
+  openOverviewHistory("Total Swap Requests", swapRequests, "swaps");
+}
         },
 
         React.createElement(
@@ -1828,7 +2044,10 @@ React.createElement(
       React.createElement(
         "div",
         {
-          className: "admin-stat-card"
+          className: "admin-stat-card",
+          onClick: function () {
+  openOverviewHistory("Pending Requests", pendingRequests, "swaps");
+}
         },
 
         React.createElement(
@@ -1864,7 +2083,10 @@ React.createElement(
       React.createElement(
         "div",
         {
-          className: "admin-stat-card"
+          className: "admin-stat-card",
+          onClick: function () {
+  openOverviewHistory("Accepted Swaps", acceptedRequests, "swaps");
+}
         },
 
         React.createElement(
@@ -1900,7 +2122,10 @@ React.createElement(
       React.createElement(
         "div",
         {
-          className: "admin-stat-card"
+          className: "admin-stat-card",
+          onClick: function () {
+  openOverviewHistory("Rejected Requests", rejectedRequests, "swaps");
+}
         },
 
         React.createElement(
@@ -1936,7 +2161,10 @@ React.createElement(
       React.createElement(
         "div",
         {
-          className: "admin-stat-card"
+          className: "admin-stat-card",
+          onClick: function () {
+  openOverviewHistory("Completed Swaps", completedSwaps, "swaps");
+}
         },
 
         React.createElement(
@@ -2396,19 +2624,125 @@ React.createElement(
           {
             className: "admin-section-count"
           },
-          clothes.length + " Listings"
+          sortedClothes.length + " Listings"
         )
       ),
+React.createElement(
+  "div",
+  {
+    className: "admin-listing-toolbar",
+    style: {
+      display: "flex",
+      gap: "12px",
+      flexWrap: "wrap",
+      marginBottom: "20px"
+    }
+  },
 
-     clothes.length === 0
-  ? React.createElement(
+  React.createElement("input", {
+    type: "text",
+    placeholder: "Search by clothing name or owner...",
+    value: listingSearch,
+    onChange: function (e) {
+      setListingSearch(e.target.value);
+      setListingPage(1);
+    },
+    style: {
+      flex: "1",
+      minWidth: "220px",
+      padding: "10px",
+      borderRadius: "8px",
+      border: "1px solid #ddd"
+    }
+  }),
+
+  React.createElement(
+    "select",
+    {
+      value: listingCategoryFilter,
+      onChange: function (e) {
+        setListingCategoryFilter(e.target.value);
+        setListingPage(1);
+      },
+      style: {
+        padding: "10px",
+        borderRadius: "8px",
+        border: "1px solid #ddd"
+      }
+    },
+    React.createElement("option", { value: "All" }, "All Categories"),
+    listingCategories.map(function (category) {
+      return React.createElement(
+        "option",
+        { key: category, value: category },
+        category
+      );
+    })
+  ),
+
+  React.createElement(
+    "select",
+    {
+      value: listingLocationFilter,
+      onChange: function (e) {
+        setListingLocationFilter(e.target.value);
+        setListingPage(1);
+      },
+      style: {
+        padding: "10px",
+        borderRadius: "8px",
+        border: "1px solid #ddd"
+      }
+    },
+    React.createElement("option", { value: "All" }, "All Locations"),
+    listingLocations.map(function (location) {
+      return React.createElement(
+        "option",
+        { key: location, value: location },
+        location
+      );
+    })
+  ),
+
+  React.createElement(
+    "select",
+    {
+      value: listingSortBy,
+      onChange: function (e) {
+        setListingSortBy(e.target.value);
+        setListingPage(1);
+      },
+      style: {
+        padding: "10px",
+        borderRadius: "8px",
+        border: "1px solid #ddd"
+      }
+    },
+    [
+      "Newest First",
+      "Oldest First",
+      "Name A-Z",
+      "Name Z-A",
+      "Value Low to High",
+      "Value High to Low"
+    ].map(function (sort) {
+      return React.createElement(
+        "option",
+        { key: sort, value: sort },
+        sort
+      );
+    })
+  )
+),
+sortedClothes.length === 0  
+? React.createElement(
       "div",
       {
         className: "admin-empty-state"
       },
-      loading
-        ? "Loading clothing listings..."
-        : "No clothing listings available."
+     listingsLoading
+  ? "Loading clothing listings..."
+  : "No listings match your filters."
     )
         : React.createElement(
             "div",
@@ -2472,9 +2806,8 @@ React.createElement(
                 "tbody",
                 null,
 
-                clothes
-                  .slice(0, 10)
-                  .map(function (item) {
+                paginatedClothes
+  .map(function (item) {
                     const image =
                       getClothingImage(item);
 
@@ -2584,14 +2917,112 @@ React.createElement(
             )
           ),
 
-      clothes.length > 10 &&
-        React.createElement(
-          "div",
-          {
-            className: "admin-table-note"
-          },
-          "Showing latest 10 clothing listings."
-        )
+     sortedClothes.length > 0 &&
+  React.createElement(
+    "div",
+    {
+      className: "admin-table-note",
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "12px",
+        marginTop: "18px"
+      }
+    },
+
+    React.createElement(
+      "span",
+      null,
+      "Showing ",
+      (currentListingPage - 1) * listingPageSize + 1,
+      " - ",
+      Math.min(currentListingPage * listingPageSize, sortedClothes.length),
+      " of ",
+      sortedClothes.length,
+      " listings"
+    ),
+
+    React.createElement(
+      "div",
+      {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          flexWrap: "wrap"
+        }
+      },
+
+     
+React.createElement("span", null, "Per page:"),
+
+React.createElement(
+  "select",
+  {
+    value: listingPageSize,
+    onChange: function (e) {
+      const selectedValue = e.target.value;
+
+      setListingPageSize(
+        selectedValue === "All"
+          ? "All"
+          : Number(selectedValue)
+      );
+
+      setListingPage(1);
+    }
+  },
+  React.createElement("option", { value: 10 }, "10"),
+  React.createElement("option", { value: 15 }, "15"),
+  React.createElement("option", { value: 25 }, "25"),
+  React.createElement("option", { value: 50 }, "50"),
+  React.createElement("option", { value: 100 }, "100"),
+  React.createElement("option", { value: 500 }, "500"),
+  React.createElement("option", { value: 1000 }, "1000"),
+  React.createElement("option", { value: "All" }, "All")
+),
+
+
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          disabled: currentListingPage <= 1,
+          onClick: function () {
+            setListingPage(function (prev) {
+              return Math.max(prev - 1, 1);
+            });
+          }
+        },
+        "Previous"
+      ),
+
+      React.createElement(
+        "span",
+        null,
+        "Page ",
+        currentListingPage,
+        " of ",
+        Math.max(totalListingPages, 1)
+      ),
+
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          disabled: currentListingPage >= totalListingPages,
+          onClick: function () {
+            setListingPage(function (prev) {
+              return Math.min(prev + 1, totalListingPages);
+            });
+          }
+        },
+        "Next"
+      )
+    )
+  )
     ),
 
   
@@ -2636,14 +3067,16 @@ React.createElement(
         )
       ),
 
-      clothes.length === 0
-        ? React.createElement(
-            "div",
-            {
-              className: "admin-empty-state"
-            },
-            "No recent clothing listings available."
-          )
+     clothes.length === 0
+  ? React.createElement(
+      "div",
+      {
+        className: "admin-empty-state"
+      },
+      listingsLoading
+        ? "Loading recent clothing listings..."
+        : "No recent clothing listings available."
+    )
         : React.createElement(
             "div",
             {
@@ -3011,9 +3444,10 @@ filteredDisputes.length === 0
         {
           className: "admin-empty-state"
         },
-        "No matching disputes found."
+        disputesLoading
+          ? "Loading disputes..."
+          : "No matching disputes found."
       )
-      
 
     : React.createElement(
         "div",
@@ -3353,12 +3787,14 @@ React.createElement(
       className: "admin-reported-listings"
     },
 
-    reportedListings.length === 0
-      ? React.createElement(
-          "p",
-          null,
-          "No reported listings found."
-        )
+   reportedListings.length === 0
+  ? React.createElement(
+      "p",
+      null,
+      reportedListingsLoading
+        ? "Loading reported listings..."
+        : "No reported listings found."
+    )
       : reportedListings.map(function (report) {
           return React.createElement(
             "div",
@@ -3460,6 +3896,181 @@ React.createElement("input", {
         })
   )
 ),
+/* =====================================
+   REMOVED CLOTHING HISTORY
+===================================== */
+
+React.createElement(
+  "section",
+  {
+    id: "removed-listings",
+    className: "admin-section-card"
+  },
+
+  React.createElement(
+    "div",
+    {
+      className: "admin-section-header"
+    },
+
+    React.createElement(
+      "div",
+      null,
+
+      React.createElement(
+        "h2",
+        null,
+        "🗑️ Removal History"
+      ),
+
+      React.createElement(
+        "p",
+        null,
+        "View clothing listings removed by administrators."
+      )
+    ),
+
+    React.createElement(
+      "span",
+      {
+        className: "admin-section-count"
+      },
+      removedClothes.length + " Removed"
+    )
+  ),
+
+  removedClothesLoading
+
+    ? React.createElement(
+        "div",
+        {
+          className: "admin-empty-state"
+        },
+        "Loading removal history..."
+      )
+
+    : removedClothes.length === 0
+
+      ? React.createElement(
+          "div",
+          {
+            className: "admin-empty-state"
+          },
+          "No removed clothing listings found."
+        )
+
+      : React.createElement(
+          "div",
+          {
+            className: "admin-table-wrapper"
+          },
+
+          React.createElement(
+            "table",
+            {
+              className: "admin-table"
+            },
+
+            React.createElement(
+              "thead",
+              null,
+
+              React.createElement(
+                "tr",
+                null,
+
+                ["Image", "Clothing", "Owner", "Location", "Price", "Removed On", "Removed By", "Removal Reason"].map(
+                  function (heading) {
+                    return React.createElement(
+                      "th",
+                      {
+                        key: heading
+                      },
+                      heading
+                    );
+                  }
+                )
+              )
+            ),
+
+            React.createElement(
+              "tbody",
+              null,
+
+              removedClothes.map(function (item) {
+                return React.createElement(
+                  "tr",
+                  {
+                    key: item._id
+                  },
+
+                  React.createElement(
+                    "td",
+                    null,
+
+                    React.createElement("img", {
+                      src:
+                        getClothingImage(item) ||
+                        "https://via.placeholder.com/60?text=No+Image",
+                      alt: getClothingTitle(item),
+                      style: {
+                        width: "55px",
+                        height: "55px",
+                        objectFit: "cover",
+                        borderRadius: "8px"
+                      }
+                    })
+                  ),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    getClothingTitle(item)
+                  ),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    getOwnerName(item)
+                  ),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    getLocation(item)
+                  ),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    getValue(item)
+                  ),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    item.deletedAt
+                      ? new Date(item.deletedAt).toLocaleString("en-IN")
+                      : "Not available"
+                  ),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    item.deletedBy || "Not available"
+                  ),
+
+                  React.createElement(
+                    "td",
+                    null,
+                    item.removalReason || "Not recorded"
+                  )
+                );
+              })
+            )
+          )
+        )
+),
 React.createElement(
   "div",
   {
@@ -3547,7 +4158,7 @@ React.createElement(
       className: "admin-swap-status-filters"
     },
 
-    ["Rejected", "Courier", "Local Exchange", "Not Selected"].map(
+    ["Rejected", "Courier", "Local Exchange", "Not Selected","Deleted History"].map(
       function (filter) {
         return React.createElement(
           "button",
@@ -3568,15 +4179,16 @@ React.createElement(
       }
     )
   ),
-    filteredSwapRequests.length === 0
-    ? React.createElement(
-        "div",
-        {
-          className: "admin-empty-state"
-        },
-        "No matching swap requests available."
-      )
-
+   filteredSwapRequests.length === 0
+? React.createElement(
+    "div",
+    {
+      className: "admin-empty-state"
+    },
+    swapRequestsLoading
+      ? "Loading swap requests..."
+      : "No matching swap requests available."
+  )
     : React.createElement(
         "div",
         {
@@ -3593,19 +4205,30 @@ React.createElement(
             "thead",
             null,
 
-            React.createElement(
-              "tr",
-              null,
-              React.createElement("th", null, "Clothing"),
-              React.createElement("th", null, "Requester"),
-              React.createElement("th", null, "Owner"),
-              React.createElement("th", null, "Request Date"),
-              React.createElement("th", null, "Status"),
-              React.createElement("th", null, "Agreement"),
-              React.createElement("th", null, "Exchange Method"),
-React.createElement("th", null, "Completion Status"),
-React.createElement("th", null, "Pending Confirmation By")
-            )
+           swapStatusFilter === "Deleted History"
+  ? React.createElement(
+      "tr",
+      null,
+      React.createElement("th", null, "Clothing"),
+      React.createElement("th", null, "Requester"),
+      React.createElement("th", null, "Owner"),
+      React.createElement("th", null, "Deleted By"),
+      React.createElement("th", null, "Deleted Date"),
+      React.createElement("th", null, "Original Request Status")
+    )
+  : React.createElement(
+      "tr",
+      null,
+      React.createElement("th", null, "Clothing"),
+      React.createElement("th", null, "Requester"),
+      React.createElement("th", null, "Owner"),
+      React.createElement("th", null, "Request Date"),
+      React.createElement("th", null, "Status"),
+      React.createElement("th", null, "Agreement"),
+      React.createElement("th", null, "Exchange Method"),
+      React.createElement("th", null, "Completion Status"),
+      React.createElement("th", null, "Pending Confirmation By")
+    )
           ),
 
           React.createElement(
@@ -3648,6 +4271,49 @@ React.createElement("th", null, "Pending Confirmation By")
                       }
                     )
                   : "Not available";
+                  if (swapStatusFilter === "Deleted History") {
+  const deletedDate = request.deletedAt
+    ? new Date(request.deletedAt).toLocaleString(
+        "en-IN",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }
+      )
+    : "Not available";
+
+  return React.createElement(
+    "tr",
+    {
+      key: request._id
+    },
+
+    React.createElement("td", null, getRequestClothing(request)),
+    React.createElement("td", null, getRequesterName(request)),
+    React.createElement("td", null, getRequestOwner(request)),
+    React.createElement(
+      "td",
+      null,
+      request.deletedBy || request.deletedByEmail || "Not available"
+    ),
+    React.createElement("td", null, deletedDate),
+
+    React.createElement(
+      "td",
+      null,
+      React.createElement(
+        "span",
+        {
+          className: getStatusClass(displayStatus)
+        },
+        displayStatus
+      )
+    )
+  );
+}
 
                 return React.createElement(
                   "tr",
@@ -3780,6 +4446,202 @@ React.createElement(
     )
   )
 ),
+
+
+selectedOverviewHistory &&
+React.createElement(
+  "div",
+  {
+    className: "admin-modal-overlay",
+    onClick: function () {
+      setSelectedOverviewHistory(null);
+    }
+  },
+  React.createElement(
+    "div",
+    {
+      className: "admin-modal-content overview-history-modal",
+      onClick: function (event) {
+        event.stopPropagation();
+      }
+    },
+    React.createElement("h3", null, selectedOverviewHistory.title),
+
+    React.createElement(
+      "p",
+      null,
+      "Total Records: " + selectedOverviewHistory.items.length
+    ),
+
+    selectedOverviewHistory.items.length === 0
+      ? React.createElement("p", null, "No records found.")
+      : React.createElement(
+          "div",
+          {
+            style: {
+  width: "100%",
+  overflowX: "hidden",
+  boxSizing: "border-box"
+}
+          },
+          React.createElement(
+            "div",
+            {
+              style: {
+               
+                display: "grid",
+                gridTemplateColumns: selectedOverviewHistory.type === "listings"
+  ? "65px minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 0.6fr) minmax(0, 0.9fr) minmax(0, 0.8fr)"
+  : "65px minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 0.7fr) minmax(0, 0.9fr) minmax(0, 1.4fr)",
+                gap: "10px",
+                padding: "12px",
+                background: "#fcecf6",
+                borderRadius: "10px",
+                fontWeight: "bold",
+                marginBottom: "10px"
+              }
+            },
+            (selectedOverviewHistory.type === "listings"
+              ? [
+                  "Image",
+                  "Clothing",
+                  "Owner",
+                  "Owner Email",
+                  "Category",
+                  "Size",
+                  "Location",
+                  "Status"
+                ]
+              : [
+                  "Image",
+                  "Clothing",
+                  "Owner",
+                  "Owner Email",
+                  "Requester",
+                  "Requester Email",
+                  "Status",
+                  "Exchange Method",
+                  "Meeting Details"
+                ]
+            ).map(function (heading, i) {
+return React.createElement(
+  "div",
+  {
+    key: i,
+    style: {
+      minWidth: 0,
+      textAlign: "left",
+      overflowWrap: "anywhere"
+    }
+  },
+  heading
+);
+            })
+          ),
+
+          selectedOverviewHistory.items.map(function (item, index) {
+            var isListing = selectedOverviewHistory.type === "listings";
+            var image = isListing ? item.image : item.clothingImage;
+
+            var meetingDetails =
+              item.exchangeMethod === "Local Exchange"
+                ? [
+                    "Location: " + (item.meetingLocation || "Not available"),
+                    "Date: " + (item.meetingDate || "Not available"),
+                    "Time: " + (item.meetingTime || "Not available")
+                  ].join(" | ")
+                : item.exchangeMethod === "Courier"
+                ? "Courier"
+                : "Not Selected";
+
+            var values = isListing
+              ? [
+                  item.title || "Untitled",
+                  item.owner || "Not available",
+                  item.ownerEmail || "Not available",
+                  item.category || "Not available",
+                  item.size || "Not available",
+                  item.location || "Not available",
+                  item.listingStatus || item.status || "Not available"
+                ]
+              : [
+                  item.clothingTitle || "Untitled",
+                  item.owner || "Not available",
+                  item.ownerEmail || "Not available",
+                  item.requester || "Not available",
+                  item.requesterEmail || "Not available",
+                  item.status || "Not available",
+                  item.exchangeMethod || "Not Selected",
+                  meetingDetails
+                ];
+
+            return React.createElement(
+              "div",
+              {
+                key: item._id || index,
+                style: {
+                  display: "grid",
+                 gridTemplateColumns: selectedOverviewHistory.type === "listings"
+  ? "65px minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 0.6fr) minmax(0, 0.9fr) minmax(0, 0.8fr)"
+  : "65px minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 0.7fr) minmax(0, 0.9fr) minmax(0, 1.4fr)",
+                  gap: "10px",
+                  alignItems: "center",
+                  padding: "12px",
+                  marginBottom: "8px",
+                  background: "#ffffff",
+                  border: "1px solid #ead8eb",
+                  borderRadius: "10px"
+                }
+              },
+              React.createElement(
+                "div",
+                null,
+                image
+                  ? React.createElement("img", {
+                      src: image,
+                      alt: "Clothing",
+                      style: {
+                        width: "65px",
+                        height: "65px",
+                        objectFit: "cover",
+                        borderRadius: "8px"
+                      }
+                    })
+                  : "No Image"
+              ),
+              values.map(function (value, i) {
+                return React.createElement(
+                  "div",
+                  {
+                    key: i,
+                    style: {
+                      fontSize: "13px",
+                      overflowWrap: "anywhere",
+                      minWidth: 0
+                    }
+                  },
+                  String(value)
+                );
+              })
+            );
+          })
+        ),
+
+    React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "admin-btn close-btn",
+        onClick: function () {
+          setSelectedOverviewHistory(null);
+        }
+      },
+      "Close"
+    )
+  )
+),
+
+
 selectedDisputeHistory &&
   React.createElement(
     "div",

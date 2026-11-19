@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import API_URL from "../api.js";
 import "./CourierTracking.css";
 
-function CourierTracking({ request, shipment: initialShipment, onShipmentUpdate }) {
+function CourierTracking({request,shipment: initialShipment,onShipmentUpdate,isAdmin}) {
   const [shipment, setShipment] = useState(initialShipment || null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -13,6 +13,10 @@ function CourierTracking({ request, shipment: initialShipment, onShipmentUpdate 
   const [arranging, setArranging] = useState(false);
   const [otp, setOtp] = useState("");
   const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [updatingMode, setUpdatingMode] = useState(false);
+const [manualStatus, setManualStatus] = useState("");
+const [manualOtp, setManualOtp] = useState("");
+const [manualTrackingId, setManualTrackingId] = useState("");
 
   const token =
     localStorage.getItem("clothswapToken") ||
@@ -273,7 +277,100 @@ function CourierTracking({ request, shipment: initialShipment, onShipmentUpdate 
       setVerifyingOtp(false);
     }
   }
+async function changeCourierMode(mode) {
+  if (!shipment || !isAdmin) return;
 
+  try {
+    setUpdatingMode(true);
+
+    const response = await fetch(
+      `${API_URL}/api/shipments/admin/${shipment._id}/courier-mode`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          courierMode: mode
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to update courier mode.");
+      return;
+    }
+
+    updateLocalShipment(data.shipment);
+    alert("Courier mode changed to " + mode + ".");
+  } catch (error) {
+    console.error("Courier mode error:", error);
+    alert("Unable to update courier mode.");
+  } finally {
+    setUpdatingMode(false);
+  }
+}
+
+async function updateManualStatus() {
+  if (!shipment || !manualStatus) {
+    alert("Please select a shipment status.");
+    return;
+  }
+
+  if (
+    manualStatus === "OTP Verified" &&
+    (!manualOtp.trim() || !manualTrackingId.trim())
+  ) {
+    alert("Please enter Tracking ID and OTP.");
+    return;
+  }
+
+  try {
+    setUpdatingMode(true);
+
+    const response = await fetch(
+      `${API_URL}/api/shipments/admin/${shipment._id}/manual-status`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: manualStatus,
+          ...(manualStatus === "OTP Verified"
+            ? {
+                otp: manualOtp.trim(),
+                trackingId: manualTrackingId.trim()
+              }
+            : {})
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || "Failed to update shipment status.");
+      return;
+    }
+
+    updateLocalShipment(data.shipment);
+    setManualOtp("");
+    setManualTrackingId("");
+    setManualStatus("");
+
+    alert(data.message || "Manual shipment status updated.");
+  } catch (error) {
+    console.error("Manual status error:", error);
+    alert("Unable to update shipment status.");
+  } finally {
+    setUpdatingMode(false);
+  }
+}
   const statusAliases = {
     "Courier Requested": 0,
     "Pending": 0,
@@ -440,7 +537,130 @@ function CourierTracking({ request, shipment: initialShipment, onShipmentUpdate 
       : React.createElement(
           React.Fragment,
           null,
+isAdmin
+  ? React.createElement("div", {
+      className: "cs-admin-courier-mode"
+    },
 
+      React.createElement("h4", null, "⚙️ Admin Courier Control"),
+
+      React.createElement("p", null, "Select Courier Mode"),
+
+      React.createElement("div", {
+        className: "cs-admin-mode-buttons"
+      },
+
+        React.createElement("button", {
+          type: "button",
+          className:
+            shipment.courierMode !== "Manual"
+              ? "active"
+              : "",
+          disabled: updatingMode,
+          onClick: function () {
+            changeCourierMode("Automatic");
+          }
+        }, "Automatic Mode"),
+
+        React.createElement("button", {
+          type: "button",
+          className:
+            shipment.courierMode === "Manual"
+              ? "active"
+              : "",
+          disabled: updatingMode,
+          onClick: function () {
+            changeCourierMode("Manual");
+          }
+        }, "Manual Mode")
+      )
+    )
+  : null,
+  isAdmin && shipment.courierMode === "Manual"
+  ? React.createElement("div", {
+      className: "cs-admin-manual-controls"
+    },
+
+      React.createElement("h4", null, "Manual Shipment Update"),
+
+      React.createElement("select", {
+        value: manualStatus,
+        onChange: function (e) {
+          setManualStatus(e.target.value);
+        }
+      },
+
+        React.createElement("option", {
+          value: ""
+        }, "Select Shipment Status"),
+
+        React.createElement("option", {
+          value: "Courier Requested"
+        }, "Courier Requested"),
+
+        React.createElement("option", {
+          value: "Pickup Scheduled"
+        }, "Pickup Scheduled"),
+
+        React.createElement("option", {
+          value: "Picked Up"
+        }, "Picked Up"),
+
+        React.createElement("option", {
+          value: "In Transit"
+        }, "In Transit"),
+
+        React.createElement("option", {
+          value: "Out for Delivery"
+        }, "Out for Delivery"),
+
+        shipment.status === "Out for Delivery"
+          ? React.createElement("option", {
+              value: "OTP Verified"
+            }, "OTP Verified")
+          : null,
+
+        shipment.status === "Arrived" && shipment.otpVerified
+          ? React.createElement("option", {
+              value: "Delivered"
+            }, "Delivered")
+          : null,
+
+        React.createElement("option", {
+          value: "Cancelled"
+        }, "Cancelled")
+      ),
+
+      manualStatus === "OTP Verified"
+        ? React.createElement(React.Fragment, null,
+
+            React.createElement("input", {
+              type: "text",
+              placeholder: "Enter Tracking ID",
+              value: manualTrackingId,
+              onChange: function (e) {
+                setManualTrackingId(e.target.value);
+              }
+            }),
+
+            React.createElement("input", {
+              type: "text",
+              placeholder: "Enter OTP",
+              value: manualOtp,
+              onChange: function (e) {
+                setManualOtp(e.target.value);
+              }
+            })
+          )
+        : null,
+
+      React.createElement("button", {
+        type: "button",
+        disabled: updatingMode || !manualStatus,
+        onClick: updateManualStatus
+      }, updatingMode ? "Updating..." : "Update Shipment Status")
+    )
+  : null,
           React.createElement("div", {
             className: "cs-tracking-topline"
           },

@@ -20633,6 +20633,26 @@ margin: 15px 0 20px auto;
   animation: disputeSlideIn 0.3s ease;
 }
 
+.overview-history-modal {
+  width: 98%;
+  max-width: 1600px;
+  max-height: 92vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.overview-history-modal > div {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.overview-history-modal img {
+  display: block;
+  margin: auto;
+}
+
 .admin-modal-content h3 {
   color: #9b4c83;
   font-size: 24px;
@@ -21114,4 +21134,608 @@ margin: 15px 0 20px auto;
   color: #c62828;
   font-size: 14px;
   margin-bottom: 12px;
+}
+
+/* Space between Reported Listings and Removal History */
+
+#reported-listings {
+  margin-bottom: 28px !important;
+}
+
+#removed-listings {
+  margin-top: 28px !important;
+}
+
+/* =================================
+   MANAGE LISTINGS - FILTER TOOLBAR
+================================= */
+
+.admin-listing-toolbar {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(150px, 1fr));
+  gap: 14px !important;
+  align-items: center;
+  width: 100%;
+  margin: 20px 0 24px !important;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(232, 93, 158, 0.15);
+  border-radius: 14px;
+  box-shadow: 0 4px 15px rgba(120, 70, 120, 0.06);
+}
+
+.admin-listing-toolbar input,
+.admin-listing-toolbar select {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 13px !important;
+  border: 1px solid #e5d5e8 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  color: #49384f;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-listing-toolbar input:focus,
+.admin-listing-toolbar select:focus {
+  border-color: #d65b9c !important;
+  box-shadow: 0 0 0 3px rgba(214, 91, 156, 0.12);
+}
+
+.admin-listing-toolbar input::placeholder {
+  color: #9b8da0;
+}
+
+/* =================================
+   MANAGE LISTINGS - PAGINATION
+================================= */
+
+.admin-table-note {
+  padding: 14px 16px;
+  background: #fcf7fc;
+  border: 1px solid #f0e1ef;
+  border-radius: 12px;
+  color: #65516d;
+  font-size: 13px;
+}
+
+.admin-table-note select {
+  height: 36px;
+  min-width: 65px;
+  padding: 0 10px;
+  border: 1px solid #dfcce2;
+  border-radius: 8px;
+  background: #fff;
+  color: #59415f;
+  cursor: pointer;
+}
+
+.admin-table-note button {
+  min-width: 82px;
+  padding: 9px 14px;
+  border: 1px solid #d9b9d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #984b91;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-table-note button:not(:disabled):hover {
+  background: linear-gradient(135deg, #e85d9e, #a85bc7);
+  border-color: transparent;
+  color: #fff;
+}
+
+.admin-table-note button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =================================
+   RESPONSIVE
+================================= */
+
+@media (max-width: 900px) {
+  .admin-listing-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-listing-toolbar input {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-listing-toolbar {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .admin-listing-toolbar input {
+    grid-column: auto;
+  }
+
+  .admin-table-note {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+}
+
+/* Reduce gap between Clothing Listings and filters */
+#manage-listings .admin-section-header {
+  margin-bottom: 5px !important;
+  padding-bottom: 5px !important;
+  min-height: auto !important;
+}
+
+#manage-listings .admin-listing-toolbar {
+  margin-top: 5px !important;
+  margin-bottom: 12px !important;
+}
+.overview-history-modal button.close-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #e85d9e;
+  color: white;
+  cursor: pointer;
+}
+
+/* ===== Automatic Matching Section ===== */
+
+.automatic-matching-card {
+  margin-bottom: 30px;
+  padding: 30px;
+  border: 1px solid rgba(232, 93, 158, 0.18);
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 241, 248, 0.95),
+    rgba(247, 239, 255, 0.95)
+  );
+  box-shadow: 0 8px 25px rgba(150, 90, 160, 0.09);
+}
+
+.automatic-matching-card h2 {
+  color: #a34486;
+  font-size: 25px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.automatic-matching-card > p {
+  color: #756579;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+
+.automatic-matching-card .comparison-field {
+  max-width: 520px;
+  margin-bottom: 25px;
+}
+
+.automatic-matching-card .comparison-field label {
+  display: block;
+  color: #70446d;
+  font-weight: 600;
+  margin-bottom: 9px;
+}
+
+.automatic-matching-card .comparison-field select {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #e7c8df;
+  border-radius: 12px;
+  background: #fff;
+  color: #49384b;
+  outline: none;
+  font-size: 14px;
+  transition: 0.25s ease;
+}
+
+.automatic-matching-card .comparison-field select:focus {
+  border-color: #d65b9d;
+  box-shadow: 0 0 0 3px rgba(214, 91, 157, 0.12);
+}
+
+/* Matching Results */
+
+.matching-results {
+  margin-top: 25px;
+  padding-top: 22px;
+  border-top: 1px solid #ead7e8;
+}
+
+.matching-results h3 {
+  color: #82417d;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.matching-results > p {
+  color: #806d82;
+  padding: 18px;
+  background: #fff;
+  border-radius: 12px;
+  text-align: center;
+}
+
+/* Individual Matching Clothes Card */
+
+.matching-item {
+  display: inline-block;
+  vertical-align: top;
+  width: calc(33.333% - 14px);
+  margin: 0 18px 18px 0;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #eedbea;
+  border-radius: 17px;
+  box-shadow: 0 5px 16px rgba(125, 74, 130, 0.07);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.matching-item:nth-child(3n) {
+  margin-right: 0;
+}
+
+.matching-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(175, 91, 153, 0.13);
+  border-color: #e4acd0;
+}
+
+.matching-item h4 {
+  color: #9b4384;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 15px;
+  overflow-wrap: anywhere;
+}
+
+.matching-item p {
+  color: #68596c;
+  font-size: 14px;
+  margin: 9px 0;
+  line-height: 1.5;
+}
+
+.matching-item button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px 15px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #e85d9e, #a85bc7);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.matching-item button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(190, 83, 155, 0.25);
+}
+
+.matching-item button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+
+@media (max-width: 900px) {
+  .matching-item {
+    width: calc(50% - 12px);
+  }
+
+  .matching-item:nth-child(3n) {
+    margin-right: 18px;
+  }
+
+  .matching-item:nth-child(2n) {
+    margin-right: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .automatic-matching-card {
+    padding: 20px 16px;
+  }
+
+  .automatic-matching-card h2 {
+    font-size: 21px;
+  }
+
+  .matching-item {
+    display: block;
+    width: 100%;
+    margin: 0 0 15px;
+  }
+
+  .matching-item:nth-child(3n) {
+    margin-right: 0;
+  }
+}
+
+/* ===== Swap Request Toast Popup ===== */
+
+.swap-toast {
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: max-content;
+  max-width: calc(100% - 30px);
+  min-width: 300px;
+  padding: 17px 18px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(70, 40, 80, 0.18);
+  border-left: 5px solid #35b879;
+  animation: swapToastSlide 0.35s ease;
+}
+
+.swap-toast.success {
+  border-left-color: #35b879;
+}
+
+.swap-toast.error {
+  border-left-color: #e05268;
+}
+
+.swap-toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e3f8ed;
+  color: #21965d;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.swap-toast.error .swap-toast-icon {
+  background: #ffeaed;
+  color: #d83f55;
+}
+
+.swap-toast-message {
+  flex: 1;
+  color: #49394d;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.swap-toast button {
+  border: none;
+  background: transparent;
+  color: #93849a;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+.swap-toast button:hover {
+  color: #d64d91;
+}
+
+@keyframes swapToastSlide {
+  from {
+    opacity: 0;
+    transform: translateX(35px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .swap-toast {
+    top: 15px;
+    right: 15px;
+    left: 15px;
+    min-width: 0;
+    width: auto;
+  }
+}
+.swap-request-tabs {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 25px 0;
+  flex-wrap: wrap;
+}
+
+.swap-request-tabs button {
+  padding: 12px 25px;
+  border: 1px solid #ead5ed;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #80518a;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.swap-request-tabs button:hover {
+  background: #f8eaf5;
+  border-color: #e85d9e;
+  transform: translateY(-2px);
+}
+
+.swap-request-tabs button.active {
+  background: linear-gradient(135deg, #e85d9e, #a85bc7);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 5px 14px rgba(168, 91, 199, 0.22);
+}
+
+@media (max-width: 480px) {
+  .swap-request-tabs button {
+    flex: 1;
+    padding: 11px 12px;
+    font-size: 13px;
+  }
+}
+
+/* ================= WISHLIST TOP BAR ================= */
+
+.wishlist-top {
+  padding: 18px 22px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(232, 93, 158, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 5px 18px rgba(180, 80, 150, 0.07);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wishlist-count-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #75436f;
+}
+
+/* CLEAR WISHLIST BUTTON */
+
+.wishlist-clear-btn {
+  border: none;
+  outline: none;
+  padding: 11px 22px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, #e85d9e, #a85bc7);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(190, 75, 155, 0.22);
+  transition: all 0.25s ease;
+}
+
+.wishlist-clear-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 16px rgba(190, 75, 155, 0.3);
+}
+
+/* ================= INDIVIDUAL REMOVE BUTTON ================= */
+
+.wishlist-image-wrapper {
+  position: relative;
+}
+
+.wishlist-remove-btn {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #e85d9e;
+  font-size: 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.25s ease;
+}
+
+.wishlist-remove-btn:hover {
+  background: #e85d9e;
+  color: white;
+  transform: scale(1.12);
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 576px) {
+  .wishlist-top {
+    padding: 15px;
+  }
+
+  .wishlist-clear-btn {
+    padding: 9px 16px;
+    font-size: 13px;
+  }
+
+  .wishlist-count-text {
+    font-size: 14px;
+  }
+}
+
+/* ================= BROWSE WISHLIST HEART ================= */
+
+.browse-wishlist-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.96);
+  color: #e85d9e;
+
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.14);
+  transition: all 0.25s ease;
+}
+
+.browse-wishlist-btn:hover {
+  transform: scale(1.12);
+  color: #e85d9e;
+}
+
+.browse-wishlist-btn.browse-wishlist-active {
+  background: #fff;
+  color: #e85d9e;
+}
+
+.browse-wishlist-btn:focus {
+  outline: none;
+}
+/* NEARBY SWAPS - ALWAYS SHOW WISHLIST HEART */
+
+.location-image-wrapper {
+  position: relative;
+}
+
+.location-image-wrapper .browse-wishlist-btn {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
