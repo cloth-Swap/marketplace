@@ -5350,10 +5350,9 @@ app.get("/api/clothes/:id/seller-profile", async function (req, res) {
         });
       }
 
-      const user = await User.findOne({
-        name: name.trim(),
-        email: email.trim().toLowerCase()
-      });
+    const user = await User.findOne({
+  email: email.trim().toLowerCase()
+});
 
       if (!user) {
         return res.status(401).json({
