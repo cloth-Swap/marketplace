@@ -965,7 +965,16 @@ await checkTermsAndNavigate("/dashboard");
         height: 54px;
       }
     }
-  `;
+  input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none !important;
+  pointer-events: none;
+}`;
 
   return React.createElement(
     "div",

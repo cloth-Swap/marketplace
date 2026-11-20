@@ -409,29 +409,29 @@ navigate("/login");
     };
 
 
-  /* =====================================================
+  
+  /* ==============================
      PAGE
-  ===================================================== */
+  ============================== */
 
   return React.createElement(
-
     "div",
-
     {
-      className:
-        "register-page-new"
+      className: "register-page-new"
     },
 
+    React.createElement(
+      "style",
+      null,
+      "input[type='password']::-ms-reveal, " +
+      "input[type='password']::-ms-clear { display: none; }"
+    ),
 
     React.createElement(
-
       "div",
-
       {
-        className:
-          "register-main-card"
+        className: "register-main-card"
       },
-
 
       /* IMAGE SIDE */
 

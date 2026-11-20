@@ -52,6 +52,11 @@ function App() {
     async function restoreSession() {
       const isLoggedIn =
         localStorage.getItem("clothswapLoggedIn") === "true";
+        
+        const isAuthPage =
+  location.pathname === "/login" ||
+  location.pathname === "/register" ||
+  (location.pathname === "/" && !isLoggedIn);
 
       if (!isLoggedIn) {
         setSessionReady(true);
@@ -88,6 +93,7 @@ function App() {
 
       const isLoggedIn =
         localStorage.getItem("clothswapLoggedIn") === "true";
+        
 
       const currentPath = location.pathname;
 
@@ -305,6 +311,10 @@ useEffect(function () {
 
   const isLoggedIn =
     localStorage.getItem("clothswapLoggedIn") === "true";
+    const isAuthPage =
+  location.pathname === "/login" ||
+  location.pathname === "/register" ||
+  (location.pathname === "/" && !isLoggedIn);
 
   const isTermsExempt =
     location.pathname === "/login" ||
@@ -403,26 +413,32 @@ useEffect(function () {
     React.Fragment,
     null,
 
-    !isCEODashboard &&
-      React.createElement(Navbar),
+   !isCEODashboard &&
+!isAuthPage &&
+React.createElement(Navbar),
 
     React.createElement(
       "div",
       {
-        className: isCEODashboard
-          ? "clothswap-page-layout clothswap-ceo-page-layout"
-          : "clothswap-page-layout"
+       className: isAuthPage
+  ? "clothswap-auth-page-layout"
+  : isCEODashboard
+    ? "clothswap-page-layout clothswap-ceo-page-layout"
+    : "clothswap-page-layout"
       },
 
-      !isCEODashboard &&
-        React.createElement(Sidebar),
+     !isCEODashboard &&
+!isAuthPage &&
+React.createElement(Sidebar),
 
       React.createElement(
         "main",
         {
-          className: isCEODashboard
-            ? "clothswap-page-content clothswap-ceo-page-content"
-            : "clothswap-page-content"
+         className: isAuthPage
+  ? "clothswap-auth-page-content"
+  : isCEODashboard
+    ? "clothswap-page-content clothswap-ceo-page-content"
+    : "clothswap-page-content"
         },
 
         location.pathname !== "/login" &&
@@ -635,7 +651,8 @@ React.createElement(LoginRequired),
     ),
 
     !isCEODashboard &&
-      React.createElement(Footer)
+!isAuthPage &&
+React.createElement(Footer)
   );
 }
 
