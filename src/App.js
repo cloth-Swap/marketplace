@@ -345,12 +345,13 @@ useEffect(function () {
 
       const currentPath = window.location.pathname;
 
-      if (
-        currentPath === "/login" ||
-        currentPath === "/register"
-      ) {
-        return;
-      }
+     if (
+  currentPath === "/" ||
+  currentPath === "/login" ||
+  currentPath === "/register"
+) {
+  return;
+}
 
       const clickedElement = event.target.closest(
         "a, button, [role='button'], [onclick]"
@@ -424,7 +425,9 @@ useEffect(function () {
             : "clothswap-page-content"
         },
 
-        React.createElement(LoginRequired),
+        location.pathname !== "/login" &&
+location.pathname !== "/register" &&
+React.createElement(LoginRequired),
 
         shouldWaitForTerms
           ? React.createElement(

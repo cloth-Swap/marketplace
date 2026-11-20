@@ -5269,46 +5269,47 @@ app.get("/api/clothes/:id/seller-profile", async function (req, res) {
   }
 });
 
-app.post("/api/users", async function (req, res) {
-  try {
-    const { name, email, location, password } = req.body;
 
-    if (
-      !name || !email || !password ||
-      !name.trim() || !email.trim()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Name, email and password are required"
-      });
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const existingUser = await User.findOne({
-      email: normalizedEmail
-    });
-
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: "You are already registered. Please login with your existing account."
-      });
-    }
-
-    const user = new User({
-      name: name.trim(),
-      email: normalizedEmail,
-      password: await bcrypt.hash(password, 10),
-      location: location && location.trim()
-        ? location.trim()
-        : "Not specified"
-    });
-
-    await user.save();
-
-    // Activity logging must not interrupt registration.
+  app.post("/api/users", async function (req, res) {
     try {
+      const {
+        name,
+        email,
+        location,
+        password
+      } = req.body;
+
+      if (!name || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Name, email and password are required"
+        });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const existingUser = await User.findOne({
+        email: normalizedEmail
+      });
+
+      if (existingUser) {
+    return res.status(409).json({
+      success: false,
+      message: "You are already registered. Please login with your existing account."
+    });
+  }
+
+      const user = new User({
+        name: name.trim(),
+        email: normalizedEmail,
+        password: await bcrypt.hash(password, 10),
+        location: location
+          ? location.trim()
+          : "Not specified"
+      });
+
+      await user.save();
+
       await recordUserActivity({
         userId: user._id,
         userName: user.name,
@@ -5316,40 +5317,25 @@ app.post("/api/users", async function (req, res) {
         activityType: "Registration",
         description: "New user registered"
       });
-    } catch (activityError) {
-      console.error("Registration activity error:", activityError);
-    }
 
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      user: {
-        name: user.name,
-        email: user.email,
-        location: user.location,
-        role: user.role
-      }
-    });
+      return res.status(201).json({
+        success: true,
+        message: "User registered successfully",
+        user: user
+      });
 
-  } catch (error) {
-    console.error("User registration error:", error);
+    } catch (error) {
+      console.error("User registration error:", error);
 
-    // Handle duplicate email safely.
-    if (error.code === 11000) {
-      return res.status(409).json({
+      return res.status(500).json({
         success: false,
-        message: "You are already registered. Please login with your existing account."
+        message: "Failed to register user",
+        error: error.message
       });
     }
+  });
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to register user"
-    });
-  }
-});
-
-
+ 
 app.post("/api/auth/login", async function (req, res) {
   try {
     const { email, password } = req.body;
@@ -5357,18 +5343,20 @@ app.post("/api/auth/login", async function (req, res) {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required"
+        message: "Email and password are required."
       });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const user = await User.findOne({
-      email: email.trim().toLowerCase()
+      email: normalizedEmail
     });
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Please register first or check your email."
+        message: "Account not found. Please register first."
       });
     }
 
@@ -5393,18 +5381,13 @@ app.post("/api/auth/login", async function (req, res) {
 
     const token = await createRefreshSession(user, res);
 
-    // Activity logging must not interrupt login.
-    try {
-      await recordUserActivity({
-        userId: user._id,
-        userName: user.name,
-        userEmail: user.email,
-        activityType: "Login",
-        description: "User logged in"
-      });
-    } catch (activityError) {
-      console.error("Login activity error:", activityError);
-    }
+    await recordUserActivity({
+      userId: user._id,
+      userName: user.name,
+      userEmail: user.email,
+      activityType: "Login",
+      description: "User logged in"
+    });
 
     return res.json({
       success: true,
@@ -5427,4 +5410,184 @@ app.post("/api/auth/login", async function (req, res) {
       error: error.message
     });
   }
+});
+
+  mongoose
+    .connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 15000
+    })
+    .then(function () {
+      
+// Run Hand-to-Hand deadline checks every minute.
+setInterval(function () {
+  checkHandToHandDeadlines();
+}, 60 * 1000);
+
+// Also check once immediately after database connection.
+checkHandToHandDeadlines();
+
+// Run Courier receiver deadline checks every minute.
+setInterval(function () {
+  checkCourierReceiverDeadlines();
+}, 60 * 1000);
+
+// Also check once immediately after database connection.
+checkCourierReceiverDeadlines();
+
+
+      console.log(
+        "MongoDB connected successfully!"
+      );
+
+  app.post("/api/notifications", async function (req, res) {
+    try {
+      const notification = new Notification({
+        recipient: req.body.recipient,
+        sender: req.body.sender || "",
+        senderName: req.body.senderName || "",
+        type: req.body.type,
+        title: req.body.title,
+        message: req.body.message,
+        relatedId: req.body.relatedId || "",
+        isRead: false
+      });
+
+      const savedNotification = await notification.save();
+
+      res.status(201).json({
+        message: "Notification created successfully.",
+        notification: savedNotification
+      });
+
+    } catch (error) {
+      console.log("Notification creation error:", error);
+
+      res.status(500).json({
+        message: "Failed to create notification."
+      });
+    }
+  });
+
+  app.get("/api/notifications/:recipient", async function (req, res) {
+    try {
+      const notifications = await Notification.find({
+        recipient: req.params.recipient
+      }).sort({
+        createdAt: -1
+      });
+
+      res.json({
+        notifications: notifications
+      });
+
+    } catch (error) {
+      console.log("Notification loading error:", error);
+
+      res.status(500).json({
+        message: "Failed to load notifications."
+      });
+    }
+  });
+
+  app.put("/api/notifications/:id/read", async function (req, res) {
+    
+    try {
+      const notification = await Notification.findByIdAndUpdate(
+        req.params.id,
+        {
+          isRead: true
+        },
+        {
+          new: true
+        }
+      );
+
+      if (!notification) {
+        return res.status(404).json({
+          message: "Notification not found."
+        });
+      }
+
+      res.json({
+        message: "Notification marked as read.",
+        notification: notification
+      });
+
+    } catch (error) {
+      console.log("Notification read error:", error);
+
+      res.status(500).json({
+        message: "Failed to update notification."
+      });
+    }
+  }); 
+
+
+  app.delete(
+    "/api/notifications/:id",
+    async function (req, res) {
+      try {
+        const id = req.params.id;
+
+        if (
+          !mongoose.Types.ObjectId.isValid(id)
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Invalid notification ID"
+          });
+        }
+
+        const notification =
+          await Notification.findById(id);
+
+        if (!notification) {
+          return res.status(404).json({
+            success: false,
+            message:
+              "Notification not found"
+          });
+        }
+
+        await Notification.findByIdAndDelete(
+          id
+        );
+
+        res.json({
+          success: true,
+          message:
+            "Notification deleted successfully"
+        });
+
+      } catch (error) {
+        console.error(
+          "Notification delete error:",
+          error
+        );
+
+        res.status(500).json({
+          success: false,
+          message:
+            "Failed to delete notification"
+        });
+      }
+    }
+  );
+  app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "online" });
+  });
+     server.listen(
+  PORT,
+  function () {
+    console.log(
+      `ClothSwap Backend running on http://localhost:${PORT}`
+    );
+  }
+);
+
+    })
+   .catch(function (error) {
+  console.error("MongoDB connection failed:", error);
+  process.exit(1);
 });

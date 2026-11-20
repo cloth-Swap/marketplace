@@ -284,21 +284,21 @@ useEffect(function () {
       setError("");
 
 
-      if (
-        !name ||
-        !email ||
-        !location ||
-        !password ||
-        !confirmPassword
-      ) {
+      const cleanName = name.trim();
+const cleanEmail = email.trim().toLowerCase();
+const cleanLocation = location.trim();
 
-        setError(
-          "Please fill in all fields."
-        );
-
-        return;
-      }
-if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
+if (
+  !cleanName ||
+  !cleanEmail ||
+  !cleanLocation ||
+  !password ||
+  !confirmPassword
+) {
+  setError("Please fill in all fields.");
+  return;
+}
+if (!cleanEmail.endsWith("@gmail.com")) {
   setError("Please enter a valid Gmail address ending with @gmail.com.");
   return;
 }
@@ -341,10 +341,10 @@ if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
                   "application/json"
               },
 
-              body: JSON.stringify({
-  name: name,
-  email: email,
-  location: location,
+           body: JSON.stringify({
+  name: cleanName,
+  email: cleanEmail,
+  location: cleanLocation,
   password: password
 })
             }
@@ -389,24 +389,22 @@ localStorage.setItem(
   "clothswapIsAdmin",
   "false"
 );
-
 localStorage.removeItem("clothswapToken");
-      localStorage.setItem(
-        "clothswapUserName",
-        name
-      );
 
+localStorage.setItem(
+  "clothswapUserName",
+  cleanName
+);
 
-      localStorage.setItem(
-        "clothswapUserEmail",
-        email
-      );
+localStorage.setItem(
+  "clothswapUserEmail",
+  cleanEmail
+);
 
-
-      localStorage.setItem(
-        "clothswapUserLocation",
-        location
-      );
+localStorage.setItem(
+  "clothswapUserLocation",
+  cleanLocation
+);
 navigate("/login");
     };
 

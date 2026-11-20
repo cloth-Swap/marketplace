@@ -81,7 +81,6 @@ function Login() {
   }
 }
 
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -298,12 +297,10 @@ useEffect(function () {
 
     setError("");
 
-    if (!username || !email || !password) {
-      setError(
-        "Please enter your username, email and password."
-      );
-      return;
-    }
+   if (!email.trim() || !password) {
+  setError("Please enter your email and password.");
+  return;
+}
 
     if (!email.trim().toLowerCase().endsWith("@gmail.com")) {
       setError(
@@ -321,11 +318,10 @@ useEffect(function () {
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            name: username.trim(),
-            email: email.trim().toLowerCase(),
-            password: password
-          })
+         body: JSON.stringify({
+  email: email.trim().toLowerCase(),
+  password: password
+})
         }
       );
 
@@ -357,15 +353,14 @@ console.log("LOGIN USER ROLE:", data.user.role);
       );
 
       localStorage.setItem(
-        "clothswapUserName",
-        username.trim()
-      );
+  "clothswapUserName",
+  data.user.name
+);
 
-      localStorage.setItem(
-        "clothSwapUserName",
-        username.trim()
-      );
-
+localStorage.setItem(
+  "clothSwapUserName",
+  data.user.name
+);
       const loginEmail =
         email.trim().toLowerCase();
 
@@ -378,13 +373,6 @@ console.log("LOGIN USER ROLE:", data.user.role);
         "clothswapUserEmail",
         loginEmail
       );
-
-      if (data.user && data.user.location) {
-        localStorage.setItem(
-          "clothswapUserLocation",
-          data.user.location
-        );
-      }
 
     if (data.user && data.user.location) {
   localStorage.setItem(
@@ -1193,38 +1181,6 @@ React.createElement(
   onSubmit: handleLogin,
   autoComplete: "off"
 },
-
-            React.createElement(
-              "div",
-              {
-                className: "clothswap-field"
-              },
-
-              React.createElement(
-                "label",
-                {
-                  className:
-                    "clothswap-field-label"
-                },
-                "Username"
-              ),
-
-             React.createElement("input", {
-  type: "text",
-  name: "clothswap-login-username",
-  autoComplete: "new-password",
-  readOnly: true,
-  onFocus: function (event) {
-    event.target.removeAttribute("readonly");
-  },
-  className: "clothswap-input",
-  placeholder: "Enter your username",
-  value: username,
-  onChange: function (event) {
-    setUsername(event.target.value);
-  }
-})
-            ),
 
             React.createElement(
               "div",
