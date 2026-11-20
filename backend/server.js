@@ -5349,10 +5349,8 @@ app.get("/api/clothes/:id/seller-profile", async function (req, res) {
           message: "Username, email and password are required"
         });
       }
-
-   const user = await User.findOne({
-  email: email.trim().toLowerCase(),
-  name: name.trim()
+const user = await User.findOne({
+  email: email.trim().toLowerCase()
 });
 
       if (!user) {
