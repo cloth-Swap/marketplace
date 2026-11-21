@@ -21933,4 +21933,19 @@ margin: 15px 0 20px auto;
     margin-top: 8px;
     box-shadow: none;
   }
+    /* Remove empty top navbar space on mobile */
+  .clothswap-navbar {
+    position: static !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .clothswap-navbar > .container-fluid {
+    min-height: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
 }
