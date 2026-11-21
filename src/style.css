@@ -21976,3 +21976,28 @@ margin: 15px 0 20px auto;
     transform: translateX(-100%) !important;
   }
 }
+/* MOBILE SIDEBAR POSITION FIX */
+@media screen and (max-width: 767px) {
+  .clothswap-page-layout {
+    min-height: 100vh !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  .clothswap-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    padding-top: 0 !important;
+    z-index: 10001 !important;
+  }
+
+  .clothswap-page-content {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    min-height: 100vh !important;
+  }
+}
