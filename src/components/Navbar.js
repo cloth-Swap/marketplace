@@ -912,7 +912,21 @@ React.createElement(
           onClick: closeMenu
         },
         "Nearby Swaps"
-      )
+      ),
+      React.createElement(
+  Link,
+  {
+    to: "/wishlist",
+    onClick: closeMenu
+  },
+  React.createElement("i", {
+    className: "bi bi-heart me-2"
+  }),
+  "Wishlist",
+  wishlistCount > 0
+    ? " (" + wishlistCount + ")"
+    : ""
+)
     )
 )
             )
