@@ -21933,19 +21933,25 @@ margin: 15px 0 20px auto;
     margin-top: 8px;
     box-shadow: none;
   }
-    /* Remove empty top navbar space on mobile */
-  .clothswap-navbar {
-    position: static !important;
-    min-height: 0 !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
+}
+/* MOBILE SIDEBAR - REMOVE TOP NAVBAR GAP */
+@media (max-width: 767px) {
+  .clothswap-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    width: 245px !important;
+    margin-top: 0 !important;
+    z-index: 10000 !important;
   }
 
-  .clothswap-navbar > .container-fluid {
-    min-height: 0 !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  .clothswap-sidebar-open {
+    width: 245px !important;
+  }
+
+  .clothswap-sidebar-collapsed {
+    width: 72px !important;
   }
 }
