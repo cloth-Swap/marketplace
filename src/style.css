@@ -21790,13 +21790,22 @@ margin: 15px 0 20px auto;
     gap: 0;
   }
 
-  .clothswap-mobile-nav-item {
-    flex: 1 1 0;
+ .clothswap-mobile-nav-item {
+    flex: 0 0 16.6666% !important;
+    width: 16.6666%;
     min-width: 0;
-    display: flex;
+    display: flex !important;
     justify-content: center;
+    align-items: center;
     position: relative;
-  }
+}
+
+.clothswap-mobile-bottom-nav > li:nth-child(4),
+.clothswap-mobile-bottom-nav > li:nth-child(5) {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
 
   .clothswap-mobile-nav-link {
     width: 100%;
@@ -21897,5 +21906,31 @@ margin: 15px 0 20px auto;
   /* Page content should not hide behind bottom navbar */
   body {
     padding-bottom: 75px;
+  }
+    /* Mobile Search Panel */
+  .clothswap-mobile-search-panel {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 80px;
+    z-index: 10000;
+    padding: 12px;
+    background: #ffffff;
+    border: 1px solid #eee5f0;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+  }
+
+  .clothswap-mobile-search-panel .clothswap-search-form {
+    width: 100%;
+  }
+
+  .clothswap-mobile-search-panel .clothswap-search-results {
+    position: static;
+    width: 100%;
+    max-height: 45vh;
+    overflow-y: auto;
+    margin-top: 8px;
+    box-shadow: none;
   }
 }

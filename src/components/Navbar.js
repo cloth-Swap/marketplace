@@ -163,6 +163,7 @@ const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     setSearchText("");
     setShowSearchResults(false);
     setMenuOpen(false);
+    setMobileSearchOpen(false);
     navigate(path);
   }
 
@@ -837,102 +838,283 @@ React.createElement(
                )
       ),
 
+   
       // Mobile Bottom Navbar
       React.createElement(
-        "ul",
-        {
-          className: "clothswap-mobile-bottom-nav"
-        },
-
-        mobileNavItem("/", "house-fill", "Home"),
-        mobileNavItem("/browse", "grid", "Browse"),
-        mobileNavItem("/swap-requests", "arrow-left-right", "Swaps"),
-        
+        React.Fragment,
+        null,
 
         React.createElement(
-  "li",
-  {
-    className: "clothswap-mobile-nav-item"
-  },
+          "ul",
+          {
+            className: "clothswap-mobile-bottom-nav"
+          },
 
-  React.createElement(
-    "button",
-    {
-      type: "button",
-      className:
-        "clothswap-mobile-nav-link " +
-        (moreOpen ? "active" : ""),
-      onClick: function () {
-        setMoreOpen(!moreOpen);
-        setMobileSearchOpen(false);
-      }
-    },
+          mobileNavItem("/", "house-fill", "Home"),
+          mobileNavItem("/browse", "grid", "Browse"),
+          mobileNavItem("/swap-requests", "arrow-left-right", "Swaps"),
 
-    React.createElement("i", {
-      className: "bi bi-three-dots",
-      style: { fontSize: "20px" }
-    }),
-
-    React.createElement(
-      "span",
-      { className: "clothswap-mobile-nav-label" },
-      "More"
-    )
-  ),
-
-  moreOpen &&
-    React.createElement(
-      "div",
-      {
-        className: "clothswap-mobile-more-menu"
-      },
-
-      React.createElement(
-        Link,
-        {
-          to: "/list-clothes",
-          onClick: closeMenu
-        },
-        "List Your Clothes"
-      ),
-
-      React.createElement(
-        Link,
-        {
-          to: "/swap-calculator",
-          onClick: closeMenu
-        },
-        "Swap Calculator"
-      ),
-
-      React.createElement(
-        Link,
-        {
-          to: "/location-matching",
-          onClick: closeMenu
-        },
-        "Nearby Swaps"
-      ),
-      React.createElement(
-  Link,
-  {
-    to: "/wishlist",
-    onClick: closeMenu
-  },
-  React.createElement("i", {
-    className: "bi bi-heart me-2"
-  }),
-  "Wishlist",
-  wishlistCount > 0
-    ? " (" + wishlistCount + ")"
-    : ""
-)
-    )
-)
+          // Mobile Search
+          React.createElement(
+            "li",
+            {
+              className: "clothswap-mobile-nav-item"
+            },
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                className:
+                  "clothswap-mobile-nav-link " +
+                  (mobileSearchOpen ? "active" : ""),
+                onClick: function () {
+                  setMobileSearchOpen(!mobileSearchOpen);
+                  setMoreOpen(false);
+                  setShowSearchResults(false);
+                },
+                "aria-label": "Search"
+              },
+              React.createElement(
+                "span",
+                { className: "clothswap-mobile-nav-icon" },
+                React.createElement("i", {
+                  className: "bi bi-search"
+                })
+              ),
+              React.createElement(
+                "span",
+                { className: "clothswap-mobile-nav-label" },
+                "Search"
+              )
             )
+          ),
+
+          // Mobile Notifications
+          React.createElement(
+            "li",
+            {
+              className: "clothswap-mobile-nav-item"
+            },
+            React.createElement(
+              Link,
+              {
+                to: "/notifications",
+                className:
+                  "clothswap-mobile-nav-link " +
+                  (location.pathname === "/notifications" ? "active" : ""),
+                onClick: closeMenu
+              },
+              React.createElement(
+                "span",
+                { className: "clothswap-mobile-nav-icon" },
+                React.createElement("i", {
+                  className: "bi bi-bell"
+                }),
+                notificationCount > 0 &&
+                  React.createElement(
+                    "span",
+                    { className: "notification-count-badge" },
+                    notificationCount
+                  )
+              ),
+              React.createElement(
+                "span",
+                { className: "clothswap-mobile-nav-label" },
+                "Notifications"
+              )
+            )
+          ),
+
+          // More Menu
+          React.createElement(
+            "li",
+            {
+              className: "clothswap-mobile-nav-item"
+            },
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                className:
+                  "clothswap-mobile-nav-link " +
+                  (moreOpen ? "active" : ""),
+                onClick: function () {
+                  setMoreOpen(!moreOpen);
+                  setMobileSearchOpen(false);
+                }
+              },
+              React.createElement(
+                "span",
+                { className: "clothswap-mobile-nav-icon" },
+                React.createElement("i", {
+                  className: "bi bi-three-dots"
+                })
+              ),
+              React.createElement(
+                "span",
+                { className: "clothswap-mobile-nav-label" },
+                "More"
+              )
+            ),
+
+            moreOpen &&
+              React.createElement(
+                "div",
+                {
+                  className: "clothswap-mobile-more-menu"
+                },
+
+                React.createElement(
+                  Link,
+                  {
+                    to: "/list-clothes",
+                    onClick: closeMenu
+                  },
+                  "List Your Clothes"
+                ),
+
+                React.createElement(
+                  Link,
+                  {
+                    to: "/swap-calculator",
+                    onClick: closeMenu
+                  },
+                  "Swap Calculator"
+                ),
+
+                React.createElement(
+                  Link,
+                  {
+                    to: "/location-matching",
+                    onClick: closeMenu
+                  },
+                  "Nearby Swaps"
+                ),
+
+                React.createElement(
+                  Link,
+                  {
+                    to: "/wishlist",
+                    onClick: closeMenu
+                  },
+                  React.createElement("i", {
+                    className: "bi bi-heart me-2"
+                  }),
+                  "Wishlist",
+                  wishlistCount > 0
+                    ? " (" + wishlistCount + ")"
+                    : ""
+                )
+              )
           )
-        )
-      
+        ),
+
+        // Mobile Search Panel
+        mobileSearchOpen &&
+          React.createElement(
+            "div",
+            {
+              className: "clothswap-mobile-search-panel"
+            },
+
+            React.createElement(
+              "form",
+              {
+                className: "clothswap-search-form",
+                onSubmit: handleSearchSubmit
+              },
+
+              React.createElement("i", {
+                className: "bi bi-search clothswap-search-icon"
+              }),
+
+              React.createElement("input", {
+                type: "text",
+                value: searchText,
+                autoFocus: true,
+                onChange: function (event) {
+                  setSearchText(event.target.value);
+                  setShowSearchResults(true);
+                },
+                placeholder: "Search ClothSwap...",
+                className: "clothswap-search-input",
+                "aria-label": "Search ClothSwap"
+              }),
+
+              searchText &&
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    className: "clothswap-search-clear",
+                    onClick: function () {
+                      setSearchText("");
+                      setShowSearchResults(false);
+                    }
+                  },
+                  React.createElement("i", {
+                    className: "bi bi-x"
+                  })
+                )
+            ),
+
+            showSearchResults &&
+              React.createElement(
+                "div",
+                {
+                  className: "clothswap-search-results"
+                },
+
+                searchResults.length > 0
+                  ? searchResults.map(function (page) {
+                      return React.createElement(
+                        "button",
+                        {
+                          type: "button",
+                          key: page.path,
+                          className: "clothswap-search-result",
+                          onClick: function () {
+                            setMobileSearchOpen(false);
+                            openSearchPage(page.path);
+                          }
+                        },
+                        React.createElement(
+                          "span",
+                          {
+                            className: "clothswap-search-result-icon"
+                          },
+                          React.createElement("i", {
+                            className: "bi bi-arrow-right-circle"
+                          })
+                        ),
+                        React.createElement(
+                          "span",
+                          {
+                            className: "clothswap-search-result-name"
+                          },
+                          page.name
+                        )
+                      );
+                    })
+                  : React.createElement(
+                      "div",
+                      {
+                        className: "clothswap-search-empty"
+                      },
+                      React.createElement("i", {
+                        className: "bi bi-search"
+                      }),
+                      React.createElement(
+                        "span",
+                        null,
+                        "No page found"
+                      )
+                    )
+              )
+          )
+      )
+    )
+  );
 }
 
 export default Navbar;
