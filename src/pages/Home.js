@@ -1,264 +1,264 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import FlowerEffect from "./FlowerEffect";
+  import React from "react";
+  import { Link } from "react-router-dom";
+  import FlowerEffect from "./FlowerEffect";
 
-function Home() {
-  const featuredClothes = [
-    {
-      title: "Floral Dress",
-      category: "Dresses",
-      condition: "Like New",
-      image:
-        "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=85"
-    },
-    {
-      title: "Classic Denim",
-      category: "Jeans",
-      condition: "Excellent",
-      image:
-        "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=85"
-    },
-    {
-      title: "Everyday Jacket",
-      category: "Jackets",
-      condition: "Very Good",
-      image:
-        "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=900&q=85"
-    },
-    {
-      title: "Casual Top",
-      category: "Tops",
-      condition: "Like New",
-      image:
-        "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85"
-    }
-  ];
-
-  const categories = [
-    {
-      name: "Dresses",
-      image:
-        "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=700&q=85"
-    },
-    {
-      name: "Tops",
-      image:
-        "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=700&q=85"
-    },
-    {
-      name: "Jeans",
-      image:
-        "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=700&q=85"
-    },
-    {
-      name: "Jackets",
-      image:
-        "https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?auto=format&fit=crop&w=700&q=85"
-    }
-  ];
-
-  const steps = [
-    {
-      number: "01",
-      title: "List",
-      text: "Add clothes from your wardrobe that you no longer wear."
-    },
-    {
-      number: "02",
-      title: "Discover",
-      text: "Browse clothing shared by other people in the community."
-    },
-    {
-      number: "03",
-      title: "Request",
-      text: "Send a swap request for something you'd love to exchange."
-    },
-    {
-      number: "04",
-      title: "Swap",
-      text: "Agree on the exchange and complete your clothing swap."
-    }
-  ];
-
-  const quickActions = [
-    {
-      number: "01",
-      icon: "👗",
-      title: "List Your Clothes",
-      text:
-        "Have something you no longer wear? Put it up for a swap.",
-      button: "Start listing",
-      path: "/list-clothes"
-    },
-    {
-      number: "02",
-      icon: "✦",
-      title: "Browse Clothes",
-      text:
-        "Explore clothes listed by people in the ClothSwap community.",
-      button: "Explore clothes",
-      path: "/browse"
-    },
-    {
-      number: "03",
-      icon: "↔",
-      title: "Swap Requests",
-      text:
-        "Check the requests you've sent or received from other users.",
-      button: "View requests",
-      path: "/swap-requests"
-    },
-    {
-      number: "04",
-      icon: "⌖",
-      title: "Nearby Swaps",
-      text:
-        "Discover clothing swaps happening around your location.",
-      button: "Explore nearby",
-      path: "/location-matching"
-    }
-  ];
-
-  return React.createElement(
-    "div",
-    {
-      className: "home-page home-new-page"
-    },
-
-    /* =====================================================
-       HERO
-       ===================================================== */
-
-    React.createElement(
-      "section",
+  function Home() {
+    const featuredClothes = [
       {
-        className: "home-new-hero"
+        title: "Floral Dress",
+        category: "Dresses",
+        condition: "Like New",
+        image:
+          "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=85"
+      },
+      {
+        title: "Classic Denim",
+        category: "Jeans",
+        condition: "Excellent",
+        image:
+          "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=85"
+      },
+      {
+        title: "Everyday Jacket",
+        category: "Jackets",
+        condition: "Very Good",
+        image:
+          "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=900&q=85"
+      },
+      {
+        title: "Casual Top",
+        category: "Tops",
+        condition: "Like New",
+        image:
+          "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85"
+      }
+    ];
+
+    const categories = [
+      {
+        name: "Dresses",
+        image:
+          "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=700&q=85"
+      },
+      {
+        name: "Tops",
+        image:
+          "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=700&q=85"
+      },
+      {
+        name: "Jeans",
+        image:
+          "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=700&q=85"
+      },
+      {
+        name: "Jackets",
+        image:
+          "https://images.unsplash.com/photo-1521223890158-f9f7c3d5d504?auto=format&fit=crop&w=700&q=85"
+      }
+    ];
+
+    const steps = [
+      {
+        number: "01",
+        title: "List",
+        text: "Add clothes from your wardrobe that you no longer wear."
+      },
+      {
+        number: "02",
+        title: "Discover",
+        text: "Browse clothing shared by other people in the community."
+      },
+      {
+        number: "03",
+        title: "Request",
+        text: "Send a swap request for something you'd love to exchange."
+      },
+      {
+        number: "04",
+        title: "Swap",
+        text: "Agree on the exchange and complete your clothing swap."
+      }
+    ];
+
+    const quickActions = [
+      {
+        number: "01",
+        icon: "👗",
+        title: "List Your Clothes",
+        text:
+          "Have something you no longer wear? Put it up for a swap.",
+        button: "Start listing",
+        path: "/list-clothes"
+      },
+      {
+        number: "02",
+        icon: "✦",
+        title: "Browse Clothes",
+        text:
+          "Explore clothes listed by people in the ClothSwap community.",
+        button: "Explore clothes",
+        path: "/browse"
+      },
+      {
+        number: "03",
+        icon: "↔",
+        title: "Swap Requests",
+        text:
+          "Check the requests you've sent or received from other users.",
+        button: "View requests",
+        path: "/swap-requests"
+      },
+      {
+        number: "04",
+        icon: "⌖",
+        title: "Nearby Swaps",
+        text:
+          "Discover clothing swaps happening around your location.",
+        button: "Explore nearby",
+        path: "/location-matching"
+      }
+    ];
+
+    return React.createElement(
+      "div",
+      {
+        className: "home-page home-new-page"
       },
 
-      React.createElement(FlowerEffect),
+      /* =====================================================
+        HERO
+        ===================================================== */
 
       React.createElement(
-        "div",
+        "section",
         {
-          className: "home-new-hero-content"
+          className: "home-new-hero"
         },
 
-        /* HERO TEXT */
+        React.createElement(FlowerEffect),
 
         React.createElement(
           "div",
           {
-            className: "home-new-hero-copy"
+            className: "home-new-hero-content"
           },
 
-          React.createElement(
-            "div",
-            {
-              className: "home-new-hero-label"
-            },
-            "CLOTHSWAP MARKETPLACE"
-          ),
-
-          React.createElement(
-            "h1",
-            null,
-            "SWAP SOMETHING.",
-            React.createElement("br"),
-            React.createElement(
-              "span",
-              null,
-              "FIND SOMETHING BETTER."
-            )
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            "A smarter way to refresh your wardrobe. ",
-            "Exchange clothes you no longer wear for pieces you'll actually love."
-          ),
+          /* HERO TEXT */
 
           React.createElement(
             "div",
             {
-              className: "home-new-hero-actions"
+              className: "home-new-hero-copy"
             },
 
             React.createElement(
-              Link,
+              "div",
               {
-                to: "/browse",
-                className: "home-new-primary-btn"
+                className: "home-new-hero-label"
               },
-              "BROWSE CLOTHES",
+              "CLOTHSWAP MARKETPLACE"
+            ),
+
+            React.createElement(
+              "h1",
+              null,
+              "SWAP SOMETHING.",
+              React.createElement("br"),
               React.createElement(
                 "span",
                 null,
-                "→"
+                "FIND SOMETHING BETTER."
               )
             ),
 
             React.createElement(
-              Link,
-              {
-                to: "/list-clothes",
-                className: "home-new-secondary-btn"
-              },
-              "LIST YOUR CLOTHES"
-            )
-          )
-        ),
-
-        /* HERO IMAGE */
-
-        React.createElement(
-          "div",
-          {
-            className: "home-new-hero-visual"
-          },
-
-          React.createElement("img", {
-            src:
-              "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=90",
-            alt: "Fashion clothing"
-          }),
-
-          /* ORIGINAL STYLE BOX 1 */
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "home-new-fashion-box home-new-fashion-box-one"
-            },
-
-            React.createElement(
-              "span",
-              {
-                className: "home-new-box-icon"
-              },
-              "↻"
+              "p",
+              null,
+              "A smarter way to refresh your wardrobe. ",
+              "Exchange clothes you no longer wear for pieces you'll actually love."
             ),
 
             React.createElement(
               "div",
-              null,
+              {
+                className: "home-new-hero-actions"
+              },
 
               React.createElement(
-                "strong",
-                null,
-                "Give Fashion",
-                React.createElement("br"),
-                "Another Life"
+                Link,
+                {
+                  to: "/browse",
+                  className: "home-new-primary-btn"
+                },
+                "BROWSE CLOTHES",
+                React.createElement(
+                  "span",
+                  null,
+                  "→"
+                )
               ),
 
               React.createElement(
-                "small",
-                null,
-                "Swap • Rewear • Repeat"
+                Link,
+                {
+                  to: "/list-clothes",
+                  className: "home-new-secondary-btn"
+                },
+                "LIST YOUR CLOTHES"
               )
             )
           ),
+
+          /* HERO IMAGE */
+
+          React.createElement(
+            "div",
+            {
+              className: "home-new-hero-visual"
+            },
+
+            React.createElement("img", {
+              src:
+                "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=90",
+              alt: "Fashion clothing"
+            }),
+
+            /* ORIGINAL STYLE BOX 1 */
+
+            React.createElement(
+              "div",
+              {
+                className:
+                  "home-new-fashion-box home-new-fashion-box-one"
+              },
+
+              React.createElement(
+                "span",
+                {
+                  className: "home-new-box-icon"
+                },
+                "↻"
+              ),
+
+              React.createElement(
+                "div",
+                null,
+
+                React.createElement(
+                  "strong",
+                  null,
+                  "Give Fashion",
+                  React.createElement("br"),
+                  "Another Life"
+                ),
+
+                React.createElement(
+                  "small",
+                  null,
+                  "Swap • Rewear • Repeat"
+                )
+              )
+            ),
 
           /* ORIGINAL STYLE BOX 2 */
 
