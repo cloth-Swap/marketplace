@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import API_URL from "../api";
 import ExcelJS from "exceljs";
@@ -5,69 +6,111 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import "../style.css";
 
-function AdminPanel() {
-  const [clothes, setClothes] = useState([]);
-  const [listingSearch, setListingSearch] = useState("");
-const [listingCategoryFilter, setListingCategoryFilter] = useState("All");
-const [listingLocationFilter, setListingLocationFilter] = useState("All");
-const [listingSortBy, setListingSortBy] = useState("Newest First");
-const [listingPage, setListingPage] = useState(1);
-const [listingPageSize, setListingPageSize] = useState(10);
-  const [swapRequests, setSwapRequests] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [listingsLoading, setListingsLoading] = useState(true);
-  const [swapRequestsLoading, setSwapRequestsLoading] = useState(true);
-  
-  const [disputes, setDisputes] = useState([]);
-  const [disputesLoading, setDisputesLoading] = useState(true);
-  const [reportedListings, setReportedListings] = useState([]);
-  const [reportedListingsLoading, setReportedListingsLoading] = useState(true);
-  const [removedClothes, setRemovedClothes] = useState([]);
-const [removedClothesLoading, setRemovedClothesLoading] = useState(true);
-  const [selectedReports, setSelectedReports] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(true);
-  const [dashboardCounts, setDashboardCounts] = useState(function () {
-  try {
-    return JSON.parse(
-      localStorage.getItem("clothswapAdminDashboardCounts") || "{}"
-    );
-  } catch (error) {
-    return {};
-  }
-});
+// Admin Panel data cache
+const adminPanelCache = {
+  clothes: undefined,
+  swapRequests: undefined,
+  users: undefined,
+  disputes: undefined,
+  reportedListings: undefined,
+  removedClothes: undefined
+};
 
-useEffect(() => {
-  localStorage.setItem(
-    "clothswapAdminDashboardCounts",
-    JSON.stringify(dashboardCounts)
-  );
-}, [dashboardCounts]);
+function AdminPanel() {
+
+  // Data states
+  const [clothes, setClothes] = useState(() => adminPanelCache.clothes || []);
+  const [swapRequests, setSwapRequests] = useState(() => adminPanelCache.swapRequests || []);
+  const [users, setUsers] = useState(() => adminPanelCache.users || []);
+
+  const [listingsLoading, setListingsLoading] = useState(() => !Array.isArray(adminPanelCache.clothes));
+  const [swapRequestsLoading, setSwapRequestsLoading] = useState(() => !Array.isArray(adminPanelCache.swapRequests));
+
+  const [disputes, setDisputes] = useState(() => adminPanelCache.disputes || []);
+  const [disputesLoading, setDisputesLoading] = useState(() => !Array.isArray(adminPanelCache.disputes));
+
+  const [reportedListings, setReportedListings] = useState(() => adminPanelCache.reportedListings || []);
+  const [reportedListingsLoading, setReportedListingsLoading] = useState(() => !Array.isArray(adminPanelCache.reportedListings));
+
+  const [removedClothes, setRemovedClothes] = useState(() => adminPanelCache.removedClothes || []);
+  const [removedClothesLoading, setRemovedClothesLoading] = useState(() => !Array.isArray(adminPanelCache.removedClothes));
+
+  const [selectedReports, setSelectedReports] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(() => !Array.isArray(adminPanelCache.users));
+
+  const [dashboardCounts, setDashboardCounts] = useState(function () {
+    try {
+      return JSON.parse(
+        localStorage.getItem("clothswapAdminDashboardCounts") || "{}"
+      );
+    } catch (error) {
+      return {};
+    }
+  });
+
+  // Existing filter and selection states
   const [userSearch, setUserSearch] = useState("");
   const [userStatusFilter, setUserStatusFilter] = useState("All");
   const [userSortBy, setUserSortBy] = useState("Newest Users");
   const [swapStatusFilter, setSwapStatusFilter] = useState("All");
   const [disputeStatusFilter, setDisputeStatusFilter] = useState("All");
-const [disputeSearch, setDisputeSearch] = useState("");
-const [selectedDisputes, setSelectedDisputes] = useState([]);
-const [showDisputeCheckboxes, setShowDisputeCheckboxes] = useState(false);
-const [selectedDisputeHistory, setSelectedDisputeHistory] = useState(null);
-const [selectedOverviewHistory, setSelectedOverviewHistory] = useState(null);
-const [selectedDisputeImages, setSelectedDisputeImages] = useState([]);
-const [showReportCheckboxes, setShowReportCheckboxes] = useState(false);
+  const [disputeSearch, setDisputeSearch] = useState("");
+  const [selectedDisputes, setSelectedDisputes] = useState([]);
+  const [showDisputeCheckboxes, setShowDisputeCheckboxes] = useState(false);
+  const [selectedDisputeHistory, setSelectedDisputeHistory] = useState(null);
+  const [selectedOverviewHistory, setSelectedOverviewHistory] = useState(null);
+  const [selectedDisputeImages, setSelectedDisputeImages] = useState([]);
+  const [showReportCheckboxes, setShowReportCheckboxes] = useState(false);
+  const [listingSearch, setListingSearch] = useState("");
+const [listingCategoryFilter, setListingCategoryFilter] = useState("All");
+const [listingLocationFilter, setListingLocationFilter] = useState("All");
+const [listingSortBy, setListingSortBy] = useState("Newest First");
+  const [listingPage, setListingPage] = useState(1);
+const [listingPageSize, setListingPageSize] = useState(10);
 
- useEffect(() => {
-  loadAdminData();
-  loadUsers();
-  loadDisputes();
-  loadReportedListings();
-  loadRemovedClothes();
 
-  const interval = setInterval(() => {
+  // Sync data with cache
+  useEffect(() => {
+    adminPanelCache.clothes = clothes;
+    adminPanelCache.swapRequests = swapRequests;
+    adminPanelCache.users = users;
+    adminPanelCache.disputes = disputes;
+    adminPanelCache.reportedListings = reportedListings;
+    adminPanelCache.removedClothes = removedClothes;
+  }, [
+    clothes,
+    swapRequests,
+    users,
+    disputes,
+    reportedListings,
+    removedClothes
+  ]);
+
+  // Save dashboard counts
+  useEffect(() => {
+    localStorage.setItem(
+      "clothswapAdminDashboardCounts",
+      JSON.stringify(dashboardCounts)
+    );
+  }, [dashboardCounts]);
+
+  // Load admin data
+  useEffect(() => {
     loadAdminData();
-  }, 30000);
+    loadUsers();
+    loadDisputes();
+    loadReportedListings();
+    loadRemovedClothes();
 
-  return () => clearInterval(interval);
-}, []);
+    const interval = setInterval(() => {
+      loadAdminData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Tamaro baki no existing AdminPanel code ahi thi continue thase...
+
 function updateDashboardCounts(newCounts) {
   setDashboardCounts(function (previous) {
     return {
@@ -147,64 +190,60 @@ function loadAdminData() {
   loadSwapRequestsData();
 }
 
-  async function loadUsers() {
-    try {
-      setUsersLoading(true);
+async function loadUsers() {
+  try {
+    // Background refresh ma loading true nahi karvanu
 
-     const response = await fetch(
-`${API_URL}/api/admin/users`,
-  {
-    headers: {
-      Authorization:
-        "Bearer " +
-        localStorage.getItem("clothswapToken")
-    }
-  }
-);
-
-      const data = await response.json();
-
-      if (
-        response.ok &&
-        data &&
-        Array.isArray(data.users)
-      ) {
-        setUsers(data.users);
-        updateDashboardCounts({
-  totalUsers: data.users.length,
-
-  activeUsers: data.users.filter(function (user) {
-    return user.status === "Active";
-  }).length,
-
-  blockedUsers: data.users.filter(function (user) {
-    return user.status === "Blocked";
-  }).length
-});
-      } else {
-        setUsers([]);
+    const response = await fetch(
+      `${API_URL}/api/admin/users`,
+      {
+        headers: {
+          Authorization:
+            "Bearer " + localStorage.getItem("clothswapToken")
+        }
       }
-    } catch (error) {
-      console.log("Users loading error:", error);
-      setUsers([]);
-    } finally {
-      setUsersLoading(false);
+    );
+
+    const data = await response.json();
+
+    if (
+      response.ok &&
+      data &&
+      Array.isArray(data.users)
+    ) {
+      setUsers(data.users);
+
+      updateDashboardCounts({
+        totalUsers: data.users.length,
+
+        activeUsers: data.users.filter(function (user) {
+          return user.status === "Active";
+        }).length,
+
+        blockedUsers: data.users.filter(function (user) {
+          return user.status === "Blocked";
+        }).length
+      });
     }
+  } catch (error) {
+    console.log("Users loading error:", error);
+  } finally {
+    setUsersLoading(false);
   }
+}
 
 
 async function loadDisputes() {
   try {
-   const response = await fetch(
-  `${API_URL}/api/admin/disputes`,
-  {
-    headers: {
-      Authorization:
-        "Bearer " +
-        localStorage.getItem("clothswapToken")
-    }
-  }
-);
+    const response = await fetch(
+      `${API_URL}/api/admin/disputes`,
+      {
+        headers: {
+          Authorization:
+            "Bearer " + localStorage.getItem("clothswapToken")
+        }
+      }
+    );
 
     const data = await response.json();
 
@@ -214,33 +253,29 @@ async function loadDisputes() {
       Array.isArray(data.disputes)
     ) {
       setDisputes(data.disputes);
+
       const activeDisputesList = data.disputes.filter(
-  function (dispute) {
-    return !dispute.isDeleted;
-  }
-);
+        function (dispute) {
+          return !dispute.isDeleted;
+        }
+      );
 
-updateDashboardCounts({
-  totalDisputes: data.disputes.length,
-
-  pendingDisputes: activeDisputesList.filter(
-    function (dispute) {
-      return dispute.status === "Pending";
+      updateDashboardCounts({
+        totalDisputes: data.disputes.length,
+        pendingDisputes: activeDisputesList.filter(
+          function (dispute) {
+            return dispute.status === "Pending";
+          }
+        ).length,
+        resolvedDisputes: activeDisputesList.filter(
+          function (dispute) {
+            return dispute.status === "Resolved";
+          }
+        ).length
+      });
     }
-  ).length,
-
-  resolvedDisputes: activeDisputesList.filter(
-    function (dispute) {
-      return dispute.status === "Resolved";
-    }
-  ).length
-});
-    } else {
-      setDisputes([]);
-    }
-    } catch (error) {
+  } catch (error) {
     console.log("Disputes loading error:", error);
-    setDisputes([]);
   } finally {
     setDisputesLoading(false);
   }
@@ -252,8 +287,7 @@ async function loadReportedListings() {
       {
         headers: {
           Authorization:
-            "Bearer " +
-            localStorage.getItem("clothswapToken")
+            "Bearer " + localStorage.getItem("clothswapToken")
         }
       }
     );
@@ -266,28 +300,23 @@ async function loadReportedListings() {
       Array.isArray(data.reports)
     ) {
       setReportedListings(data.reports);
-    } else {
-      setReportedListings([]);
     }
-   } catch (error) {
+  } catch (error) {
     console.log("Reported listings loading error:", error);
-    setReportedListings([]);
   } finally {
     setReportedListingsLoading(false);
   }
 }
-  
 async function loadRemovedClothes() {
   try {
-    setRemovedClothesLoading(true);
+    // Background refresh ma loading true nahi karvanu
 
     const response = await fetch(
       `${API_URL}/api/admin/clothes`,
       {
         headers: {
           Authorization:
-            "Bearer " +
-            localStorage.getItem("clothswapToken")
+            "Bearer " + localStorage.getItem("clothswapToken")
         }
       }
     );
@@ -300,17 +329,15 @@ async function loadRemovedClothes() {
       Array.isArray(data.clothes)
     ) {
       setRemovedClothes(data.clothes);
-    } else {
-      setRemovedClothes([]);
     }
 
   } catch (error) {
     console.log("Removed clothing history error:", error);
-    setRemovedClothes([]);
   } finally {
     setRemovedClothesLoading(false);
   }
 }
+
   const pendingRequests = swapRequests.filter(function (request) {
     return request.status === "Pending";
   });

@@ -1,6 +1,8 @@
+
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import API_URL from "../api";
+
 const CHAT_WARNING =
   "This chat is only for ClothSwap-related communication.";
 
@@ -9,6 +11,8 @@ function isClothSwapRelatedMessage(message) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+
+  if (!text) return false;
 
   const blockedPatterns = [
     /\bi\s+love\s+you\b/,
@@ -33,19 +37,13 @@ function isClothSwapRelatedMessage(message) {
     /\byour\s+snapchat\b/
   ];
 
-  if (blockedPatterns.some(function (pattern) {
+  return !blockedPatterns.some(function (pattern) {
     return pattern.test(text);
-  })) {
-    return false;
-  }
-
-  const allowedTopics =
-    /\b(cloth|clothes|clothing|kapda|kapde|dress|shirt|t-shirt|jeans|kurti|top|jacket|trouser|shoes|item|listing|photo|picture|pic|size|colour|color|condition|quality|brand|swap|swapping|exchange|offer|request|value|price|courier|delivery|deliver|parcel|shipment|shipping|tracking|dispatch|pickup|pick up|hand to hand|local exchange|meeting|meet|location|address|place|date|time|tomorrow|today|otp|received|send|share|available|packing|pack)\b/i;
-
-  const shortReplies =
-  /^(ok|okay|okey|ohk|okk|yes|no|yep|nope|sure|fine|alright|all right|right|hmm|hm|hmmm|acha|accha|achha|saru|saras|barabar|thik|thik che|theek hai|ha|haa|han|haan|na|naa|kem cho|majama|maja ma|good|nice|great|hello|hi|hey|bye|good morning|good afternoon|good evening|good night|thanks|thank you|thankyou|thank u|thnx|welcome|you're welcome|ur welcome|please|pls|noted|got it|understood|done|perfect|no problem|its okay|it's okay|koi baat nahi|koi problem nahi|sorry|my bad|haha|hehe|lol|😂|👍|🙏)[.!?, ]*$/i;  return allowedTopics.test(text) || shortReplies.test(text);
+  });
 }
+
 function Chat() {
+
   const [searchParams] = useSearchParams();
   const requestId = searchParams.get("requestId");
 
@@ -189,10 +187,10 @@ function Chat() {
       console.log("SENDING MESSAGE REQUEST");
       const response = await fetch(`${API_URL}/api/messages`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        
+       headers: {
+  "Content-Type": "application/json",
+  "Authorization": "Bearer " + localStorage.getItem("clothswapToken")
+},
 body: JSON.stringify({
   swapRequestId: requestId,
   sender: currentUser,
