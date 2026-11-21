@@ -21955,3 +21955,24 @@ margin: 15px 0 20px auto;
     width: 72px !important;
   }
 }
+/* MOBILE SIDEBAR - REMOVE TOP GAP */
+@media (max-width: 767px) {
+  .clothswap-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    margin: 0 !important;
+    z-index: 10000 !important;
+  }
+
+  .clothswap-sidebar-open {
+    width: 245px !important;
+    transform: translateX(0) !important;
+  }
+
+  .clothswap-sidebar-collapsed {
+    transform: translateX(-100%) !important;
+  }
+}
