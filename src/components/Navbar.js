@@ -10,6 +10,8 @@ function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const searchPages = [
     {
@@ -344,15 +346,41 @@ useEffect(
   },
   [location.pathname]
 );
+function closeMenu() {
+  setMenuOpen(false);
+  setMoreOpen(false);
+  setMobileSearchOpen(false);
+}
+function mobileNavItem(path, icon, label) {
+  const isActive = location.pathname === path;
 
+  return React.createElement(
+    "li",
+    {
+      className: "clothswap-mobile-nav-item",
+      key: path
+    },
+    React.createElement(
+      Link,
+      {
+        to: path,
+        className: `clothswap-mobile-nav-link ${isActive ? "active" : ""}`,
+        onClick: closeMenu
+      },
+      React.createElement(
+  "span",
+  { className: "clothswap-mobile-nav-icon" },
+  React.createElement("i", {
+    className: "bi bi-" + icon
+  })
+),
+      React.createElement("span", { className: "clothswap-mobile-nav-label" }, label)
+    )
+  );
+}
 
-
-  function closeMenu() {
-    setMenuOpen(false);
-  }
-
-
-  function navLink(path, text, extraClass) {
+function navLink(path, text, extraClass) {
+  // Ahiya tamaro existing navLink no code j rehva devo
     return React.createElement(
       "li",
       {
@@ -806,10 +834,91 @@ React.createElement(
                   "Register"
                 )
               )
-        )
+               )
+      ),
+
+      // Mobile Bottom Navbar
+      React.createElement(
+        "ul",
+        {
+          className: "clothswap-mobile-bottom-nav"
+        },
+
+        mobileNavItem("/", "house-fill", "Home"),
+        mobileNavItem("/browse", "grid", "Browse"),
+        mobileNavItem("/swap-requests", "arrow-left-right", "Swaps"),
+        
+
+        React.createElement(
+  "li",
+  {
+    className: "clothswap-mobile-nav-item"
+  },
+
+  React.createElement(
+    "button",
+    {
+      type: "button",
+      className:
+        "clothswap-mobile-nav-link " +
+        (moreOpen ? "active" : ""),
+      onClick: function () {
+        setMoreOpen(!moreOpen);
+        setMobileSearchOpen(false);
+      }
+    },
+
+    React.createElement("i", {
+      className: "bi bi-three-dots",
+      style: { fontSize: "20px" }
+    }),
+
+    React.createElement(
+      "span",
+      { className: "clothswap-mobile-nav-label" },
+      "More"
+    )
+  ),
+
+  moreOpen &&
+    React.createElement(
+      "div",
+      {
+        className: "clothswap-mobile-more-menu"
+      },
+
+      React.createElement(
+        Link,
+        {
+          to: "/list-clothes",
+          onClick: closeMenu
+        },
+        "List Your Clothes"
+      ),
+
+      React.createElement(
+        Link,
+        {
+          to: "/swap-calculator",
+          onClick: closeMenu
+        },
+        "Swap Calculator"
+      ),
+
+      React.createElement(
+        Link,
+        {
+          to: "/location-matching",
+          onClick: closeMenu
+        },
+        "Nearby Swaps"
       )
     )
-  );
+)
+            )
+          )
+        )
+      
 }
 
 export default Navbar;
