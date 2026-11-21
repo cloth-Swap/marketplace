@@ -272,8 +272,9 @@ router.put(
         }
 
         shipment.otpVerified = true;
-        shipment.parcelArrived = true;
-        shipment.status = "Arrived";
+shipment.parcelArrived = true;
+shipment.status = "Arrived";
+shipment.arrivedAt = new Date();
       }
 
       else if (status === "Delivered") {
@@ -811,9 +812,11 @@ router.post(
       }
 
       shipment.otpVerified = true;
-      shipment.status = "Arrived";
+shipment.status = "Arrived";
+shipment.parcelArrived = true;
+shipment.arrivedAt = new Date();
 
-      await shipment.save();
+await shipment.save();
 
       return res.json({
         success: true,

@@ -337,10 +337,10 @@ async function checkCourierReceiverDeadlines() {
   try {
     const now = Date.now();
 
-    const shipments = await Shipment.find({
-      deliveryConfirmed: true,
-      deliveredAt: { $ne: null }
-    });
+  const shipments = await Shipment.find({
+  receiverEmail: email,
+  receiverConfirmationOverdue: true
+});
 
     for (const shipment of shipments) {
       try {
@@ -377,14 +377,13 @@ async function checkCourierReceiverDeadlines() {
           continue;
         }
 
-        const deliveredAt = new Date(shipment.deliveredAt).getTime();
+const arrivedAt = new Date(shipment.arrivedAt).getTime();
 
         if (!Number.isFinite(deliveredAt)) {
           continue;
         }
 
-        const elapsedHours =
-          (now - deliveredAt) / (60 * 60 * 1000);
+       const elapsedHours = (now - arrivedAt) / (60 * 60 * 1000);
 
         // 24-hour reminder to receiver only.
         if (

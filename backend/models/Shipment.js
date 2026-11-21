@@ -126,6 +126,10 @@ senderNotified: {
       type: Date,
       default: null
     },
+    arrivedAt: {
+  type: Date,
+  default: null
+},
     // Courier Receiver 48 Hours Confirmation System
 
 receiverReminder24Sent: {
