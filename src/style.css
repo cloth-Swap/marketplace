@@ -22636,3 +22636,49 @@ margin: 15px 0 20px auto;
     width: 100%;
   }
 }
+/* FIX: REGISTER PAGE MOBILE LAYOUT */
+@media (max-width: 680px) {
+
+  .register-visual {
+    display: none !important;
+  }
+
+  .register-main-card {
+    display: block;
+    background: rgba(255, 255, 255, 0.94);
+  }
+
+  .register-form-side {
+    padding: 35px 23px 30px;
+  }
+
+}
+/* MOBILE REGISTER PAGE - DUPLICATE TEXT FIX */
+
+@media (max-width: 768px) {
+
+  /* Keep full-page background image */
+  .register-visual {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Hide duplicate text over background */
+  .register-visual-overlay {
+    display: none !important;
+  }
+
+  /* Keep form above background */
+  .register-form-side {
+    position: relative;
+    z-index: 2;
+    grid-column: 1 / -1;
+  }
+
+  /* Clear readable form card */
+  .register-form-inner {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.90);
+  }
+}
