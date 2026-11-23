@@ -238,20 +238,29 @@ useEffect(function () {
       window.__clothSwapGoogleClientId = clientId;
     }
 
-    googleButtonRef.current.innerHTML = "";
+   const availableWidth = Math.floor(
+  googleButtonRef.current.getBoundingClientRect().width
+);
 
-    window.google.accounts.id.renderButton(
-      googleButtonRef.current,
-      {
-        type: "standard",
-        theme: "outline",
-        size: "medium",
-          width: 360,
-        text: "signin_with",
-        shape: "pill",
-        logo_alignment: "left"
-      }
-    );
+const buttonWidth = Math.max(
+  120,
+  Math.min(400, availableWidth || 360)
+);
+
+googleButtonRef.current.innerHTML = "";
+
+window.google.accounts.id.renderButton(
+  googleButtonRef.current,
+  {
+    type: "standard",
+    theme: "outline",
+    size: "medium",
+    width: buttonWidth,
+    text: "signin_with",
+    shape: "pill",
+    logo_alignment: "left"
+  }
+);
   };
 
   if (
@@ -974,6 +983,48 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   visibility: hidden;
   display: none !important;
   pointer-events: none;
+  /* Mobile Google button fix */
+.clothswap-google-area {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: visible;
+  box-sizing: border-box;
+}
+
+.clothswap-login-card {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.clothswap-divider {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.clothswap-divider span {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .clothswap-google-area {
+    padding: 0;
+  }
+
+  .clothswap-divider {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
 }`;
 
   return React.createElement(
