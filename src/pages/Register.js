@@ -220,8 +220,8 @@ useEffect(function () {
 );
 
 const buttonWidth = Math.max(
-  120,
-  Math.min(400, availableWidth || 360)
+  200,
+  Math.min(400, (availableWidth || 360) - 20)
 );
 
 googleButtonRef.current.innerHTML = "";
@@ -456,11 +456,7 @@ navigate("/login");
     box-sizing: border-box;
   }
 
-  .register-google-area iframe {
-    max-width: 100% !important;
-  }
-
-  .register-google-divider {
+    .register-google-divider {
     width: 100%;
     min-width: 0;
     display: flex;
