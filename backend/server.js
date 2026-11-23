@@ -338,8 +338,8 @@ async function checkCourierReceiverDeadlines() {
     const now = Date.now();
 
   const shipments = await Shipment.find({
-  receiverEmail: email,
-  receiverConfirmationOverdue: true
+  receiverEmail: { $exists: true, $ne: "" },
+  arrivedAt: { $exists: true, $ne: null }
 });
 
     for (const shipment of shipments) {
@@ -379,9 +379,9 @@ async function checkCourierReceiverDeadlines() {
 
 const arrivedAt = new Date(shipment.arrivedAt).getTime();
 
-        if (!Number.isFinite(deliveredAt)) {
-          continue;
-        }
+if (!Number.isFinite(arrivedAt)) {
+  continue;
+}
 
        const elapsedHours = (now - arrivedAt) / (60 * 60 * 1000);
 

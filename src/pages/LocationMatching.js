@@ -289,12 +289,11 @@ function toggleWishlist(item) {
         "div",
         { className: "location-matching-header" },
 
-        React.createElement(
-          "div",
-          { className: "location-matching-label" },
-          "📍 CLOTHSWAP"
-        ),
-
+      React.createElement(
+  "span",
+  { className: "clothswap-brand-label" },
+  "♻️ CLOTHSWAP MARKETPLACE"
+),
         React.createElement(
           "h1",
           null,

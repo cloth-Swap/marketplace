@@ -448,9 +448,7 @@ navigate("/login");
         React.createElement(
           "img",
           {
-            src:
-              "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=1200&q=90",
-
+src: "https://thumbnail.coupangcdn.com/thumbnails/remote/1920x1920ex/image/sd_image/fef3/7d7704e2d9e22665ffd17f45a81dd34864272be5cc3d395877494b9f88bf.png",
             alt:
               "Clothing collection"
           }

@@ -269,7 +269,7 @@ function Sidebar() {
 localStorage.getItem("clothswapIsAdmin") === "true" &&
   menuItem(
     "📊",
-    "CEO Dashboard",
+    "Admin Dashboard",
     "/admin-dashboard"
   ),
         

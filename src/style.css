@@ -14900,35 +14900,6 @@ video + div button:last-child {
    Modern + Premium Fashion Design
    ========================================================= */
 
-.register-page-new {
-  min-height: 100vh;
-  padding: 55px 24px;
-  box-sizing: border-box;
-
-  background:
-    radial-gradient(
-      circle at 12% 15%,
-      rgba(255, 190, 220, 0.45),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 88% 85%,
-      rgba(205, 180, 240, 0.40),
-      transparent 32%
-    ),
-    linear-gradient(
-      135deg,
-      #fde8f1 0%,
-      #f7edf9 48%,
-      #eadcf7 100%
-    );
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-
 /* =========================
    MAIN CARD
 ========================= */
@@ -14968,12 +14939,6 @@ video + div button:last-child {
     0 38px 90px rgba(92, 60, 110, 0.19),
     0 12px 30px rgba(92, 60, 110, 0.08);
 }
-
-
-/* =========================
-   IMAGE SIDE
-========================= */
-
 .register-visual {
   position: relative;
   min-height: 700px;
@@ -14998,11 +14963,6 @@ video + div button:last-child {
 .register-visual img {
   transform: scale(1.035);
 }
-
-
-/* =========================
-   IMAGE OVERLAY
-========================= */
 
 .register-visual::after {
   content: "";
@@ -21997,4 +21957,261 @@ margin: 15px 0 20px auto;
   body .clothswap-page-layout .clothswap-sidebar-collapsed {
     transform: translateX(-100%) !important;
   }
+}
+
+/* =========================================
+   CLOTHSWAP REGISTER - NEW PASTEL DESIGN
+   ========================================= */
+
+.register-page-new {
+  min-height: 100vh;
+  padding: 35px;
+  background:
+    radial-gradient(circle at 5% 5%, #f7cce8 0%, transparent 35%),
+    radial-gradient(circle at 95% 90%, #d9c5f4 0%, transparent 35%),
+    linear-gradient(135deg, #fce8f3, #f2e4fa, #f9eaf3);
+}
+
+.register-main-card {
+  max-width: 1450px;
+  min-height: 750px;
+  grid-template-columns: 52% 48%;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+
+.register-main-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.register-visual {
+  min-height: 750px;
+  background: transparent;
+}
+
+.register-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
+.register-visual-overlay {
+  padding: 45px;
+}
+
+.register-visual-tag {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  color: #814b85;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  backdrop-filter: blur(8px);
+}
+.register-visual-content {
+  color: #63376b;
+}
+
+.register-visual-content p {
+  margin: 0 0 13px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  color: #a4549a;
+}
+
+.register-visual-content h2 {
+  margin: 0;
+  font-size: clamp(34px, 3.3vw, 54px);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -1.8px;
+  color: #63376b;
+}
+
+.register-visual-content span {
+  display: block;
+  margin-top: 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #805c83;
+}
+
+.register-form-side {
+  padding: 45px;
+}
+
+.register-form-inner {
+  max-width: 570px;
+  padding: 42px;
+  border-radius: 30px;
+  background: rgba(255,255,255,0.48);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 18px 55px rgba(130,75,135,0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.register-heading h1 {
+  color: #492252;
+}
+
+.register-heading p {
+  color: #765c7c;
+}
+
+.register-field label {
+  color: #492c50;
+}
+
+.register-field input {
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(180,125,178,0.22);
+  border-radius: 12px;
+}
+
+.register-field input:focus {
+  border-color: #d66bad;
+  box-shadow: 0 0 0 4px rgba(214,107,173,0.12);
+}
+
+.register-submit {
+  border-radius: 50px;
+  background: linear-gradient(110deg,#ed6ca6,#c05ac5);
+  box-shadow: 0 10px 25px rgba(207,91,164,0.22);
+}
+
+.register-submit:hover {
+  box-shadow: 0 14px 30px rgba(207,91,164,0.3);
+}
+
+.register-login-text a {
+  color: #bd4eaa;
+}
+
+.register-login-text a:hover {
+  color: #883b98;
+}
+
+/* Mobile */
+@media (max-width: 680px) {
+  .register-page-new {
+    padding: 15px;
+  }
+
+  .register-main-card {
+    display: block;
+  }
+
+  .register-visual {
+    min-height: 300px;
+    height: 300px;
+  }
+
+  .register-form-side {
+    padding: 15px 0;
+  }
+
+  .register-form-inner {
+    padding: 27px 20px;
+    border-radius: 23px;
+  }
+}
+
+/* =========================================
+   CLOTHSWAP - FULL SCREEN CLEAR IMAGE
+   ========================================= */
+
+.register-page-new {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Remove all old blur and overlay effects */
+.register-page-new::before,
+.register-page-new::after {
+  display: none;
+  content: none;
+}
+
+/* Full screen layout */
+.register-main-card {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 47% 53%;
+  overflow: hidden;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Clear clothes image across full screen */
+.register-visual {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  z-index: 0;
+}
+
+.register-visual img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: none;
+}
+
+/* Registration form over the image */
+.register-form-side {
+  grid-column: 2;
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+}
+
+/* Mobile layout */
+@media (max-width: 768px) {
+  .register-visual {
+    position: absolute;
+  }
+
+  .register-form-side {
+    grid-column: 1 / -1;
+  }
+}
+/* COMMON CLOTHSWAP BRAND LABEL */
+
+.clothswap-brand-label {
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  background: linear-gradient(90deg, #e85d9e, #a85bc7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
 }

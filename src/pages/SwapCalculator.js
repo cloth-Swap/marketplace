@@ -381,11 +381,11 @@ finally {
         "div",
         { className: "swap-calculator-header" },
 
-        React.createElement(
-          "div",
-          { className: "swap-calculator-label" },
-          "♻️ CLOTHSWAP"
-        ),
+      React.createElement(
+  "span",
+  { className: "clothswap-brand-label" },
+  "♻️ CLOTHSWAP MARKETPLACE"
+),
 
         React.createElement(
           "h1",

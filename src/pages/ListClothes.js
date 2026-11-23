@@ -671,23 +671,13 @@ if (isEditMode) {
             }
           },
 
-          React.createElement(
-            "div",
-            {
-              style: {
-                display: "inline-block",
-                padding: "9px 20px",
-                borderRadius: "50px",
-                background: "linear-gradient(135deg,#ff6b9d,#8e44ad)",
-                color: "white",
-                fontSize: "12px",
-                fontWeight: "800",
-                letterSpacing: "1px",
-                marginBottom: "15px"
-              }
-            },
-            "♻️ CLOTHSWAP MARKETPLACE"
-          ),
+         React.createElement(
+  "span",
+  {
+    className: "clothswap-brand-label"
+  },
+  "♻️ CLOTHSWAP MARKETPLACE"
+),
 
           React.createElement(
             "h1",
