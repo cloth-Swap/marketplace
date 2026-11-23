@@ -22681,4 +22681,28 @@ margin: 15px 0 20px auto;
     box-sizing: border-box;
     background: rgba(255, 255, 255, 0.90);
   }
+  .clothswap-google-area {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.clothswap-google-area iframe {
+  max-width: 100% !important;
+}
+
+.clothswap-divider {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.clothswap-divider span {
+  min-width: 0;
+  flex: 1 1 0;
+}
 }

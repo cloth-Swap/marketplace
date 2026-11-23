@@ -246,8 +246,10 @@ useEffect(function () {
         type: "standard",
         theme: "outline",
         size: "medium",
-        width: 360,
-        text: "signin_with",
+width: Math.min(
+  360,
+  googleButtonRef.current.clientWidth || 360
+),        text: "signin_with",
         shape: "pill",
         logo_alignment: "left"
       }
