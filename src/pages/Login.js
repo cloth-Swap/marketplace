@@ -248,8 +248,8 @@ useEffect(function () {
         size: "medium",
 width: Math.min(
   360,
-  googleButtonRef.current.clientWidth - 8
-),       text: "signin_with",
+  googleButtonRef.current.clientWidth || 360
+),        text: "signin_with",
         shape: "pill",
         logo_alignment: "left"
       }
