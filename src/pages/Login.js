@@ -238,13 +238,13 @@ useEffect(function () {
       window.__clothSwapGoogleClientId = clientId;
     }
 
-   const availableWidth = Math.floor(
+  const availableWidth = Math.floor(
   googleButtonRef.current.getBoundingClientRect().width
 );
 
 const buttonWidth = Math.max(
-  120,
-  Math.min(400, availableWidth || 360)
+  200,
+  Math.min(400, availableWidth - 20)
 );
 
 googleButtonRef.current.innerHTML = "";
@@ -983,6 +983,7 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   visibility: hidden;
   display: none !important;
   pointer-events: none;
+}
   /* Mobile Google button fix */
 .clothswap-google-area {
   width: 100%;
