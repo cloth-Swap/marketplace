@@ -25,7 +25,6 @@ const upload = multer({
   storage: storage
 });
 
-// ADD CLOTHING
 router.post("/", upload.single("image"), async function (req, res) {
   try {
     const clothing = new Clothing({
@@ -57,7 +56,6 @@ router.post("/", upload.single("image"), async function (req, res) {
   }
 });
 
-// GET ALL CLOTHES
 router.get("/", async function (req, res) {
   try {
     const clothes = await Clothing.find().sort({

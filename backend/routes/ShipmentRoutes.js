@@ -7,7 +7,6 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const User = require("../models/User");
 
-// ADMIN-ONLY AUTHENTICATION FOR MANUAL TESTING
 async function requireAdmin(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -62,7 +61,6 @@ async function requireAdmin(req, res, next) {
   }
 }
 
-// ARRANGE COURIER
 router.post("/", async function (req, res) {
   try {
     const {
@@ -85,18 +83,15 @@ router.post("/", async function (req, res) {
       });
     }
 
-    // GENERATE TRACKING ID
     const trackingId =
       "CS" +
       Date.now().toString().slice(-8) +
       Math.floor(100 + Math.random() * 900);
 
-    // GENERATE 6 DIGIT OTP
     const otp = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
 
-    // GET THE ORIGINAL SWAP REQUEST
     const swapRequest = await SwapRequest.findById(
       swapRequestId
     );
@@ -108,7 +103,6 @@ router.post("/", async function (req, res) {
       });
     }
 
-    // GET RECEIVER DETAILS FROM DATABASE
     const receiverEmail = String(
       swapRequest.requesterEmail || ""
     ).trim().toLowerCase();
@@ -120,7 +114,6 @@ router.post("/", async function (req, res) {
       });
     }
 
-    // CREATE SHIPMENT
     const shipment = new Shipment({
       swapRequestId,
       sender,
@@ -194,7 +187,6 @@ router.put("/admin/:id/courier-mode", requireAdmin, async function (req, res) {
     });
   }
 });
-// ADMIN-ONLY: MANUAL COURIER TESTING MODE
 router.put(
   "/admin/:id/manual-status",
   requireAdmin,
@@ -241,7 +233,6 @@ router.put(
 
       const previousStatus = shipment.status;
 
-      // VERIFY ACTUAL OTP
       if (status === "OTP Verified") {
         if (!otp || !trackingId) {
           return res.status(400).json({
@@ -304,7 +295,6 @@ shipment.arrivedAt = new Date();
 
       await shipment.save();
 
-      // COMPLETE SWAP AFTER DELIVERY
       if (shipment.status === "Delivered") {
         const completedSwap = await SwapRequest.findById(
           shipment.swapRequestId
@@ -318,7 +308,6 @@ shipment.arrivedAt = new Date();
         }
       }
 
-      // NOTIFY BOTH SWAP USERS
       const swapRequest = await SwapRequest.findById(
         shipment.swapRequestId
       );
@@ -373,7 +362,6 @@ shipment.arrivedAt = new Date();
   }
 );
 
-// GET ALL SHIPMENTS
 router.get("/", async function (req, res) {
   try {
     const shipments = await Shipment
@@ -398,7 +386,6 @@ router.get("/", async function (req, res) {
   }
 });
 
-// GET SENDER NOTIFICATIONS
 router.get(
   "/notifications/:user",
   async function (req, res) {
@@ -431,7 +418,6 @@ router.get(
   }
 );
 
-// RECEIVER OTP - AUTHENTICATED RECEIVER ONLY
 router.get("/:id/receiver-otp", async function (req, res) {
   try {
     const authHeader = req.headers.authorization;

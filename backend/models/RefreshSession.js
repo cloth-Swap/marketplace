@@ -29,7 +29,6 @@ const refreshSessionSchema = new mongoose.Schema(
   }
 );
 
-// Expired sessions automatically delete થશે
 refreshSessionSchema.index(
   { expiresAt: 1 },
   { expireAfterSeconds: 0 }

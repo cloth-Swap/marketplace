@@ -117,10 +117,6 @@ requesterEmail: {
       type: Boolean,
       default: false
     },
-    // Hand-to-Hand 48 Hours Confirmation System
-
-    // Courier 48 Hours Confirmation System
-
     courierExchangeStartedAt: {
       type: Date,
       default: null
@@ -201,7 +197,6 @@ requesterConfirmationOverdue: {
       ],
       default: "Not Started"
     },
-    // Swap Request Deleted History
 
 isDeleted: {
   type: Boolean,

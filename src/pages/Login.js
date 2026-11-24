@@ -8,7 +8,6 @@ function Login() {
   const navigate = useNavigate();
   async function continueAfterTerms(nextPath) {
   try {
-    // Admin users do not need to create a profile
     if (
       localStorage.getItem("clothswapIsAdmin") === "true"
     ) {
@@ -214,11 +213,9 @@ useEffect(function () {
       return;
     }
 
-    // Keep the latest page's Google callback.
     window.__clothSwapGoogleCallback =
       handleGoogleResponse;
 
-    // Initialize Google only once for this website.
     if (
       window.__clothSwapGoogleClientId !== clientId
     ) {

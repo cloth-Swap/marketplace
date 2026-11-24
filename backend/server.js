@@ -67,15 +67,11 @@ function parseMeetingDateTimeIST(meetingDate, meetingTime) {
   } else if (period === "PM" && hour !== 12) {
     hour += 12;
   }
-
-  // Convert Indian Standard Time (UTC +5:30) to UTC
-  const meetingTimestamp =
+c  const meetingTimestamp =
     Date.UTC(year, month - 1, day, hour, minute) -
     (5 * 60 + 30) * 60 * 1000;
 
   const result = new Date(meetingTimestamp);
-
-  // Reject invalid calendar dates
   if (
     result.getUTCFullYear() !== year ||
     result.getUTCMonth() !== month - 1 ||
@@ -136,8 +132,6 @@ async function checkHandToHandDeadlines() {
       try {
         let changed = false;
 
-        // If both participants have completed the swap,
-        // mark the request completed without sending reminders.
         if (
           request.ownerCompleted &&
           request.requesterCompleted
@@ -162,8 +156,6 @@ async function checkHandToHandDeadlines() {
 
         const meetingTimestamp = meetingAt.getTime();
 
-        // Reset the deadline schedule whenever meeting details change.
-        // This must happen BEFORE checking whether the meeting is in future.
         if (
           !request.handToHandExchangeStartedAt ||
           new Date(
@@ -183,14 +175,10 @@ async function checkHandToHandDeadlines() {
 
           changed = true;
         }
-
-        // Save reset values even when the new meeting is in future.
         if (changed) {
           await request.save();
           changed = false;
         }
-
-        // Countdown starts only after the scheduled meeting time.
         if (now < meetingTimestamp) {
           continue;
         }
@@ -219,8 +207,6 @@ async function checkHandToHandDeadlines() {
           const participantEmail = String(
             participant.email || ""
           ).trim().toLowerCase();
-
-          // Already completed participants must not receive reminders.
           if (participant.completed) {
             if (request[participant.overdue]) {
               request[participant.overdue] = false;
@@ -233,8 +219,6 @@ async function checkHandToHandDeadlines() {
           if (!participantEmail) {
             continue;
           }
-
-          // First reminder after 24 hours.
           if (
             elapsedHours >= 24 &&
             !request[participant.reminder24]
@@ -252,8 +236,6 @@ async function checkHandToHandDeadlines() {
             await request.save();
             changed = false;
           }
-
-          // Second reminder after 36 hours.
           if (
             elapsedHours >= 36 &&
             !request[participant.reminder36]
@@ -271,8 +253,6 @@ async function checkHandToHandDeadlines() {
             await request.save();
             changed = false;
           }
-
-          // At 48 hours, check for a pending genuine dispute.
           if (elapsedHours >= 48) {
             const pendingDispute = await Dispute.findOne({
               swapRequestId: request._id,
@@ -358,8 +338,6 @@ async function checkCourierReceiverDeadlines() {
         ) {
           continue;
         }
-
-        // Only the parcel receiver is responsible for confirmation.
         const receiverEmail = String(
           shipment.receiverEmail || request.requesterEmail || ""
         ).trim().toLowerCase();
@@ -367,8 +345,6 @@ async function checkCourierReceiverDeadlines() {
         if (!receiverEmail) {
           continue;
         }
-
-        // Receiver has already completed their confirmation.
         if (request.requesterCompleted === true) {
           if (shipment.receiverConfirmationOverdue) {
             shipment.receiverConfirmationOverdue = false;
@@ -384,8 +360,6 @@ if (!Number.isFinite(arrivedAt)) {
 }
 
        const elapsedHours = (now - arrivedAt) / (60 * 60 * 1000);
-
-        // 24-hour reminder to receiver only.
         if (
           elapsedHours >= 24 &&
           !shipment.receiverReminder24Sent
@@ -401,8 +375,6 @@ if (!Number.isFinite(arrivedAt)) {
           shipment.receiverReminder24Sent = true;
           await shipment.save();
         }
-
-        // 36-hour final reminder to receiver only.
         if (
           elapsedHours >= 36 &&
           !shipment.receiverReminder36Sent
@@ -418,8 +390,6 @@ if (!Number.isFinite(arrivedAt)) {
           shipment.receiverReminder36Sent = true;
           await shipment.save();
         }
-
-        // At 48 hours, check whether receiver has a pending dispute.
         if (
           elapsedHours >= 48 &&
           !shipment.receiverConfirmationOverdue
@@ -464,8 +434,6 @@ if (!Number.isFinite(arrivedAt)) {
     courierReceiverDeadlineCheckRunning = false;
   }
 }
-
-
 const CURRENT_TERMS_VERSION = "1.0";
   const app = express();
   const server = http.createServer(app);
@@ -477,7 +445,6 @@ const CURRENT_TERMS_VERSION = "1.0";
   }
 });
 app.set("io", io);
-// SECURE SOCKET.IO AUTHENTICATION
 io.use(async function (socket, next) {
   try {
     const token = socket.handshake.auth?.token;
@@ -508,7 +475,6 @@ io.use(async function (socket, next) {
   }
 });
 
-// USER-SPECIFIC SOCKET ROOMS
 io.on("connection", function (socket) {
   const userId = String(socket.user._id);
   const userEmail = String(socket.user.email || "")
@@ -528,9 +494,6 @@ io.on("connection", function (socket) {
   );
 
   const PORT = process.env.PORT || 5000;
-  // =====================================================
-  // ACCESS TOKEN + REFRESH TOKEN HELPERS
-  // =====================================================
 
   const crypto = require("crypto");
 
@@ -591,9 +554,6 @@ io.on("connection", function (socket) {
   app.use(cookieParser());
 
   app.use("/api/shipments", shipmentRoutes);
-  // =====================================================
-  // REFRESH ACCESS TOKEN API
-  // =====================================================
 
   app.post("/api/auth/refresh", async (req, res) => {
     try {
@@ -691,7 +651,6 @@ io.on("connection", function (socket) {
           role: user.role
         }
       });
-
     } catch (error) {
       console.error("Refresh Token Error:", error);
 
@@ -701,10 +660,6 @@ io.on("connection", function (socket) {
       });
     }
   });
-  // =====================================================
-  // LOGOUT API
-  // =====================================================
-
   app.post("/api/auth/logout", async (req, res) => {
     try {
       const refreshToken = req.cookies.clothswapRefreshToken;
@@ -867,7 +822,6 @@ async function requireNoHandToHandOverdue(req, res, next) {
       });
     }
 
-    // Find all pending Hand-to-Hand confirmations overdue for this user.
     const overdueRequests = await SwapRequest.find({
       status: "Accepted",
       exchangeMethod: "Local Exchange",
@@ -890,8 +844,6 @@ async function requireNoHandToHandOverdue(req, res, next) {
       return next();
     }
 
-    // A user who has raised a pending dispute for that swap
-    // must not be restricted for that particular swap.
     const pendingDisputes = await Dispute.find({
       swapRequestId: {
         $in: overdueRequests.map(function (request) {
@@ -914,8 +866,6 @@ async function requireNoHandToHandOverdue(req, res, next) {
       }
     );
 
-    // Allow access if every overdue swap has a pending dispute
-    // raised by this user.
     if (!restrictedRequest) {
       return next();
     }
@@ -941,7 +891,6 @@ async function requireNoHandToHandOverdue(req, res, next) {
     });
   }
 }
-// Restrict only Courier receivers whose confirmation is overdue.
 async function requireNoCourierReceiverOverdue(req, res, next) {
   try {
     const userEmail = String(req.user.email || "")
@@ -979,8 +928,6 @@ async function requireNoCourierReceiverOverdue(req, res, next) {
         reporterEmail: userEmail,
         status: "Pending"
       });
-
-      // A pending dispute exempts this receiver from restriction.
       if (pendingDispute) {
         continue;
       }
@@ -1009,7 +956,6 @@ async function requireNoCourierReceiverOverdue(req, res, next) {
     });
   }
 }
-// CHECK LOGGED-IN USER ACCOUNT STATUS
 app.get("/api/auth/status", requireAuth, function (req, res) {
   return res.status(200).json({
     success: true,
@@ -1209,7 +1155,6 @@ app.get("/api/clothes/:id", async function (req, res) {
     });
   }
 });
-/* CHECK USER TERMS & CONDITIONS STATUS */
 app.get(
   "/api/auth/terms-status",
   requireAuth,
@@ -1252,8 +1197,6 @@ app.get(
   }
 );
 
-/* CHECK WHETHER USER ALREADY REPORTED THIS LISTING */
-// CREATE NEW CLOTHING LISTING
 app.post(
   "/api/clothes",
  requireAuth,
@@ -1364,9 +1307,7 @@ app.get(
     }
   }
 );
-/* =========================================
-   REPORT CLOTHING LISTING
-========================================= */
+
 
 app.post("/api/clothes/:id/report", requireAuth, async function (req, res) {
   try {
@@ -1478,9 +1419,7 @@ app.get("/api/admin/reported-listings", requireAdmin, async function (req, res) 
     });
   }
 });
-/* =========================================
-   ADMIN - REVIEW REPORTED LISTING
-========================================= */
+
 
 app.patch(
   "/api/admin/reported-listings/:id/review",
@@ -1526,7 +1465,6 @@ app.patch(
         req.user.email || req.user.name || "Admin";
       report.reviewedAt = new Date();
 
-// SAVE ADMIN ACTION HISTORY
 report.actionHistory.push({
   action: status,
   adminName: req.user.name || "Admin",
@@ -1537,7 +1475,6 @@ report.actionHistory.push({
 
 await report.save();
 
-      // NOTIFY THE USER WHO REPORTED THE LISTING
       try {
         const reporterEmail = String(
           report.reporterEmail || ""
@@ -1609,9 +1546,7 @@ await report.save();
     }
   }
 );
-/* =========================================
-   ADMIN - DELETE SELECTED REPORTED LISTINGS
-========================================= */
+
 
 app.delete(
   "/api/admin/reported-listings",
@@ -1662,10 +1597,6 @@ app.delete(
   }
 );
 
-
-/* =========================================
-   RAISE DISPUTE FOR SWAP REQUEST
-========================================= */
 
 app.post(
   "/api/swap-requests/:id/dispute",
@@ -1761,7 +1692,6 @@ app.post(
 
       await dispute.save();
 
-      // NOTIFY ALL ACTIVE ADMIN USERS
       try {
         const adminUsers = await User.find({
           role: "Admin",
@@ -1821,10 +1751,6 @@ app.post(
     }
   }
 );
-/* =========================================
-   GET CURRENT USER'S RAISED DISPUTES
-========================================= */
-
 app.get(
   "/api/swap-requests/my-disputes",
   requireAuth,
@@ -1862,10 +1788,6 @@ app.get(
   }
 );
 
-/* =========================================
-   ADMIN - GET ALL DISPUTES
-========================================= */
-
 app.get(
   "/api/admin/disputes",
   requireAdmin,
@@ -1892,10 +1814,6 @@ app.get(
   }
 );
 
-
-/* =========================================
-   ADMIN - REJECT DISPUTE
-========================================= */
 
 app.put(
   "/api/admin/disputes/:id/reject",
@@ -1961,7 +1879,6 @@ app.put(
         relatedId: String(dispute._id)
       });
 
-      // NOTIFY BOTH DISPUTE PARTICIPANTS
       try {
         const reporterEmail = String(
           dispute.reporterEmail || ""
@@ -2036,9 +1953,6 @@ app.put(
     }
   }
 );
-/* =========================================
-   ADMIN - RESOLVE DISPUTE
-========================================= */
 
 app.put(
   "/api/admin/disputes/:id/resolve",
@@ -2097,7 +2011,6 @@ app.put(
         relatedId: String(dispute._id)
       });
 
-      // NOTIFY DISPUTE PARTICIPANTS
       try {
         const reporterEmail = String(
           dispute.reporterEmail || ""
@@ -2171,9 +2084,6 @@ app.put(
     }
   }
 );
-/* =========================================
-   ADMIN - SOFT DELETE SELECTED DISPUTES
-========================================= */
 
 app.delete(
   "/api/admin/disputes",
@@ -2293,37 +2203,28 @@ app.delete(
   monthlyUsers
 ] = await Promise.all([
 
-       // Total Users - All Registered Users
 User.countDocuments({}),
 
-// Active Users - Unique Emails from Activity
 UserActivity.distinct("userEmail", {
   ...dateFilter,
   userEmail: { $nin: ["", null] }
 }),
 
-        // Total Listings
         Clothing.countDocuments({
           ...dateFilter,
           isDeleted: { $ne: true },
           listingStatus: { $ne: "Removed" }
         }),
 
-        // Total Swap Requests
         SwapRequest.countDocuments(dateFilter),
 
-        // Total Completed Swaps
         SwapRequest.countDocuments({
           ...dateFilter,
           completionStatus: "Completed"
         }),
-
-        // Recent Activities
         UserActivity.find(dateFilter)
           .sort({ createdAt: -1 })
           .limit(10),
-
-        // Monthly Swaps
         SwapRequest.aggregate([
           { $match: dateFilter },
           {
@@ -2346,8 +2247,6 @@ UserActivity.distinct("userEmail", {
           },
           { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]),
-
-        // Monthly Listings
         Clothing.aggregate([
           { $match: dateFilter },
           {
@@ -2361,8 +2260,6 @@ UserActivity.distinct("userEmail", {
           },
           { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]),
-
-        // Monthly Users
         User.aggregate([
           { $match: dateFilter },
           {
@@ -2438,8 +2335,6 @@ app.get(
       }
 
       const now = new Date();
-
-      // Project starting month: September 2026
       const projectStart = new Date("2026-09-01T00:00:00+05:30");
 
       let startDate;
@@ -2674,8 +2569,6 @@ const [
   getTrend(UserActivity),
   getTopPerformingCategories()
 ]);
-
-     // Generate all date labels, including months with zero records.
 const labels = [];
 
 if (period === "7days") {
@@ -2877,10 +2770,7 @@ app.put("/api/admin/users/:id/status", requireAdmin, async function (req, res) {
           message: "User not found"
         });
       }
-  // REVOKE ALL REFRESH SESSIONS WHEN USER IS BLOCKED
-
   if (status === "Blocked") {
-    // DISCONNECT ALL ACTIVE SOCKET CONNECTIONS
 if (status === "Blocked") {
   io.in("user:" + String(user._id))
     .disconnectSockets(true);
@@ -2982,8 +2872,6 @@ requireNoCourierReceiverOverdue,
           message: "Listing not found"
         });
       }
-
-      // Only the listing owner can edit it
       if (
         String(clothing.ownerEmail).toLowerCase() !==
         String(req.user.email).toLowerCase()
@@ -2993,8 +2881,6 @@ requireNoCourierReceiverOverdue,
           message: "You are not allowed to edit this listing"
         });
       }
-
-      // Do not edit removed or swapped listings
       if (
         clothing.isDeleted ||
         clothing.listingStatus === "Removed" ||
@@ -3006,8 +2892,6 @@ requireNoCourierReceiverOverdue,
           message: "This listing cannot be edited"
         });
       }
-
-      // Prevent editing while a swap request is active
       const activeRequest = await SwapRequest.findOne({
         clothingId: clothing._id,
         status: { $in: ["Pending", "Accepted"] }
@@ -3031,8 +2915,6 @@ requireNoCourierReceiverOverdue,
         description,
         image
       } = req.body;
-
-      // Validate required fields
       if (
         !title ||
         !title.trim() ||
@@ -3057,8 +2939,6 @@ requireNoCourierReceiverOverdue,
           message: "Please enter a valid price"
         });
       }
-
-      // Update only editable fields
       clothing.title = title.trim();
       clothing.brand = brand || "";
       clothing.category = category.trim();
@@ -3067,8 +2947,6 @@ requireNoCourierReceiverOverdue,
       clothing.location = location || "";
       clothing.price = updatedPrice;
       clothing.description = description || "";
-
-      // Keep existing image if no new image is provided
       if (image !== undefined && image !== "") {
         clothing.image = image;
       }
@@ -3151,10 +3029,6 @@ const user = req.body?.user || req.user;
       });
     }
   }),
-
-  /* =========================================
-   GET MY CLOTHING LISTINGS
-========================================= */
 
 app.get("/api/my-listings", requireAuth, async (req, res) => {
   try {
@@ -3693,7 +3567,6 @@ requireNoCourierReceiverOverdue,
 
 
         await request.save();
-        // REAL-TIME SWAP REQUEST UPDATE
 const io = req.app.get("io");
 
 if (io) {
@@ -4161,9 +4034,6 @@ requireNoCourierReceiverOverdue,
           message: "Swap must be confirmed before marking as completed"
         });
       }
-      
-  /* COURIER DELIVERY MUST BE VERIFIED BEFORE COMPLETION */
-
   if (
     request.exchangeMethod === "Courier" ||
     request.exchangeMethod === "Courier Delivery"
@@ -4235,7 +4105,6 @@ requireNoCourierReceiverOverdue,
   request.completionStatus = "Completed";
   request.agreementStatus = "Completed";
 
-  // Keep clothing record for My Listings and Admin history
   const clothing = await Clothing.findById(request.clothingId);
 
   if (clothing) {
@@ -4334,7 +4203,6 @@ requireNoCourierReceiverOverdue,
     }
   ),
 
-// DELETE SWAP REQUEST - SOFT DELETE
 app.delete(
   "/api/swap-requests/:id",
  requireAuth,
@@ -4382,7 +4250,6 @@ requireNoCourierReceiverOverdue,
         });
       }
 
-      // Preserve request and save deletion history
       if (!Array.isArray(request.deletedFor)) {
   request.deletedFor = [];
 }
@@ -4414,12 +4281,6 @@ await request.save();
     }
   }
 );
-
-
-// =========================================
-// ADMIN - GET REMOVED CLOTHING HISTORY
-// =========================================
-
 app.get(
   "/api/admin/clothes",
   requireAdmin,
@@ -4682,7 +4543,6 @@ if (!isClothSwapRelatedMessage(text)) {
 
       await newMessage.save();
 
-      // Notification is optional; message saving is not dependent on it.
       if (req.body.chatNotificationsEnabled === true) {
         try {
           const receiverEmail = String(
@@ -4717,8 +4577,6 @@ if (!isClothSwapRelatedMessage(text)) {
           console.error("Chat notification error:", chatNotificationError);
         }
       }
-
-      // Always respond after saving, whether notifications are enabled or not.
       return res.status(201).json({
         success: true,
         message: "Message sent successfully",
@@ -5019,7 +4877,6 @@ if (!isClothSwapRelatedMessage(text)) {
     });
   await user.save();
   }
-  // BLOCKED USER CHECK — AHI ADD KARVU
   if (user.status === "Blocked") {
     return res.status(403).json({
       success: false,
@@ -5064,8 +4921,6 @@ if (!isClothSwapRelatedMessage(text)) {
     }
   );
 
-// GET: Logged-in user's personal profile
-
 app.get("/api/user/profile", requireAuth, async function (req, res) {
   try {
     const user = await User.findById(req.user._id).select(
@@ -5105,9 +4960,6 @@ app.get("/api/user/profile", requireAuth, async function (req, res) {
   }
 });
 
-
-
-// PUT: Update logged-in user's personal profile
 app.put("/api/user/profile", requireAuth, async function (req, res) {
   try {
     const { name, location, bio, profilePhoto } = req.body;
@@ -5409,20 +5261,16 @@ app.post("/api/auth/login", async function (req, res) {
     })
     .then(function () {
       
-// Run Hand-to-Hand deadline checks every minute.
 setInterval(function () {
   checkHandToHandDeadlines();
 }, 60 * 1000);
 
-// Also check once immediately after database connection.
 checkHandToHandDeadlines();
 
-// Run Courier receiver deadline checks every minute.
 setInterval(function () {
   checkCourierReceiverDeadlines();
 }, 60 * 1000);
 
-// Also check once immediately after database connection.
 checkCourierReceiverDeadlines();
 
 

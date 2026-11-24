@@ -28,7 +28,6 @@ const passwordResetOTPSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Expired OTP records automatically delete
 passwordResetOTPSchema.index(
   { expiresAt: 1 },
   { expireAfterSeconds: 0 }
