@@ -5,8 +5,6 @@ import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import "../style.css";
-
-// Admin Panel data cache
 const adminPanelCache = {
   clothes: undefined,
   swapRequests: undefined,
@@ -17,8 +15,6 @@ const adminPanelCache = {
 };
 
 function AdminPanel() {
-
-  // Data states
   const [clothes, setClothes] = useState(() => adminPanelCache.clothes || []);
   const [swapRequests, setSwapRequests] = useState(() => adminPanelCache.swapRequests || []);
   const [users, setUsers] = useState(() => adminPanelCache.users || []);
@@ -47,8 +43,6 @@ function AdminPanel() {
       return {};
     }
   });
-
-  // Existing filter and selection states
   const [userSearch, setUserSearch] = useState("");
   const [userStatusFilter, setUserStatusFilter] = useState("All");
   const [userSortBy, setUserSortBy] = useState("Newest Users");
@@ -68,8 +62,6 @@ const [listingSortBy, setListingSortBy] = useState("Newest First");
   const [listingPage, setListingPage] = useState(1);
 const [listingPageSize, setListingPageSize] = useState(10);
 
-
-  // Sync data with cache
   useEffect(() => {
     adminPanelCache.clothes = clothes;
     adminPanelCache.swapRequests = swapRequests;
@@ -85,16 +77,12 @@ const [listingPageSize, setListingPageSize] = useState(10);
     reportedListings,
     removedClothes
   ]);
-
-  // Save dashboard counts
   useEffect(() => {
     localStorage.setItem(
       "clothswapAdminDashboardCounts",
       JSON.stringify(dashboardCounts)
     );
   }, [dashboardCounts]);
-
-  // Load admin data
   useEffect(() => {
     loadAdminData();
     loadUsers();
@@ -108,8 +96,6 @@ const [listingPageSize, setListingPageSize] = useState(10);
 
     return () => clearInterval(interval);
   }, []);
-
-  // Tamaro baki no existing AdminPanel code ahi thi continue thase...
 
 function updateDashboardCounts(newCounts) {
   setDashboardCounts(function (previous) {
@@ -192,7 +178,6 @@ function loadAdminData() {
 
 async function loadUsers() {
   try {
-    // Background refresh ma loading true nahi karvanu
 
     const response = await fetch(
       `${API_URL}/api/admin/users`,
@@ -309,7 +294,6 @@ async function loadReportedListings() {
 }
 async function loadRemovedClothes() {
   try {
-    // Background refresh ma loading true nahi karvanu
 
     const response = await fetch(
       `${API_URL}/api/admin/clothes`,
@@ -355,7 +339,6 @@ async function loadRemovedClothes() {
   }
 
   const completedSwaps = swapRequests.filter(isSwapCompleted);
-  // DISPUTE SUMMARY COUNTS
 
 const activeDisputes = disputes.filter(function (dispute) {
   return !dispute.isDeleted;
@@ -408,8 +391,6 @@ const filteredDisputes = disputes.filter(function (dispute) {
 const filteredSwapRequests = swapRequests.filter(function (request) {
   const status = getAdminSwapStatus(request);
   const method = request.exchangeMethod || "Not Selected";
-
-  // Deleted requests should appear only in Deleted History
   if (request.isDeleted === true) {
     return swapStatusFilter === "Deleted History";
   }
@@ -602,12 +583,7 @@ async function deleteClothing(id) {
     alert("Failed to remove clothing listing.");
   }
 }
-
-
- 
-
-  
-  async function changeUserStatus(user) {
+async function changeUserStatus(user) {
     const newStatus =
       user.status === "Blocked"
         ? "Active"
@@ -761,8 +737,6 @@ async function deleteClothing(id) {
     { width: 22 },
     { width: 16 }
   ];
-
-  // TITLE
   worksheet.mergeCells("A1:K1");
   worksheet.getCell("A1").value = "ClothSwap - User Management";
   worksheet.getCell("A1").font = {
@@ -781,8 +755,6 @@ async function deleteClothing(id) {
     vertical: "middle"
   };
   worksheet.getRow(1).height = 40;
-
-  // SUBTITLE
   worksheet.mergeCells("A2:K2");
   worksheet.getCell("A2").value =
     "Registered Users Report | Swap • Share • Rewear";
@@ -794,8 +766,6 @@ async function deleteClothing(id) {
   worksheet.getCell("A2").alignment = {
     horizontal: "center"
   };
-
-  // TOTAL USERS
   worksheet.mergeCells("A4:K4");
   worksheet.getCell("A4").value =
     "Total Registered Users: " + users.length;
@@ -846,8 +816,6 @@ async function deleteClothing(id) {
       wrapText: true
     };
   });
-
-  // USER DATA
   users.forEach(function (user) {
     const row = worksheet.addRow([
       user.name || "",
@@ -904,8 +872,6 @@ async function deleteClothing(id) {
     from: "A5",
     to: "K5"
   };
-
-  // DOWNLOAD EXCEL
   const buffer = await workbook.xlsx.writeBuffer();
 
   const blob = new Blob(
@@ -1055,11 +1021,9 @@ user.status === "Blocked"
     },
 
     willDrawPage: function () {
-      // FULL PAGE BACKGROUND
       doc.setFillColor(250, 243, 252);
       doc.rect(0, 0, pageWidth, pageHeight, "F");
 
-      // HEADER
       doc.setFillColor(136, 70, 165);
       doc.rect(0, 0, pageWidth, 32, "F");
 
@@ -1094,7 +1058,6 @@ user.status === "Blocked"
     }
   });
 doc.setPage(1);
-  // SUMMARY SECTION ON FIRST PAGE
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(10, 38, pageWidth - 20, 42, 3, 3, "F");
 
@@ -1134,10 +1097,7 @@ doc.setPage(1);
       align: "center"
     });
   });
-    // SUMMARY FIRST PAGE PAR SHOW KARO
   doc.setPage(1);
-
-  // DOWNLOAD PDF
   doc.save("ClothSwap_Users.pdf");
 }
 async function resolveDispute(dispute) {
@@ -1777,7 +1737,6 @@ function getAdminSwapStatus(request) {
 
   return request.status || "Unknown";
 }
-// MANAGE LISTINGS FILTERS
 
 const listingCategories = [
   "Dresses",
@@ -1809,8 +1768,6 @@ const listingLocations = Array.from(
     })
   )
 );
-
-// SEARCH + FILTER
 const filteredClothes = clothes.filter(function (item) {
   const search = listingSearch.trim().toLowerCase();
 
@@ -1830,8 +1787,6 @@ const filteredClothes = clothes.filter(function (item) {
 
   return matchesSearch && matchesCategory && matchesLocation;
 });
-
-// SORT LISTINGS
 const sortedClothes = [...filteredClothes].sort(function (a, b) {
   if (listingSortBy === "Newest First") {
     return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
@@ -1867,9 +1822,6 @@ const sortedClothes = [...filteredClothes].sort(function (a, b) {
 
   return 0;
 });
-
-
-// PAGINATION
 
 const effectiveListingPageSize =
   listingPageSize === "All"
@@ -1932,8 +1884,6 @@ const paginatedClothes = sortedClothes.slice(
         "Admin Access"
       )
     ),
-
-  /* ADMIN PANEL NAVIGATION */
 
 React.createElement(
   "div",
@@ -2225,9 +2175,6 @@ React.createElement(
       )
     ),
 
-    /* =================================================
-       MANAGE USERS
-    ================================================= */
 
     React.createElement(
       "div",
@@ -2274,7 +2221,6 @@ React.createElement(
         {
           className: "admin-user-summary"
         },
-// USER SEARCH BOX
 
           React.createElement(
           "div",
@@ -2333,7 +2279,6 @@ React.createElement(
           )
         )
       ),
-      // USER SEARCH BOX
 React.createElement(
   "div",
   {
@@ -3923,9 +3868,7 @@ React.createElement("input", {
         })
   )
 ),
-/* =====================================
-   REMOVED CLOTHING HISTORY
-===================================== */
+
 
 React.createElement(
   "section",

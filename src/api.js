@@ -4,8 +4,6 @@ const API_URL =
 
 let refreshPromise = null;
 
-/* ================= API RESPONSE CACHE ================= */
-
 const apiResponseCache = new Map();
 
 function getCachedResponse(cacheKey) {
@@ -68,9 +66,6 @@ export async function apiFetchCached(
 
   return response;
 }
-
-
-/* ================= REFRESH ACCESS TOKEN ================= */
 export async function refreshAccessToken() {
 
   if (refreshPromise) {
@@ -121,9 +116,6 @@ export async function refreshAccessToken() {
   return refreshPromise;
 }
 
-
-/* ================= COMMON API FETCH ================= */
-
 export async function apiFetch(url, options = {}) {
 
   const requestOptions = {
@@ -155,15 +147,12 @@ export async function apiFetch(url, options = {}) {
     url.includes("/api/auth/logout");
 
  
-// CHECK IF USER ACCOUNT IS BLOCKED OR HAND-TO-HAND OVERDUE
 if (response.status === 403) {
   const errorData = await response.clone().json().catch(
     function () {
       return null;
     }
   );
-
-  // HAND-TO-HAND OVERDUE POP-UP
   if (
     errorData &&
     errorData.code === "HAND_TO_HAND_CONFIRMATION_OVERDUE"
@@ -175,8 +164,6 @@ if (response.status === 403) {
 
     return response;
   }
-
-  // CHECK IF USER ACCOUNT IS BLOCKED
   if (
     errorData &&
     (

@@ -158,7 +158,6 @@ async function loadItem() {
       ownerEmail: clothing.ownerEmail || ""
     };
 
-    // Base64 image localStorage માં save નહીં થાય
     if (
       clothing.image &&
       !String(clothing.image).startsWith("data:")
@@ -495,8 +494,6 @@ function removeFromWishlist() {
     );
   }
 
-  /* ERROR */
-
   if (error || !item) {
     return React.createElement(
       "div",
@@ -549,8 +546,6 @@ function removeFromWishlist() {
     "div",
     { className: "item-details-page" },
 
-    /* TOAST */
-
     swapMessage &&
       React.createElement(
         "div",
@@ -581,8 +576,6 @@ function removeFromWishlist() {
       "div",
       { className: "container py-5" },
 
-      /* BACK */
-
       React.createElement(
         "button",
         {
@@ -595,8 +588,6 @@ function removeFromWishlist() {
       React.createElement(
         "div",
         { className: "row g-5 align-items-start mt-2" },
-
-        /* IMAGE */
 
         React.createElement(
           "div",
@@ -620,8 +611,6 @@ function removeFromWishlist() {
             )
           )
         ),
-
-        /* DETAILS */
 
         React.createElement(
           "div",
@@ -656,8 +645,6 @@ function removeFromWishlist() {
               { className: "item-details-description" },
               description
             ),
-
-            /* INFO GRID */
 
             React.createElement(
               "div",
@@ -696,8 +683,6 @@ function removeFromWishlist() {
                 )
               )
             ),
-
-       /* SELLER PROFILE */
 
 React.createElement(
   "div",
@@ -757,8 +742,6 @@ React.createElement(
   )
 ),
 
-            /* ACTION BUTTONS */
-
             React.createElement(
               "div",
               { className: "item-details-actions" },
@@ -799,11 +782,9 @@ React.createElement(
                  onClick: handleReportClick,
 disabled: reportChecking
                 },
-                "🚩 Report Listing"
+                " Report Listing"
               )
             ),
-
-            /* REPORT FORM */
 
             showReportForm &&
               React.createElement(
@@ -813,7 +794,7 @@ disabled: reportChecking
                 React.createElement(
                   "h3",
                   null,
-                  "🚩 Report this Listing"
+                  " Report this Listing"
                 ),
 
                 React.createElement(
@@ -874,7 +855,7 @@ disabled: reportChecking
                   },
                   reportSending
                     ? "Submitting..."
-                    : "🚩 Submit Report"
+                    : "Submit Report"
                 )
               )
           )

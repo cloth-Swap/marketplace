@@ -61,8 +61,6 @@
 
     const [selectedStateCode, setSelectedStateCode] = useState("");
     const [selectedCity, setSelectedCity] = useState("");
-
-    // NEW EDIT MODE useEffect — અહીં paste કરવો
 useEffect(function () {
   if (!editListing) return;
 
@@ -147,8 +145,6 @@ useEffect(function () {
     const [showCamera, setShowCamera] = useState(false);
     const [cameraReady, setCameraReady] = useState(false);
 
-    /* ================= INPUT ================= */
-
     function handleChange(event) {
       const name = event.target.name;
       const value = event.target.value;
@@ -160,8 +156,6 @@ useEffect(function () {
         };
       });
     }
-
-    /* ================= IMAGE PROCESSING ================= */
 
     function processImage(file) {
       if (!file) return;
@@ -248,8 +242,6 @@ useEffect(function () {
       event.target.value = "";
     }
 
-    /* ================= CAMERA ================= */
-
     async function openCamera() {
       setError("");
       setMessage("");
@@ -309,8 +301,6 @@ useEffect(function () {
       }
     }
 
-    /* ================= CAPTURE ================= */
-
     function capturePhoto() {
       if (!videoRef.current) return;
 
@@ -362,8 +352,6 @@ useEffect(function () {
       closeCamera();
     }
 
-    /* ================= CLOSE CAMERA ================= */
-
     function closeCamera() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(function (track) {
@@ -381,8 +369,6 @@ useEffect(function () {
       setCameraReady(false);
     }
 
-    /* ================= CLEAN CAMERA ================= */
-
     useEffect(function () {
       return function () {
         if (streamRef.current) {
@@ -392,8 +378,6 @@ useEffect(function () {
         }
       };
     }, []);
-
-    /* ================= SUBMIT ================= */
 
     async function handleSubmit(event) {
       event.preventDefault();
@@ -525,8 +509,6 @@ if (isEditMode) {
       }
     }
 
-    /* ================= CAMERA SCREEN ================= */
-
     if (showCamera) {
       return React.createElement(
         "div",
@@ -639,8 +621,6 @@ if (isEditMode) {
       );
     }
 
-    /* ================= MAIN FORM ================= */
-
     return React.createElement(
       "div",
       {
@@ -659,8 +639,6 @@ if (isEditMode) {
             margin: "0 auto"
           }
         },
-
-        /* HEADER */
 
         React.createElement(
           "div",
@@ -704,8 +682,6 @@ if (isEditMode) {
             "Give your pre-loved fashion a beautiful new home ♡"
           )
         ),
-
-        /* FORM */
 
         React.createElement(
           "form",
@@ -1239,8 +1215,6 @@ if (isEditMode) {
             )
           ),
 
-          /* SUCCESS MESSAGE */
-
           message &&
             React.createElement(
               "div",
@@ -1257,8 +1231,6 @@ if (isEditMode) {
               message
             ),
 
-          /* ERROR MESSAGE */
-
           error &&
             React.createElement(
               "div",
@@ -1274,8 +1246,6 @@ if (isEditMode) {
               },
               error
             ),
-
-          /* SUBMIT BUTTON */
 
           React.createElement(
             "button",
@@ -1299,8 +1269,6 @@ if (isEditMode) {
   ? (isEditMode ? "⏳ Saving Changes..." : "⏳ Listing...")
   : (isEditMode ? "💾 Save Changes" : "✨ List My Clothing")
           ),
-
-          /* BROWSE BUTTON */
 
           message &&
             React.createElement(

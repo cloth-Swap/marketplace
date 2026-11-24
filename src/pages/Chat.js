@@ -66,7 +66,6 @@ function Chat() {
     [...previous, ...incoming].forEach(function (message) {
       if (!message) return;
 
-      // Saved messages are identified by their MongoDB ID.
       if (message._id) {
         messageMap.set(String(message._id), message);
       }

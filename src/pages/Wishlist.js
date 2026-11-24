@@ -132,10 +132,6 @@ function clearWishlist() {
         className: "container py-5"
       },
 
-      /* =========================
-         HEADING
-      ========================= */
-
       React.createElement(
         "div",
         {
@@ -168,10 +164,6 @@ function clearWishlist() {
           "Your favourite clothes, saved in one place."
         )
       ),
-
-      /* =========================
-         EMPTY WISHLIST
-      ========================= */
 
       wishlist.length === 0
         ? React.createElement(
@@ -218,10 +210,6 @@ function clearWishlist() {
         : React.createElement(
             React.Fragment,
             null,
-
-            /* =========================
-               TOP BAR
-            ========================= */
 
             React.createElement(
               "div",

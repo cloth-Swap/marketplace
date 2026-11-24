@@ -36,7 +36,6 @@ function getCurrentUserEmail() {
         return savedUser.email.trim().toLowerCase();
       }
     } catch (error) {
-      // Ignore invalid saved user data
     }
   }
 

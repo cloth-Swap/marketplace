@@ -31,11 +31,6 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const googleButtonRef =
     useRef(null);
 
-
-  /* =====================================================
-     GOOGLE LOGIN
-  ===================================================== */
-
   const handleGoogleResponse =
     async function (response) {
 
@@ -129,11 +124,6 @@ const [showConfirmPassword, setShowConfirmPassword] = useState(false);
             : "false"
         );
 
-
-       /* ==============================
-   REGISTRATION COMPLETE
-   ============================== */
-
 localStorage.removeItem("clothswapLoggedIn");
 
 localStorage.setItem(
@@ -190,12 +180,8 @@ useEffect(function () {
       );
       return;
     }
-
-    // Update callback for the currently open page.
     window.__clothSwapGoogleCallback =
       handleGoogleResponse;
-
-    // Initialize only once for this Google Client ID.
     if (
       window.__clothSwapGoogleClientId !== clientId
     ) {
@@ -279,12 +265,6 @@ window.google.accounts.id.renderButton(
     }
   };
 }, []);
-
-
-  /* =====================================================
-     NORMAL REGISTER
-  ===================================================== */
-
   const handleRegister =
     async function (event) {
 
@@ -417,12 +397,6 @@ localStorage.setItem(
 navigate("/login");
     };
 
-
-  
-  /* ==============================
-     PAGE
-  ============================== */
-
   return React.createElement(
     "div",
     {
@@ -488,8 +462,6 @@ navigate("/login");
       {
         className: "register-main-card"
       },
-
-      /* IMAGE SIDE */
 
       React.createElement(
 
@@ -576,9 +548,6 @@ src: "https://thumbnail.coupangcdn.com/thumbnails/remote/1920x1920ex/image/sd_im
         )
       ),
 
-
-      /* FORM SIDE */
-
       React.createElement(
 
         "div",
@@ -654,10 +623,6 @@ src: "https://thumbnail.coupangcdn.com/thumbnails/remote/1920x1920ex/image/sd_im
               )
 
             : null,
-
-
-          /* REGISTER FORM */
-
           React.createElement(
 
             "form",
@@ -987,9 +952,6 @@ src: "https://thumbnail.coupangcdn.com/thumbnails/remote/1920x1920ex/image/sd_im
             )
           ),
 
-
-          /* GOOGLE OR */
-
           React.createElement(
 
             "div",
@@ -1019,9 +981,6 @@ src: "https://thumbnail.coupangcdn.com/thumbnails/remote/1920x1920ex/image/sd_im
             )
           ),
 
-
-          /* GOOGLE BUTTON */
-
           React.createElement(
 
             "div",
@@ -1034,9 +993,6 @@ src: "https://thumbnail.coupangcdn.com/thumbnails/remote/1920x1920ex/image/sd_im
                 googleButtonRef
             }
           ),
-
-
-          /* LOGIN LINK */
 
           React.createElement(
 

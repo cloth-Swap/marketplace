@@ -116,8 +116,6 @@ useEffect(function () {
 );
 
      browseClothesCache = latestClothes;
-
-// Browse cache save disabled to prevent localStorage quota error
 setClothes(latestClothes);
     })
     .catch(function (error) {
@@ -238,7 +236,6 @@ useEffect(function () {
       matchesLocation
     );
   });
-/* ================= SORT ================= */
 
 const sortedClothes = [...filteredClothes].sort(function (a, b) {
   const priceA = Number(a.price || a.value || 0);
@@ -347,7 +344,6 @@ function toggleWishlist(item) {
     savedWishlist = [];
   }
 
-  // જૂના Base64 images દૂર કરીને compact data રાખવો
   savedWishlist = savedWishlist
     .filter(function (savedItem) {
       return savedItem && (savedItem._id || savedItem.id);
@@ -661,13 +657,10 @@ return updatedClothes;
       });
   }
 
-  /* ================= RETURN ================= */
 
   return React.createElement(
     "div",
     { className: "browse-page" },
-
-    /* ================= TOAST ================= */
 
     swapMessage &&
       React.createElement(
@@ -734,8 +727,6 @@ return updatedClothes;
           "container py-5"
       },
 
-      /* ================= HEADER ================= */
-
       React.createElement(
         "div",
         {
@@ -770,8 +761,6 @@ return updatedClothes;
         )
       ),
 
-      /* ================= FILTER BOX ================= */
-
       React.createElement(
         "div",
         {
@@ -786,7 +775,6 @@ return updatedClothes;
               "row g-3"
           },
 
-          /* SEARCH */
 
           React.createElement(
             "div",
@@ -820,7 +808,6 @@ return updatedClothes;
             )
           ),
 
-          /* CATEGORY */
 
           React.createElement(
             "div",
@@ -887,7 +874,6 @@ return updatedClothes;
 })
             )
           ),
-          /* SIZE */
 
           React.createElement(
             "div",
@@ -954,7 +940,6 @@ return updatedClothes;
             )
           ),
 
-          /* CONDITION */
 
           React.createElement(
             "div",
@@ -1011,7 +996,6 @@ return updatedClothes;
             )
           ),
 
-          /* LOCATION */
 
           React.createElement(
             "div",
@@ -1074,7 +1058,6 @@ return updatedClothes;
           )
         ),
 
-        /* ================= FILTER BOTTOM ================= */
 
         React.createElement(
           "div",
@@ -1156,7 +1139,6 @@ return updatedClothes;
         )
       ),
 
-      /* ================= LOADING ================= */
 
       loading &&
         React.createElement(
@@ -1181,7 +1163,6 @@ return updatedClothes;
           )
         ),
 
-      /* ================= CLOTHING GRID ================= */
 
       !loading &&
         filteredClothes.length > 0 &&
@@ -1271,7 +1252,6 @@ const itemSize =
                       "clothing-card h-100"
                   },
 
-                  /* ================= IMAGE ================= */
 
                   React.createElement(
                     "div",
@@ -1306,7 +1286,6 @@ const itemSize =
 )
                     ),
 
-                    /* AVAILABLE BADGE */
 
                     React.createElement(
                       "span",
@@ -1318,7 +1297,6 @@ const itemSize =
                         "Available"
                     ),
 
-                    /* WISHLIST */
 
                     React.createElement(
                       "button",
@@ -1346,7 +1324,6 @@ const itemSize =
                     )
                   ),
 
-                  /* ================= INFO ================= */
 
                   React.createElement(
                     "div",
@@ -1378,7 +1355,6 @@ const itemSize =
     itemSize
   )
 ),
-// BRAND NAME
 React.createElement(
   "p",
   {
@@ -1387,9 +1363,6 @@ React.createElement(
   "🏷️ ",
   item.brand || "Unbranded"
 ),
-
-
-// SELLER PROFILE PHOTO + NAME
 React.createElement(
   "div",
   {
@@ -1498,8 +1471,6 @@ React.createElement(
                     )
                   ),
 
-                  /* ================= ACTIONS ================= */
-
                   React.createElement(
                     "div",
                     {
@@ -1566,8 +1537,6 @@ React.createElement(
             }
           )
         ),
-
-      /* ================= NO RESULTS ================= */
 
       !loading &&
         filteredClothes.length === 0 &&

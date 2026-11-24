@@ -89,7 +89,6 @@ useEffect(function () {
   useEffect(function () {
     fetchRequests();
   }, []);
-/* ================= REAL-TIME SWAP REQUEST UPDATES ================= */
 
 useEffect(function () {
 
@@ -2496,7 +2495,6 @@ const agreementBox = isSwapCompleted ? null : createAgreementBox(
   }
 })
   : null,
-            /* ================= MESSAGE ================= */
 
             request.message
               ? React.createElement(
@@ -2528,8 +2526,6 @@ const agreementBox = isSwapCompleted ? null : createAgreementBox(
 
             agreementBox,
 
-            /* ================= ACTIONS ================= */
-
             actionButtons.length > 0
               ? React.createElement(
                   "div",
@@ -2546,10 +2542,6 @@ const agreementBox = isSwapCompleted ? null : createAgreementBox(
       );
     }
   );
-
-  /* =====================================================
-     MAIN PAGE
-  ===================================================== */
 
   return React.createElement(
     "div",
@@ -2615,11 +2607,7 @@ React.createElement(
     },
     "Swap History (" + historyRequests.length + ")"
   
-),
-
- 
-
-  
+),  
 ),
       React.createElement(
         "div",

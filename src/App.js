@@ -46,8 +46,6 @@ function App() {
   const [termsCheckedPath, setTermsCheckedPath] = useState("");
   const [termsCheckedAt, setTermsCheckedAt] = useState(0);
 
-  /* ================= AUTO SESSION RESTORE ================= */
-
   useEffect(function () {
     async function restoreSession() {
       const isLoggedIn =
@@ -81,7 +79,6 @@ function App() {
     restoreSession();
   }, []);
 
-  /* ================= MANDATORY TERMS PROTECTION ================= */
 
   useEffect(function () {
     let cancelled = false;
@@ -181,8 +178,6 @@ function App() {
 
   }, [sessionReady, location.pathname]);
 
-  /* ================= AUTOMATIC BLOCK CHECK ================= */
-
   useEffect(function () {
     let isRedirecting = false;
     let isChecking = false;
@@ -279,7 +274,6 @@ function App() {
     };
 
   }, [sessionReady]);
-  /* ================= GLOBAL SOCKET CONNECTION ================= */
 
 useEffect(function () {
   if (!sessionReady) {
@@ -304,7 +298,6 @@ useEffect(function () {
 
 }, [sessionReady]);
 
-  /* ================= ROUTE CHECKS ================= */
 
   const isCEODashboard =
     location.pathname === "/admin-dashboard";
@@ -336,13 +329,11 @@ useEffect(function () {
     termsCheckedPath === location.pathname &&
     !termsAccepted;
 
-  /* ================= PC NOTIFICATIONS ================= */
 
   useEffect(function () {
     registerNotifications();
   }, []);
 
-  /* ================= LOGIN PROTECTION ================= */
 
   useEffect(function () {
     function handleProtectedClick(event) {
@@ -406,8 +397,6 @@ useEffect(function () {
       );
     };
   }, []);
-
-  /* ================= MAIN LAYOUT ================= */
 
   return React.createElement(
     React.Fragment,

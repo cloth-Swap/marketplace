@@ -1,7 +1,3 @@
-/* =====================================================
-   CLOTHSWAP - GLOBAL STYLES
-===================================================== */
-
 * {
   box-sizing: border-box;
 }
@@ -36,10 +32,6 @@ main {
   flex: 1;
 }
 
-/* =====================================================
-   CLOTHSWAP - PREMIUM NAVBAR
-===================================================== */
-
 .clothswap-navbar {
   min-height: 76px;
   padding: 10px 0;
@@ -51,19 +43,10 @@ main {
   z-index: 1050;
 }
 
-/* =====================================================
-   NAVBAR CONTAINER
-===================================================== */
-
 .clothswap-navbar > .container {
   min-height: 54px;
   gap: 20px;
 }
-
-/* =====================================================
-   LOGO
-===================================================== */
-
 .clothswap-navbar-brand {
   display: inline-flex;
   align-items: center;
@@ -97,10 +80,6 @@ main {
 .clothswap-navbar-brand:hover .clothswap-logo-icon {
   transform: rotate(-15deg) scale(1.08);
 }
-
-/* =====================================================
-   MAIN NAVIGATION
-===================================================== */
 
 .clothswap-main-nav {
   align-items: center;
@@ -160,11 +139,6 @@ main {
 .clothswap-main-nav .nav-link.active {
   color: #814d8e !important;
 }
-
-/* =====================================================
-   SEARCH
-===================================================== */
-
 .clothswap-search-wrapper {
   position: relative;
   width: 205px;
@@ -244,11 +218,6 @@ main {
   color: #70427c;
   transform: scale(1.05);
 }
-
-/* =====================================================
-   SEARCH RESULTS
-===================================================== */
-
 .clothswap-search-results {
   position: absolute;
   top: calc(100% + 9px);
@@ -326,9 +295,6 @@ main {
   font-size: 18px;
 }
 
-/* =====================================================
-   RIGHT SIDE
-===================================================== */
 
 .clothswap-user-area {
   margin-left: auto;
@@ -336,9 +302,6 @@ main {
   gap: 7px !important;
 }
 
-/* =====================================================
-   NOTIFICATION + WISHLIST
-===================================================== */
 
 .clothswap-notification-icon,
 .clothswap-wishlist-icon {
@@ -369,11 +332,6 @@ main {
 .clothswap-wishlist-icon .bi-heart-fill {
   color: #d46d9b;
 }
-
-/* =====================================================
-   NOTIFICATION BADGE
-===================================================== */
-
 .notification-count-badge,
 .wishlist-count-badge {
   position: absolute;
@@ -410,10 +368,6 @@ main {
   );
 }
 
-/* =====================================================
-   USER AREA
-===================================================== */
-
 .clothswap-user-box {
   min-height: 40px;
   padding: 3px 8px 3px 4px !important;
@@ -439,11 +393,6 @@ main {
   color: #493d4e;
   font-size: 12px;
 }
-
-/* =====================================================
-   LOGIN / REGISTER
-===================================================== */
-
 .clothswap-user-area > .btn-outline-dark,
 .clothswap-user-area > .btn-dark {
   min-height: 38px;
@@ -498,10 +447,6 @@ main {
   font-weight: 700;
 }
 
-/* =====================================================
-   MOBILE TOGGLER
-===================================================== */
-
 .clothswap-mobile-toggler {
   width: 42px;
   height: 42px;
@@ -522,10 +467,6 @@ main {
   height: 20px;
 }
 
-/* =====================================================
-   TABLET
-===================================================== */
-
 @media (max-width: 1199px) {
   .clothswap-main-nav .nav-link {
     padding-left: 7px !important;
@@ -542,10 +483,6 @@ main {
     max-width: 75px;
   }
 }
-
-/* =====================================================
-   TABLET / MOBILE NAVIGATION
-===================================================== */
 
 @media (max-width: 991px) {
   .clothswap-navbar {
@@ -612,11 +549,6 @@ main {
     max-width: 180px;
   }
 }
-
-/* =====================================================
-   MOBILE
-===================================================== */
-
 @media (max-width: 767px) {
   .clothswap-navbar-brand {
     font-size: 1.4rem;
@@ -659,10 +591,6 @@ main {
   }
 }
 
-/* =====================================================
-   SMALL MOBILE
-===================================================== */
-
 @media (max-width: 480px) {
   .clothswap-navbar {
     min-height: 68px;
@@ -703,21 +631,12 @@ main {
   }
 }
 
-/* =========================================================
-   CLOTHSWAP HOME PAGE
-   ========================================================= */
-
 .home-new-page {
   width: 100%;
   overflow: hidden;
   background: #fffafc;
   color: #34263a;
 }
-
-/* =========================================================
-   COMMON
-   ========================================================= */
-
 .home-new-section {
   width: 100%;
   padding: 90px 6%;
@@ -769,11 +688,6 @@ main {
   color: #a05288;
   transform: translateX(4px);
 }
-
-/* =========================================================
-   HERO
-   ========================================================= */
-
 .home-new-hero {
   width: 100%;
   min-height: 680px;
@@ -810,8 +724,6 @@ main {
   align-items: center;
   gap: 65px;
 }
-
-/* ---------- Hero text ---------- */
 
 .home-new-hero-copy {
   max-width: 570px;
@@ -859,7 +771,6 @@ main {
   line-height: 1.8;
 }
 
-/* ---------- Hero buttons ---------- */
 
 .home-new-hero-actions {
   display: flex;
@@ -925,10 +836,6 @@ main {
     0 12px 25px rgba(92, 58, 96, 0.1);
 }
 
-/* =========================================================
-   HERO IMAGE
-   ========================================================= */
-
 .home-new-hero-visual {
   position: relative;
   width: 100%;
@@ -969,10 +876,6 @@ main {
   box-shadow:
     0 28px 70px rgba(69, 43, 75, 0.18);
 }
-
-/* =========================================================
-   THE TWO ORIGINAL HERO BOXES
-   ========================================================= */
 
 .home-new-fashion-box {
   position: absolute;
@@ -1060,10 +963,6 @@ main {
   line-height: 1.3;
   font-weight: 600;
 }
-
-/* =========================================================
-   FEATURED CLOTHES
-   ========================================================= */
 
 .home-new-featured-section {
   background: #fffafc;
@@ -1174,10 +1073,6 @@ main {
   letter-spacing: 0.8px;
 }
 
-/* =========================================================
-   STATEMENT
-   ========================================================= */
-
 .home-new-statement {
   padding: 120px 6%;
 
@@ -1246,10 +1141,6 @@ main {
   box-shadow:
     0 12px 25px rgba(92, 58, 96, 0.1);
 }
-
-/* =========================================================
-   CATEGORIES
-   ========================================================= */
 
 .home-new-category-section {
   background: #fffafc;
@@ -1329,10 +1220,6 @@ main {
   letter-spacing: 1px;
 }
 
-/* =========================================================
-   HOW IT WORKS
-   ========================================================= */
-
 .home-new-how-section {
   position: relative;
   padding: 105px 6%;
@@ -1364,11 +1251,6 @@ main {
   font-weight: 750;
 }
 
-
-/* =========================================================
-   4 STEP BOXES
-   ========================================================= */
-
 .home-new-steps-grid {
   position: relative;
   z-index: 2;
@@ -1380,11 +1262,6 @@ main {
   grid-template-columns: repeat(4, 1fr);
   gap: 18px;
 }
-
-
-/* =========================================================
-   INDIVIDUAL STEP BOX
-   ========================================================= */
 
 .home-new-step {
   position: relative;
@@ -1423,11 +1300,6 @@ main {
     background 0.35s ease;
 }
 
-
-/* =========================================================
-   TOP DECORATIVE LINE
-   ========================================================= */
-
 .home-new-step::before {
   content: "";
 
@@ -1453,11 +1325,6 @@ main {
 
   z-index: 3;
 }
-
-
-/* =========================================================
-   DECORATIVE CIRCLE
-   ========================================================= */
 
 .home-new-step::after {
   content: "";
@@ -1491,11 +1358,6 @@ main {
   pointer-events: none;
 }
 
-
-/* =========================================================
-   HOVER EFFECT
-   ========================================================= */
-
 .home-new-step:hover {
   transform: translateY(-9px);
 
@@ -1521,10 +1383,6 @@ main {
   transform: scale(1.45);
 }
 
-/* =========================================================
-   NUMBER
-   ========================================================= */
-
 .home-new-step-number {
   position: relative;
   z-index: 2;
@@ -1549,12 +1407,6 @@ main {
 
   letter-spacing: 1.8px;
 }
-
-
-/* =========================================================
-   TITLE
-   ========================================================= */
-
 .home-new-step h3 {
   position: relative;
   z-index: 2;
@@ -1568,12 +1420,6 @@ main {
 
   letter-spacing: -0.5px;
 }
-
-
-/* =========================================================
-   DESCRIPTION
-   ========================================================= */
-
 .home-new-step p {
   position: relative;
   z-index: 2;
@@ -1585,12 +1431,6 @@ main {
   font-size: 13px;
   line-height: 1.75;
 }
-
-
-/* =========================================================
-   TABLET
-   ========================================================= */
-
 @media (max-width: 1000px) {
   .home-new-steps-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1600,12 +1440,6 @@ main {
     min-height: 220px;
   }
 }
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 600px) {
   .home-new-how-section {
     padding: 75px 5%;
@@ -1639,10 +1473,6 @@ main {
     font-size: 12px;
   }
 }
-/* =========================================================
-   START SWAPPING / QUICK ACTIONS
-   ========================================================= */
-
 .home-new-actions-section {
   position: relative;
   padding: 105px 6%;
@@ -1665,9 +1495,6 @@ main {
     );
   overflow: hidden;
 }
-
-/* subtle background decoration */
-
 .home-new-actions-section::before {
   content: "";
   position: absolute;
@@ -1695,11 +1522,6 @@ main {
   pointer-events: none;
 }
 
-
-/* =========================================================
-   HEADING
-   ========================================================= */
-
 .home-new-actions-heading {
   position: relative;
   z-index: 2;
@@ -1723,12 +1545,6 @@ main {
   font-size: 14px;
   line-height: 1.7;
 }
-
-
-/* =========================================================
-   CARDS GRID
-   ========================================================= */
-
 .home-new-actions-grid {
   position: relative;
   z-index: 2;
@@ -1740,12 +1556,6 @@ main {
   grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
-
-
-/* =========================================================
-   ACTION CARD
-   ========================================================= */
-
 .home-new-action-card {
   position: relative;
 
@@ -1785,10 +1595,6 @@ main {
     border-color 0.35s ease,
     background 0.35s ease;
 }
-
-
-/* top decorative border */
-
 .home-new-action-card::after {
   content: "";
 
@@ -1813,10 +1619,6 @@ main {
 
   transition: transform 0.4s ease;
 }
-
-
-/* soft circle decoration */
-
 .home-new-action-card::before {
   content: "";
 
@@ -1843,11 +1645,6 @@ main {
     opacity 0.35s ease;
 }
 
-
-/* =========================================================
-   HOVER
-   ========================================================= */
-
 .home-new-action-card:hover {
   transform: translateY(-9px);
 
@@ -1872,12 +1669,6 @@ main {
 .home-new-action-card:hover::before {
   transform: scale(1.45);
 }
-
-
-/* =========================================================
-   TOP AREA
-   ========================================================= */
-
 .home-new-action-top {
   position: relative;
   z-index: 3;
@@ -1886,10 +1677,6 @@ main {
   align-items: center;
   justify-content: space-between;
 }
-
-
-/* number */
-
 .home-new-action-number {
   display: inline-flex;
   align-items: center;
@@ -1913,12 +1700,6 @@ main {
 
   letter-spacing: 1.8px;
 }
-
-
-/* =========================================================
-   ICON
-   ========================================================= */
-
 .home-new-action-icon {
   width: 52px;
   height: 52px;
@@ -1959,11 +1740,6 @@ main {
     0 14px 28px rgba(126, 74, 139, 0.25);
 }
 
-
-/* =========================================================
-   CONTENT
-   ========================================================= */
-
 .home-new-action-content {
   position: relative;
   z-index: 3;
@@ -1993,11 +1769,6 @@ main {
   line-height: 1.75;
 }
 
-
-/* =========================================================
-   BOTTOM AREA
-   ========================================================= */
-
 .home-new-action-bottom {
   position: relative;
   z-index: 3;
@@ -2018,10 +1789,6 @@ main {
   letter-spacing: 1.1px;
   text-transform: uppercase;
 }
-
-
-/* arrow circle */
-
 .home-new-action-bottom strong {
   width: 38px;
   height: 38px;
@@ -2062,12 +1829,6 @@ main {
   box-shadow:
     0 7px 16px rgba(126, 74, 139, 0.18);
 }
-
-
-/* =========================================================
-   TABLET
-   ========================================================= */
-
 @media (max-width: 900px) {
   .home-new-actions-section {
     padding: 85px 5%;
@@ -2086,12 +1847,6 @@ main {
     font-size: 20px;
   }
 }
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 767px) {
   .home-new-actions-section {
     padding: 75px 5%;
@@ -2122,12 +1877,6 @@ main {
     border-radius: 14px;
   }
 }
-
-
-/* =========================================================
-   SMALL MOBILE
-   ========================================================= */
-
 @media (max-width: 480px) {
   .home-new-actions-section {
     padding: 65px 18px;
@@ -2176,11 +1925,6 @@ main {
     height: 35px;
   }
 }
-
-/* =========================================================
-   ACTIONS — MOBILE
-   ========================================================= */
-
 @media (max-width: 767px) {
   .home-new-actions-section {
     padding: 75px 5%;
@@ -2225,10 +1969,6 @@ main {
     border-radius: 13px;
   }
 }
-/* =========================================================
-   NEARBY SWAPS
-   ========================================================= */
-
 .home-new-nearby-section {
   max-width: 1400px;
   margin: 0 auto;
@@ -2279,11 +2019,6 @@ main {
   font-size: 15px;
   line-height: 1.8;
 }
-
-/* =========================================================
-   SUSTAINABILITY
-   ========================================================= */
-
 .home-new-sustainability {
   padding: 95px 8%;
 
@@ -2316,11 +2051,6 @@ main {
   font-size: 17px;
   line-height: 1.9;
 }
-
-/* =========================================================
-   FINAL CTA
-   ========================================================= */
-
 .home-new-final-cta {
   padding: 115px 6%;
 
@@ -2369,11 +2099,6 @@ main {
   flex-wrap: wrap;
   gap: 12px;
 }
-
-/* =========================================================
-   TABLET
-   ========================================================= */
-
 @media (max-width: 1100px) {
   .home-new-hero-content {
     grid-template-columns: 1fr 1fr;
@@ -2412,11 +2137,6 @@ main {
     gap: 45px;
   }
 }
-
-/* =========================================================
-   MOBILE TABLET
-   ========================================================= */
-
 @media (max-width: 900px) {
   .home-new-hero {
     padding: 55px 5% 80px;
@@ -2457,11 +2177,6 @@ main {
     gap: 30px;
   }
 }
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 767px) {
   .home-new-section {
     padding: 70px 5%;
@@ -2669,11 +2384,6 @@ main {
     width: 100%;
   }
 }
-
-/* =========================================================
-   SMALL MOBILE
-   ========================================================= */
-
 @media (max-width: 480px) {
   .home-new-hero {
     padding-left: 18px;
@@ -2749,12 +2459,6 @@ main {
     height: 320px;
   }
 }
-
-/* =====================================================
-   FEATURED CLOTHES
-===================================================== */
-
-
 .clothing-card {
   height: 100%;
   background: #ffffff;
@@ -2857,11 +2561,6 @@ main {
   font-size: 1rem;
   margin-top: 2px;
 }
-
-/* =====================================================
-   HOME - FASHION CATEGORY CARDS
-===================================================== */
-
 .home-category-section {
   position: relative;
   padding: 95px 0 105px;
@@ -2881,12 +2580,6 @@ main {
 .home-category-heading .home-section-heading {
   margin-bottom: 18px;
 }
-
-
-/* =========================
-   CATEGORY CARD
-========================= */
-
 .home-category-card {
   position: relative;
   display: block;
@@ -2911,9 +2604,6 @@ main {
     transform 0.35s ease,
     box-shadow 0.35s ease;
 }
-
-/* Dark overlay */
-
 .home-category-card::before {
   content: "";
 
@@ -2933,10 +2623,6 @@ main {
   transition:
     background 0.35s ease;
 }
-
-
-/* Fashion images */
-
 .home-category-card::after {
   content: "";
 
@@ -2952,12 +2638,7 @@ main {
 
   transition:
     transform 0.55s ease;
-}
-
-
-/* Different clothing image for each card */
-
-.home-category-card:nth-child(1)::after {
+}me-category-card:nth-child(1)::after {
   background-image:
     url("https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=800&q=85");
 }
@@ -2986,10 +2667,6 @@ main {
   background-image:
     url("https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=800&q=85");
 }
-
-
-/* Hover */
-
 .home-category-card:hover {
   transform: translateY(-8px);
 
@@ -3010,12 +2687,6 @@ main {
       rgba(20, 15, 22, 0.84) 100%
     );
 }
-
-
-/* =========================
-   NUMBER
-========================= */
-
 .home-category-number {
   position: absolute;
 
@@ -3045,12 +2716,6 @@ main {
   box-shadow:
     0 7px 20px rgba(0,0,0,0.10);
 }
-
-
-/* =========================
-   ICON
-========================= */
-
 .home-category-icon {
   position: absolute;
 
@@ -3086,12 +2751,6 @@ main {
 
   background: #ffffff;
 }
-
-
-/* =========================
-   TEXT
-========================= */
-
 .home-category-card h3 {
   position: absolute;
 
@@ -3127,12 +2786,6 @@ main {
   font-size: 12.5px;
   line-height: 1.55;
 }
-
-
-/* =========================
-   ARROW
-========================= */
-
 .home-category-arrow {
   position: absolute;
 
@@ -3165,12 +2818,6 @@ main {
 
   background: #ffffff;
 }
-
-
-/* =====================================================
-   MOBILE
-===================================================== */
-
 @media (max-width: 991px) {
 
   .home-category-section {
@@ -3302,7 +2949,7 @@ main {
 }
 
 
-/* Benefit cards */
+
 
 .home-benefit-card {
   position: relative;
@@ -3446,11 +3093,6 @@ main {
   font-size: 13px;
   line-height: 1.75;
 }
-
-
-/* =====================================================
-   HOME - NEW SECTIONS RESPONSIVE
-===================================================== */
 
 @media (max-width: 991px) {
 
@@ -3596,12 +3238,6 @@ main {
     line-height: 1.65;
   }
 }
-
-
-/* =====================================================
-   CLOTHSWAP - PREMIUM FOOTER
-===================================================== */
-
 .footer-section {
   position: relative;
   margin-top: 0;
@@ -3743,10 +3379,6 @@ main {
   color: #9b5fb0;
   font-weight: 500;
 }
-/* =========================================
-   FILTER BOX
-========================================= */
-
 .filter-box {
   border: 1px solid #eee3f1;
   border-radius: 20px;
@@ -3806,10 +3438,6 @@ main {
 }
 
 
-/* =========================================
-   CLOTHING CARD
-========================================= */
-
 .clothing-card {
   background: #fff;
   border: 1px solid #eee5ee;
@@ -3845,10 +3473,6 @@ main {
 }
 
 
-/* =========================================
-   AVAILABLE BADGE
-========================================= */
-
 .available-badge {
   position: absolute;
   top: 14px;
@@ -3861,12 +3485,6 @@ main {
   font-weight: 700;
   box-shadow: 0 3px 10px rgba(50, 100, 70, 0.08);
 }
-
-
-/* =========================================
-   CLOTHING INFORMATION
-========================================= */
-
 .clothing-info {
   padding: 19px;
   color: #292333;
@@ -3929,11 +3547,6 @@ main {
   color: #6f6873;
 }
 
-
-/* =========================================
-   EMPTY RESULTS
-========================================= */
-
 .empty-results {
   width: 100%;
   background: rgba(255, 255, 255, 0.8);
@@ -3949,11 +3562,6 @@ main {
 .empty-results p {
   color: #687078;
 }
-
-
-/* =========================================
-   TABLET
-========================================= */
 
 @media (max-width: 991px) {
 
@@ -3974,10 +3582,6 @@ main {
   }
 }
 
-
-/* =========================================
-   MOBILE
-========================================= */
 
 @media (max-width: 576px) {
 
@@ -4029,11 +3633,6 @@ main {
     font-size: 18px;
   }
 }
-/* =========================================================
-   CLOTHSWAP — PREMIUM LIST YOUR CLOTHES PAGE
-   Sustainable Fashion Theme
-   ========================================================= */
-
 .list-page {
   min-height: 100vh;
   padding: 55px 0 90px;
@@ -4042,15 +3641,9 @@ main {
     radial-gradient(circle at 90% 20%, rgba(239, 207, 185, 0.28), transparent 28%),
     #f8f6f0;
 }
-
-/* ================= MAIN CONTAINER ================= */
-
 .list-page .container {
   max-width: 920px;
 }
-
-/* ================= HEADER ================= */
-
 .list-page > .container > div:first-child {
   margin-bottom: 38px !important;
 }
@@ -4080,9 +3673,6 @@ main {
   font-size: 17px;
   margin: 0;
 }
-
-/* ================= FORM CARD ================= */
-
 .list-clothes-form {
   position: relative;
   background: rgba(255, 255, 255, 0.94);
@@ -4094,8 +3684,6 @@ main {
     0 4px 15px rgba(48, 62, 51, 0.04);
   overflow: hidden;
 }
-
-/* Decorative top line */
 
 .list-clothes-form::before {
   content: "";
@@ -4111,9 +3699,6 @@ main {
     #91a889
   );
 }
-
-/* ================= LABELS ================= */
-
 .list-clothes-form .form-label {
   color: #34463a;
   font-size: 14px;
@@ -4121,9 +3706,6 @@ main {
   letter-spacing: 0.2px;
   margin-bottom: 9px;
 }
-
-/* ================= INPUTS ================= */
-
 .list-clothes-form .form-control,
 .list-clothes-form .form-select {
   min-height: 52px;
@@ -4148,9 +3730,6 @@ main {
   min-height: 125px;
   resize: vertical;
 }
-
-/* ================= INPUT FOCUS ================= */
-
 .list-clothes-form .form-control:focus,
 .list-clothes-form .form-select:focus {
   background: #fff;
@@ -4158,15 +3737,9 @@ main {
   box-shadow:
     0 0 0 4px rgba(145, 168, 137, 0.14);
 }
-
-/* ================= FORM SPACING ================= */
-
 .list-clothes-form .mb-3 {
   margin-bottom: 21px !important;
 }
-
-/* ================= IMAGE AREA ================= */
-
 .list-clothes-form .mb-4 {
   margin-top: 30px;
   padding: 22px;
@@ -4175,15 +3748,10 @@ main {
   border: 1px dashed #c9cec5;
 }
 
-/* Image label */
-
 .list-clothes-form .mb-4 > .form-label {
   font-size: 15px;
   color: #34463a;
 }
-
-/* ================= PHOTO BUTTONS ================= */
-
 .list-clothes-form .btn {
   min-height: 49px;
   padding: 11px 21px;
@@ -4192,9 +3760,6 @@ main {
   font-weight: 600;
   transition: all 0.2s ease;
 }
-
-/* Choose Photo */
-
 .list-clothes-form label.btn-outline-dark {
   color: #46594b;
   background: #ffffff;
@@ -4207,9 +3772,6 @@ main {
   border-color: #718a69;
   transform: translateY(-2px);
 }
-
-/* Take Photo */
-
 .list-clothes-form button.btn-dark {
   background: #718a69;
   border-color: #718a69;
@@ -4223,7 +3785,7 @@ main {
   box-shadow: 0 8px 20px rgba(87, 111, 82, 0.20);
 }
 
-/* ================= PREVIEW ================= */
+
 
 .list-clothes-form .fw-semibold {
   color: #34463a;
@@ -4243,7 +3805,7 @@ main {
     0 14px 35px rgba(47, 65, 52, 0.15);
 }
 
-/* ================= ALERTS ================= */
+
 
 .list-clothes-form .alert {
   border: none;
@@ -4262,7 +3824,7 @@ main {
   color: #884c43;
 }
 
-/* ================= SUBMIT BUTTON ================= */
+
 
 .list-clothes-form > button[type="submit"] {
   position: relative;
@@ -4329,10 +3891,6 @@ main {
 }
 
 
-/* =========================================================
-   ================== BROWSE HEADING =======================
-   ========================================================= */
-
 .browse-page .browse-heading {
   padding-top: 15px;
   margin-bottom: 55px !important;
@@ -4356,7 +3914,7 @@ main {
   margin-bottom: 10px;
 }
 
-/* MAIN TITLE */
+
 
 .browse-page .browse-heading h1 {
   margin: 0;
@@ -4371,7 +3929,7 @@ main {
 }
 
 
-/* PINK STYLISH PART */
+
 
 .browse-page .browse-heading h1 em {
   font-style: italic;
@@ -4390,10 +3948,6 @@ main {
   text-shadow:
     0 8px 25px rgba(220, 91, 165, 0.12);
 }
-
-
-/* SUBTITLE */
-
 .browse-page .browse-heading p {
   margin-top: 17px;
   margin-bottom: 0;
@@ -4405,10 +3959,6 @@ main {
   letter-spacing: 0.1px;
 }
 
-
-/* =========================================================
-   ================ FILTER BOX GLASS LOOK ==================
-   ========================================================= */
 
 .browse-page .filter-box {
   background: rgba(255, 255, 255, 0.82);
@@ -4426,7 +3976,7 @@ main {
   backdrop-filter: blur(12px);
 }
 
-/* ================= FILTER LABEL ================= */
+
 
 .browse-page .filter-label {
   display: block;
@@ -4436,7 +3986,7 @@ main {
   font-weight: 700;
 }
 
-/* ================= FILTER INPUT ================= */
+
 
 .browse-page .filter-input {
   width: 100%;
@@ -4466,13 +4016,13 @@ main {
   outline: none !important;
 }
 
-/* ================= SELECT ARROW ================= */
+
 
 .browse-page select.filter-input {
   cursor: pointer;
 }
 
-/* ================= FILTER BOTTOM ================= */
+
 
 .browse-page .filter-bottom {
   border-top: 1px solid #eadfeb;
@@ -4486,7 +4036,7 @@ main {
   font-weight: 700;
 }
 
-/* ================= CLEAR BUTTON ================= */
+
 
 .browse-page .clear-btn {
   border: none !important;
@@ -4507,9 +4057,6 @@ main {
   box-shadow: 0 6px 15px rgba(112, 77, 117, 0.18);
 }
 
-/* =========================================================
-   ================= CLOTHING CARDS ========================
-   ========================================================= */
 
 .browse-page .clothing-card {
   position: relative;
@@ -4526,7 +4073,7 @@ main {
   box-shadow: 0 18px 35px rgba(52, 38, 60, 0.12);
 }
 
-/* ================= IMAGE ================= */
+
 
 .browse-page .clothing-image-wrapper {
   position: relative;
@@ -4548,7 +4095,7 @@ main {
   transform: scale(1.04);
 }
 
-/* ================= AVAILABLE BADGE ================= */
+
 
 .browse-page .available-badge {
   position: absolute;
@@ -4564,7 +4111,7 @@ main {
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
 }
 
-/* ================= CARD INFO ================= */
+
 
 .browse-page .clothing-info {
   padding: 20px;
@@ -4618,7 +4165,7 @@ main {
   font-size: 13px;
 }
 
-/* Remove default Link styling inside cards */
+
 
 .browse-page .clothing-card a {
   color: inherit;
@@ -4630,16 +4177,12 @@ main {
   text-decoration: none;
 }
 
-/* ================= LOADING ================= */
+
 
 .browse-page .text-center h4 {
   color: #5d4467;
   font-weight: 600;
 }
-
-/* =========================================================
-   ================= RESPONSIVE ===========================
-   ========================================================= */
 
 @media (max-width: 991px) {
 
@@ -4709,15 +4252,12 @@ main {
   }
 }
 
-/* =========================================================
-   CAMERA SCREEN
-   ========================================================= */
 
 .list-page + div {
   background: #1d261f;
 }
 
-/* Camera buttons */
+
 
 video + div button:first-child {
   background: #dce8d7 !important;
@@ -4735,10 +4275,6 @@ video + div button:last-child {
   border-color: #aeb9ad !important;
   color: #fff !important;
 }
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
 
 @media (max-width: 768px) {
 
@@ -4770,7 +4306,7 @@ video + div button:last-child {
   }
 }
 
-/* ================= SMALL MOBILE ================= */
+
 
 @media (max-width: 480px) {
 
@@ -4801,7 +4337,7 @@ video + div button:last-child {
     height: 300px !important;
   }
 }
-/* ================= WISHLIST NUMBER ABOVE TEXT ================= */
+
 
 .wishlist-nav-wrapper {
   position: relative;
@@ -4850,9 +4386,6 @@ video + div button:last-child {
   outline: none !important;
   box-shadow: none !important;
 }
-/* =================================
-   ITEM DETAILS PAGE
-================================= */
 
 .item-details-page {
   min-height: 100vh;
@@ -5148,10 +4681,6 @@ video + div button:last-child {
   cursor: pointer;
 }
 
-/* =================================
-   ITEM DETAILS MOBILE
-================================= */
-
 @media (max-width: 991px) {
   .item-details-image-box {
     height: 550px;
@@ -5185,9 +4714,6 @@ video + div button:last-child {
     width: 100%;
   }
 }
-
-/* ===== ITEM DETAILS PREMIUM DESIGN ===== */
-
 .item-details-page {
   background: linear-gradient(135deg, #fff 55%, #fdf6ff);
 }
@@ -5375,11 +4901,6 @@ video + div button:last-child {
     width: 100%;
   }
 }
-
-/* =================================
-   WISHLIST PAGE
-================================= */
-
 .wishlist-page {
   min-height: 100vh;
   background: #ffffff;
@@ -5427,7 +4948,7 @@ video + div button:last-child {
   margin: 0;
 }
 
-/* TOP BAR */
+
 
 .wishlist-top {
   border-bottom: 1px solid #eeeeee;
@@ -5452,7 +4973,7 @@ video + div button:last-child {
   color: #202428;
 }
 
-/* CARD */
+
 
 .wishlist-card {
   background: #ffffff;
@@ -5472,7 +4993,7 @@ video + div button:last-child {
     0 14px 35px rgba(0, 0, 0, 0.09);
 }
 
-/* IMAGE */
+
 
 .wishlist-image-wrapper {
   height: 350px;
@@ -5496,7 +5017,7 @@ video + div button:last-child {
   transform: scale(1.04);
 }
 
-/* REMOVE BUTTON */
+
 
 .wishlist-remove-btn {
   position: absolute;
@@ -5527,7 +5048,7 @@ video + div button:last-child {
   transform: scale(1.08);
 }
 
-/* CARD INFORMATION */
+
 
 .wishlist-card-info {
   padding: 20px;
@@ -5564,7 +5085,7 @@ video + div button:last-child {
   color: #687078;
 }
 
-/* CARD BOTTOM */
+
 
 .wishlist-card-bottom {
   border-top: 1px solid #eeeeee;
@@ -5605,7 +5126,7 @@ video + div button:last-child {
   transform: translateY(-2px);
 }
 
-/* EMPTY WISHLIST */
+
 
 .wishlist-empty {
   padding: 70px 20px;
@@ -5675,9 +5196,6 @@ video + div button:last-child {
   transform: translateY(-2px);
 }
 
-/* =================================
-   WISHLIST MOBILE
-================================= */
 
 @media (max-width: 576px) {
 
@@ -5701,9 +5219,6 @@ video + div button:last-child {
     font-size: 13px;
   }
 }
-/* ===============================
-   WISHLIST NAVBAR COUNT
-================================ */
 
 .wishlist-nav-wrapper {
   position: relative;
@@ -5758,10 +5273,6 @@ video + div button:last-child {
   }
 }
 
-/* =====================================================
-   SWAP REQUESTS - PREMIUM DESIGN
-   ===================================================== */
-
 .swap-requests-page {
   min-height: 100vh;
   padding: 45px 0 80px;
@@ -5795,7 +5306,7 @@ video + div button:last-child {
   font-size: 16px;
 }
 
-/* CARD */
+
 
 .swap-request-card {
   background: #ffffff;
@@ -5812,7 +5323,7 @@ video + div button:last-child {
   box-shadow: 0 16px 38px rgba(115, 70, 130, 0.14);
 }
 
-/* IMAGE */
+
 
 .swap-request-image {
   width: 125px;
@@ -5838,7 +5349,7 @@ video + div button:last-child {
   font-size: 42px;
 }
 
-/* DETAILS */
+
 
 .swap-request-title {
   margin: 0 0 12px;
@@ -5891,7 +5402,7 @@ video + div button:last-child {
   color: #d6455d;
 }
 
-/* BUTTONS */
+
 
 .swap-request-actions {
   display: flex;
@@ -5922,7 +5433,7 @@ video + div button:last-child {
   transition: all 0.2s ease;
 }
 
-/* ACCEPT */
+
 
 .accept-btn {
   background: #e6f8f1;
@@ -5934,7 +5445,7 @@ video + div button:last-child {
   transform: translateY(-1px);
 }
 
-/* REJECT */
+
 
 .reject-btn {
   background: #fdecef;
@@ -5946,7 +5457,7 @@ video + div button:last-child {
   transform: translateY(-1px);
 }
 
-/* CHAT */
+
 
 .swap-request-actions .chat-button {
   background: linear-gradient(
@@ -5964,7 +5475,7 @@ video + div button:last-child {
   box-shadow: 0 7px 16px rgba(168, 63, 202, 0.25);
 }
 
-/* DELETE */
+
 
 .delete-request-btn {
   background: #f1f2f3;
@@ -5976,7 +5487,7 @@ video + div button:last-child {
   transform: translateY(-1px);
 }
 
-/* EMPTY STATE */
+
 
 .swap-request-card.text-center {
   max-width: 650px;
@@ -6025,7 +5536,7 @@ video + div button:last-child {
   font-weight: 700;
 }
 
-/* LOADING */
+
 
 .swap-loading {
   padding: 100px 20px;
@@ -6034,7 +5545,7 @@ video + div button:last-child {
   font-size: 16px;
 }
 
-/* RESPONSIVE */
+
 
 @media (max-width: 768px) {
   .swap-requests-page {
@@ -6098,7 +5609,7 @@ video + div button:last-child {
   }
 
 }
-/* ================= SWAP REQUESTS NAVBAR LINK ================= */
+
 
 .swap-requests-nav-link {
   color: #222 !important;
@@ -6121,7 +5632,7 @@ video + div button:last-child {
   outline: none !important;
   box-shadow: none !important;
 }
-/* ================= CLOTHING ACTIONS ================= */
+
 
 .clothing-actions {
   display: flex;
@@ -6175,7 +5686,7 @@ video + div button:last-child {
   transform: none;
 }
 
-/* ================= SWAP TOAST ================= */
+
 
 .swap-toast {
   position: fixed;
@@ -6270,7 +5781,7 @@ video + div button:last-child {
   }
 }
 
-/* ================= MOBILE ================= */
+
 
 @media (max-width: 575px) {
   .clothing-actions {
@@ -6289,9 +5800,6 @@ video + div button:last-child {
     width: auto;
   }
 }
-/* ================================
-   ITEM DETAILS SWAP TOAST
-================================ */
 
 .swap-toast {
   position: fixed;
@@ -6379,9 +5887,6 @@ video + div button:last-child {
     transform: translateX(0);
   }
 }
-/* =========================================================
-   DASHBOARD PAGE
-   ========================================================= */
 
 .dashboard-page {
   background: #faf8fc;
@@ -6719,10 +6224,6 @@ video + div button:last-child {
   color: #888;
   font-size: 11px;
 }
-
-
-/* ================= RESPONSIVE ================= */
-
 @media (max-width: 767px) {
   .dashboard-header h1 {
     font-size: 27px;
@@ -6806,9 +6307,6 @@ video + div button:last-child {
     height: 55px;
   }
 }
-/* =========================================================
-   SWAP VALUE COMPARISON
-   ========================================================= */
 
 .swap-calculator-page {
   min-height: 100vh;
@@ -6826,7 +6324,7 @@ video + div button:last-child {
   margin: 0 auto;
 }
 
-/* HEADER */
+
 
 .swap-calculator-header {
   text-align: center;
@@ -6864,7 +6362,7 @@ video + div button:last-child {
   font-size: 18px;
 }
 
-/* MAIN CARD */
+
 
 .comparison-card {
   background: #ffffff;
@@ -6891,7 +6389,7 @@ video + div button:last-child {
   font-size: 15px;
 }
 
-/* TWO ITEMS */
+
 
 .comparison-grid {
   display: grid;
@@ -6947,7 +6445,7 @@ video + div button:last-child {
   color: #222;
 }
 
-/* FIELDS */
+
 
 .comparison-field {
   margin-bottom: 20px;
@@ -6980,7 +6478,7 @@ video + div button:last-child {
   box-shadow: 0 0 0 3px rgba(151, 69, 181, 0.1);
 }
 
-/* COMPARE BUTTON */
+
 
 .compare-button {
   display: block;
@@ -7003,7 +6501,7 @@ video + div button:last-child {
   box-shadow: 0 12px 25px rgba(151, 69, 181, 0.28);
 }
 
-/* RESULT */
+
 
 .comparison-result {
   margin-top: 30px;
@@ -7101,7 +6599,7 @@ video + div button:last-child {
   line-height: 1.6;
 }
 
-/* BROWSE */
+
 
 .swap-calculator-browse {
   text-align: center;
@@ -7126,7 +6624,7 @@ video + div button:last-child {
   color: #ffffff;
 }
 
-/* MOBILE */
+
 
 @media (max-width: 768px) {
   .swap-calculator-page {
@@ -7169,9 +6667,7 @@ video + div button:last-child {
     font-size: 23px;
   }
 }
-/* =========================================================
-   LOCATION MATCHING - CLOTHSWAP THEME
-   ========================================================= */
+
 
 .location-matching-page {
   min-height: 100vh;
@@ -7188,9 +6684,6 @@ video + div button:last-child {
   max-width: 1150px;
   margin: 0 auto;
 }
-
-/* ================= HEADER ================= */
-
 .location-matching-header {
   text-align: center;
   margin-bottom: 50px;
@@ -7227,9 +6720,6 @@ video + div button:last-child {
   color: #667085;
   font-size: 18px;
 }
-
-/* ================= FILTER CARD ================= */
-
 .location-filter-card {
   background: #ffffff;
   border-radius: 22px;
@@ -7294,7 +6784,7 @@ video + div button:last-child {
   box-shadow: 0 0 0 3px rgba(151, 69, 181, 0.1);
 }
 
-/* ================= RESULTS HEADER ================= */
+
 
 .location-results-header {
   display: flex;
@@ -7320,7 +6810,7 @@ video + div button:last-child {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-/* ================= CLOTHING GRID ================= */
+
 
 .location-clothing-grid {
   display: grid;
@@ -7340,9 +6830,6 @@ video + div button:last-child {
   transform: translateY(-5px);
   box-shadow: 0 14px 32px rgba(151, 69, 181, 0.14);
 }
-
-/* ================= IMAGE ================= */
-
 .location-image-wrapper {
   width: 100%;
   height: 245px;
@@ -7361,8 +6848,6 @@ video + div button:last-child {
 .location-clothing-card:hover .location-clothing-image {
   transform: scale(1.04);
 }
-
-/* ================= INFO ================= */
 
 .location-clothing-info {
   padding: 20px;
@@ -7407,9 +6892,6 @@ video + div button:last-child {
   font-size: 13px;
   font-weight: 500;
 }
-
-/* ================= VIEW BUTTON ================= */
-
 .location-view-button {
   display: block;
   width: 100%;
@@ -7432,7 +6914,7 @@ video + div button:last-child {
   box-shadow: 0 7px 15px rgba(151, 69, 181, 0.2);
 }
 
-/* ================= LOADING ================= */
+
 
 .location-loading {
   padding: 60px 20px;
@@ -7440,9 +6922,6 @@ video + div button:last-child {
   color: #777;
   font-size: 17px;
 }
-
-/* ================= EMPTY ================= */
-
 .location-empty {
   padding: 60px 20px;
   text-align: center;
@@ -7467,7 +6946,7 @@ video + div button:last-child {
   color: #777;
 }
 
-/* ================= TABLET ================= */
+
 
 @media (max-width: 992px) {
   .location-clothing-grid {
@@ -7478,9 +6957,6 @@ video + div button:last-child {
     font-size: 45px;
   }
 }
-
-/* ================= MOBILE ================= */
-
 @media (max-width: 768px) {
   .location-matching-page {
     padding: 40px 15px 60px;
@@ -7514,7 +6990,7 @@ video + div button:last-child {
   }
 }
 
-/* ================= SMALL MOBILE ================= */
+
 
 @media (max-width: 480px) {
   .location-matching-header h1 {
@@ -7533,10 +7009,6 @@ video + div button:last-child {
     height: 260px;
   }
 }
-/* =========================================
-   CHAT / NEGOTIATE PAGE
-========================================= */
-
 .chat-page {
   min-height: 100vh;
   padding: 45px 0 80px;
@@ -7552,7 +7024,7 @@ video + div button:last-child {
   max-width: 1050px;
 }
 
-/* ================= HEADER ================= */
+
 
 .chat-page-header {
   padding: 5px 0 30px;
@@ -7585,7 +7057,7 @@ video + div button:last-child {
   font-size: 16px;
 }
 
-/* ================= MAIN CARD ================= */
+
 
 .chat-main-card {
   overflow: hidden;
@@ -7595,7 +7067,7 @@ video + div button:last-child {
   box-shadow: 0 15px 45px rgba(115, 70, 130, 0.10);
 }
 
-/* ================= CLOTHING INFO ================= */
+
 
 .chat-item-section {
   display: flex;
@@ -7658,7 +7130,7 @@ video + div button:last-child {
   font-weight: 700;
 }
 
-/* ================= CHAT USER ================= */
+
 
 .chat-user-section {
   display: flex;
@@ -7700,7 +7172,7 @@ video + div button:last-child {
   font-size: 13px;
 }
 
-/* ================= ERROR ================= */
+
 
 .chat-inline-error {
   margin: 18px 25px 0;
@@ -7712,7 +7184,7 @@ video + div button:last-child {
   font-size: 14px;
 }
 
-/* ================= MESSAGES ================= */
+
 
 .chat-messages {
   min-height: 330px;
@@ -7784,7 +7256,7 @@ video + div button:last-child {
   color: rgba(255, 255, 255, 0.75);
 }
 
-/* ================= EMPTY CHAT ================= */
+
 
 .chat-empty {
   min-height: 280px;
@@ -7822,7 +7294,7 @@ video + div button:last-child {
   line-height: 1.6;
 }
 
-/* ================= INPUT ================= */
+
 
 .chat-input-area {
   display: flex;
@@ -7885,7 +7357,7 @@ video + div button:last-child {
   cursor: not-allowed;
 }
 
-/* ================= LOADING ================= */
+
 
 .chat-loading {
   padding: 100px 20px;
@@ -7893,7 +7365,7 @@ video + div button:last-child {
   font-size: 17px;
 }
 
-/* ================= ERROR CARD ================= */
+
 
 .chat-error-card {
   max-width: 600px;
@@ -7933,7 +7405,7 @@ video + div button:last-child {
   font-weight: 700;
 }
 
-/* ================= MOBILE ================= */
+
 
 @media (max-width: 768px) {
   .chat-page {
@@ -7998,10 +7470,7 @@ video + div button:last-child {
     min-height: 300px;
   }
 }
-/* =========================================================
-   CLOTHSWAP LEFT SIDEBAR
-   AI CHAT + SETTINGS
-========================================================= */
+
 
 .clothswap-page-layout {
   display: flex;
@@ -8145,9 +7614,6 @@ video + div button:last-child {
   min-height: calc(100vh - 70px);
 }
 
-/* =========================================================
-   AI CHAT PAGE
-========================================================= */
 
 .clothswap-ai-page {
   max-width: 1000px;
@@ -8270,9 +7736,6 @@ video + div button:last-child {
   background: #146c43;
 }
 
-/* =========================================================
-   SETTINGS PAGE
-========================================================= */
 
 .clothswap-settings-page {
   max-width: 900px;
@@ -8369,7 +7832,7 @@ video + div button:last-child {
   font-size: 13px;
 }
 
-/* SETTINGS SWITCH */
+
 
 .clothswap-switch {
   position: relative;
@@ -8414,10 +7877,6 @@ video + div button:last-child {
 .clothswap-switch input:checked + .clothswap-slider:before {
   transform: translateX(21px);
 }
-
-/* =========================================================
-   SIDEBAR RESPONSIVE
-========================================================= */
 
 @media (max-width: 991px) {
   .clothswap-sidebar {
@@ -8527,9 +7986,6 @@ video + div button:last-child {
     max-width: 190px;
   }
 }
-/* =========================================================
-   CLOTHSWAP SIDEBAR - OPEN / CLOSE
-========================================================= */
 
 .clothswap-page-layout {
   display: flex;
@@ -8560,9 +8016,6 @@ video + div button:last-child {
 .clothswap-sidebar-collapsed {
   width: 72px;
 }
-
-/* HEADER */
-
 .clothswap-sidebar-title {
   min-height: 76px;
   display: flex;
@@ -8605,7 +8058,7 @@ video + div button:last-child {
   font-size: 11px;
 }
 
-/* TOGGLE ARROW */
+
 
 .clothswap-sidebar-toggle {
   position: absolute;
@@ -8632,8 +8085,6 @@ video + div button:last-child {
   color: #ffffff;
   border-color: #198754;
 }
-
-/* MENU */
 
 .clothswap-sidebar-menu {
   padding: 18px 12px;
@@ -8699,8 +8150,6 @@ video + div button:last-child {
   padding-right: 8px;
 }
 
-/* BOTTOM */
-
 .clothswap-sidebar-bottom {
   padding: 14px;
   border-top: 1px solid #eeeeee;
@@ -8732,9 +8181,6 @@ video + div button:last-child {
   color: #888;
 }
 
-/* =========================================================
-   MAIN CONTENT
-========================================================= */
 
 .clothswap-page-content {
   width: calc(100% - 245px);
@@ -8743,17 +8189,11 @@ video + div button:last-child {
   transition: width 0.25s ease, margin-left 0.25s ease;
 }
 
-/* =========================================================
-   MOBILE SIDEBAR BUTTON
-========================================================= */
 
 .clothswap-sidebar-mobile-button {
   display: none;
 }
 
-/* =========================================================
-   TABLET
-========================================================= */
 
 @media (max-width: 991px) {
 
@@ -8771,9 +8211,6 @@ video + div button:last-child {
   }
 }
 
-/* =========================================================
-   MOBILE
-========================================================= */
 
 @media (max-width: 767px) {
 
@@ -8837,9 +8274,6 @@ video + div button:last-child {
   }
 }
 
-/* =========================================================
-   SMALL MOBILE
-========================================================= */
 
 @media (max-width: 480px) {
 
@@ -8858,28 +8292,26 @@ video + div button:last-child {
     height: 40px;
   }
 }
-/* =========================================================
-   CLOTHSWAP SIDEBAR - FULL WIDTH / COLLAPSE FIX
-========================================================= */
 
-/* Main layout */
+
+
 .clothswap-page-layout {
   display: flex;
   width: 100%;
   min-height: calc(100vh - 70px);
 }
 
-/* Open sidebar */
+
 .clothswap-sidebar-open {
   width: 245px;
 }
 
-/* Collapsed sidebar */
+
 .clothswap-sidebar-collapsed {
   width: 72px;
 }
 
-/* Main content takes remaining space */
+
 .clothswap-page-content {
   flex: 1;
   min-width: 0;
@@ -8888,15 +8320,12 @@ video + div button:last-child {
   transition: margin-left 0.25s ease, width 0.25s ease;
 }
 
-/* When sidebar is collapsed */
+
 .clothswap-sidebar-collapsed ~ .clothswap-page-content {
   width: calc(100% - 72px);
   margin-left: 72px;
 }
 
-/* =========================================================
-   MOBILE
-========================================================= */
 
 @media (max-width: 767px) {
 
@@ -8913,7 +8342,7 @@ video + div button:last-child {
     min-width: 0;
   }
 
-  /* Sidebar open = overlay, does NOT reserve page space */
+  
   .clothswap-sidebar-open {
     position: fixed;
     top: 70px;
@@ -8923,7 +8352,7 @@ video + div button:last-child {
     z-index: 9999;
   }
 
-  /* Sidebar closed = completely out of layout */
+  
   .clothswap-sidebar-collapsed {
     width: 0;
     min-width: 0;
@@ -8938,13 +8367,10 @@ video + div button:last-child {
     z-index: 10000;
   }
 }
-/* =========================================================
-   CLOTHSWAP MOBILE SIDEBAR
-========================================================= */
 
 @media (max-width: 767px) {
 
-  /* Main layout always full width */
+  
   .clothswap-page-layout {
     display: block !important;
     width: 100% !important;
@@ -8957,7 +8383,7 @@ video + div button:last-child {
     min-width: 0 !important;
   }
 
-  /* Sidebar OPEN */
+  
   .clothswap-sidebar.clothswap-sidebar-open {
     position: fixed !important;
     top: 70px !important;
@@ -8968,8 +8394,6 @@ video + div button:last-child {
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }
-
-  /* Sidebar CLOSED */
   .clothswap-sidebar.clothswap-sidebar-collapsed {
     position: fixed !important;
     top: 70px !important;
@@ -8980,8 +8404,6 @@ video + div button:last-child {
     overflow: hidden !important;
     border: none !important;
   }
-
-  /* Mobile ☰ button */
   .clothswap-sidebar-mobile-button {
     position: fixed !important;
     top: 82px !important;
@@ -8997,12 +8419,12 @@ video + div button:last-child {
     cursor: pointer;
   }
 
-  /* Mobile sidebar title */
+  
   .clothswap-sidebar-title {
     padding: 14px 18px !important;
   }
 
-  /* Mobile menu becomes vertical */
+  
   .clothswap-sidebar-menu {
     display: block !important;
     padding: 10px 12px !important;
@@ -9015,19 +8437,17 @@ video + div button:last-child {
     margin-bottom: 5px;
   }
 
-  /* Hide desktop collapsed logo behavior on mobile */
+  
   .clothswap-sidebar-collapsed .clothswap-sidebar-collapsed-logo {
     display: none !important;
   }
 
-  /* Smooth slide */
+  
   .clothswap-sidebar {
     transition: left 0.25s ease, width 0.25s ease !important;
   }
 }
-/* =========================================================
-   SWAP REQUESTS - RESPONSIVE CARD STRUCTURE
-========================================================= */
+
 
 .swap-requests-list {
   width: 100%;
@@ -9255,10 +8675,6 @@ video + div button:last-child {
 }
 
 
-/* =========================================================
-   TABLET
-========================================================= */
-
 @media (min-width: 768px) and (max-width: 1024px) {
 
   .swap-request-card {
@@ -9288,10 +8704,6 @@ video + div button:last-child {
   }
 }
 
-
-/* =========================================================
-   MOBILE
-========================================================= */
 
 @media (max-width: 767px) {
 
@@ -9385,9 +8797,7 @@ video + div button:last-child {
     width: 100%;
   }
 }
-/* =========================================================
-   CLOTHSWAP - SWAP REQUESTS PAGE
-========================================================= */
+
 
 .swap-requests-page {
   width: 100%;
@@ -9413,7 +8823,7 @@ video + div button:last-child {
   font-size: 15px;
 }
 
-/* ================= CARD ================= */
+
 
 .swap-request-card {
   background: #fff;
@@ -9429,7 +8839,7 @@ video + div button:last-child {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.09);
 }
 
-/* ================= IMAGE ================= */
+
 
 .swap-request-image {
   width: 100%;
@@ -9440,7 +8850,7 @@ video + div button:last-child {
   background: #f3f3f3;
 }
 
-/* ================= TEXT ================= */
+
 
 .swap-request-title {
   margin: 0 0 14px;
@@ -9460,7 +8870,7 @@ video + div button:last-child {
   color: #333;
 }
 
-/* ================= ACTIONS ================= */
+
 
 .swap-request-actions {
   display: flex;
@@ -9490,7 +8900,7 @@ video + div button:last-child {
   transform: translateY(-1px);
 }
 
-/* Accept / Agree */
+
 
 .accept-btn {
   background: #e9f8ef;
@@ -9502,7 +8912,7 @@ video + div button:last-child {
   background: #d8f3e2;
 }
 
-/* Reject / Delete */
+
 
 .reject-btn {
   background: #fff0f0;
@@ -9514,7 +8924,7 @@ video + div button:last-child {
   background: #ffe2e2;
 }
 
-/* Chat */
+
 
 .swap-btn {
   background: #f5edff;
@@ -9526,7 +8936,7 @@ video + div button:last-child {
   background: #eadcff;
 }
 
-/* Disabled */
+
 
 .swap-request-actions button:disabled {
   opacity: 0.65;
@@ -9534,7 +8944,7 @@ video + div button:last-child {
   transform: none;
 }
 
-/* ================= LOADING ================= */
+
 
 .swap-loading {
   background: #fff;
@@ -9546,7 +8956,7 @@ video + div button:last-child {
   box-shadow: 0 5px 18px rgba(0, 0, 0, 0.05);
 }
 
-/* ================= MOBILE ================= */
+
 
 @media (max-width: 767px) {
 
@@ -9593,9 +9003,6 @@ video + div button:last-child {
   }
 }
 
-/* =========================================================
-   CLOTHSWAP - RESPONSIVE NAVBAR
-========================================================= */
 
 .clothswap-navbar {
   min-height: 70px;
@@ -9606,7 +9013,7 @@ video + div button:last-child {
   white-space: nowrap;
 }
 
-/* Desktop */
+
 
 .clothswap-main-nav {
   align-items: center;
@@ -9638,9 +9045,6 @@ video + div button:last-child {
   text-overflow: ellipsis;
 }
 
-/* =========================================================
-   TABLET
-========================================================= */
 
 @media (max-width: 1100px) {
 
@@ -9655,9 +9059,6 @@ video + div button:last-child {
   }
 }
 
-/* =========================================================
-   MOBILE
-========================================================= */
 
 @media (max-width: 991px) {
 
@@ -9743,9 +9144,6 @@ video + div button:last-child {
   }
 }
 
-/* =========================================================
-   SMALL MOBILE
-========================================================= */
 
 @media (max-width: 575px) {
 
@@ -9774,9 +9172,6 @@ video + div button:last-child {
   }
 }
 
-/* =========================================================
-   CLOTHSWAP DASHBOARD
-========================================================= */
 
 .dashboard-page {
   min-height: calc(100vh - 70px);
@@ -9803,7 +9198,7 @@ video + div button:last-child {
   margin: 0;
 }
 
-/* Profile */
+
 
 .dashboard-profile-card {
   background: #fff;
@@ -9866,7 +9261,7 @@ video + div button:last-child {
   opacity: .88;
 }
 
-/* Stats */
+
 
 .dashboard-stat-card {
   background: #fff;
@@ -9895,7 +9290,7 @@ video + div button:last-child {
   margin-top: 3px;
 }
 
-/* Sections */
+
 
 .dashboard-section-card {
   background: #fff;
@@ -9933,7 +9328,7 @@ video + div button:last-child {
   white-space: nowrap;
 }
 
-/* Listings */
+
 
 .dashboard-list {
   display: flex;
@@ -9984,7 +9379,7 @@ video + div button:last-child {
   font-weight: 700;
 }
 
-/* Requests */
+
 
 .dashboard-request-list {
   display: flex;
@@ -10038,7 +9433,7 @@ video + div button:last-child {
   color: #d64545;
 }
 
-/* Empty */
+
 
 .dashboard-empty-box {
   text-align: center;
@@ -10061,7 +9456,7 @@ video + div button:last-child {
   font-size: 13px;
 }
 
-/* Quick Actions */
+
 
 .dashboard-quick-actions h2 {
   font-size: 20px;
@@ -10101,7 +9496,7 @@ video + div button:last-child {
   font-size: 12px;
 }
 
-/* Mobile */
+
 
 @media (max-width: 767px) {
 
@@ -10130,7 +9525,7 @@ video + div button:last-child {
     flex-shrink: 0;
   }
 }
-/* ================= DASHBOARD PINK / PURPLE BACKGROUND ================= */
+
 .dashboard-page {
   background: linear-gradient(
     135deg,
@@ -10140,10 +9535,6 @@ video + div button:last-child {
   ) !important;
 }
 
-/* =========================================================
-   CLOTHSWAP AI STYLIST - PROFESSIONAL UI
-   Add this at the VERY BOTTOM of your existing CSS
-   ========================================================= */
 
 .clothswap-ai-page {
   min-height: calc(100vh - 70px);
@@ -10497,7 +9888,7 @@ video + div button:last-child {
   background: #fff;
 }
 
-/* ================= MOBILE ================= */
+
 
 @media (max-width: 767px) {
   .clothswap-ai-page {
@@ -10588,7 +9979,7 @@ video + div button:last-child {
     margin: 0 10px 8px;
   }
 }
-/* AI CHAT - ATTACH + SEND PERFECT ALIGNMENT */
+
 
 .clothswap-ai-input-area {
   display: flex !important;
@@ -10662,9 +10053,7 @@ video + div button:last-child {
     height: 38px !important;
   }
 }
-/* =========================================================
-   AI CHAT CAMERA MODAL
-   ========================================================= */
+
 
 .clothswap-camera-overlay {
   position: fixed !important;
@@ -10830,9 +10219,7 @@ video + div button:last-child {
     min-height: 44px !important;
   }
 }
-/* =========================================================
-   AI CHAT - MOBILE PHOTO + INPUT FIX
-   ========================================================= */
+
 
 .clothswap-ai-chat-box {
   display: flex !important;
@@ -10956,9 +10343,7 @@ video + div button:last-child {
     flex-shrink: 0 !important;
   }
 }
-/* =========================================================
-   AI CHAT - ATTACH + SEND ALIGNMENT
-   ========================================================= */
+
 
 .clothswap-ai-input-area {
   display: flex !important;
@@ -11015,11 +10400,6 @@ video + div button:last-child {
   flex-shrink: 0 !important;
 }
 
-
-/* =========================================================
-   AI CHAT - MOBILE CHAT BOX FIX
-   ========================================================= */
-
 .clothswap-ai-chat-box {
   display: flex !important;
   flex-direction: column !important;
@@ -11073,11 +10453,6 @@ video + div button:last-child {
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
-
-
-/* =========================================================
-   CAMERA MODAL
-   ========================================================= */
 
 .clothswap-camera-overlay {
   position: fixed !important;
@@ -11209,10 +10584,6 @@ video + div button:last-child {
 }
 
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 767px) {
 
   .clothswap-ai-page {
@@ -11320,9 +10691,7 @@ video + div button:last-child {
     min-height: 44px !important;
   }
 }
-/* =========================================================
-   ITEM DETAILS - PROFESSIONAL TITLE + PRICE
-   ========================================================= */
+
 
 .item-details-content h1 {
   font-size: 38px !important;
@@ -11345,7 +10714,7 @@ video + div button:last-child {
   margin-bottom: 4px !important;
 }
 
-/* PRICE BOX */
+
 
 .item-details-price {
   display: inline-flex !important;
@@ -11372,7 +10741,7 @@ video + div button:last-child {
   margin-right: 4px;
 }
 
-/* DESCRIPTION */
+
 
 .item-details-description {
   background: #fafafa !important;
@@ -11385,13 +10754,13 @@ video + div button:last-child {
   margin: 0 0 22px !important;
 }
 
-/* INFO HEADING EFFECT */
+
 
 .item-details-info-grid {
   margin-top: 10px !important;
 }
 
-/* MOBILE */
+
 
 @media (max-width: 767px) {
 
@@ -11420,11 +10789,6 @@ video + div button:last-child {
     padding: 12px 14px !important;
   }
 }
-/* =========================================================
-   BROWSE CLOTHES - PROFESSIONAL CARD + SORT BY
-   ========================================================= */
-
-/* ---------- CATEGORY + SIZE ---------- */
 
 .clothing-top-row {
   display: flex !important;
@@ -11460,7 +10824,7 @@ video + div button:last-child {
 }
 
 
-/* ---------- CLOTHING NAME ---------- */
+
 
 .clothing-info h3 {
   font-size: 21px !important;
@@ -11472,17 +10836,13 @@ video + div button:last-child {
 }
 
 
-/* ---------- OWNER ---------- */
+
 
 .clothing-brand {
   color: #777 !important;
   font-size: 13px !important;
   margin: 0 0 14px !important;
 }
-
-
-/* ---------- CONDITION ---------- */
-
 .clothing-condition {
   display: flex !important;
   align-items: center !important;
@@ -11505,10 +10865,6 @@ video + div button:last-child {
   font-size: 12px !important;
   font-weight: 800 !important;
 }
-
-
-/* ---------- PRICE BOX ---------- */
-
 .clothing-price-box {
   display: flex !important;
   align-items: center !important;
@@ -11537,20 +10893,12 @@ video + div button:last-child {
   font-weight: 900 !important;
   white-space: nowrap !important;
 }
-
-
-/* ---------- LOCATION ---------- */
-
 .clothing-location {
   color: #666 !important;
   font-size: 12px !important;
   margin-top: 4px !important;
 }
 
-
-/* =========================================================
-   SORT BY
-   ========================================================= */
 
 .filter-bottom {
   flex-wrap: wrap !important;
@@ -11590,10 +10938,6 @@ video + div button:last-child {
 }
 
 
-/* =========================================================
-   CARD POLISH
-   ========================================================= */
-
 .clothing-card {
   overflow: hidden !important;
   border-radius: 16px !important;
@@ -11611,10 +10955,6 @@ video + div button:last-child {
 .clothing-info {
   padding: 16px !important;
 }
-
-
-/* ---------- ACTION BUTTONS ---------- */
-
 .clothing-actions {
   display: flex !important;
   align-items: center !important;
@@ -11628,10 +10968,6 @@ video + div button:last-child {
   min-height: 42px !important;
 }
 
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
 
 @media (max-width: 767px) {
 
@@ -11688,11 +11024,6 @@ video + div button:last-child {
     flex: 1 !important;
   }
 }
-/* =====================================================
-   BROWSE CLOTHES - COMPACT CARDS ALL DEVICES
-===================================================== */
-
-/* PC / DESKTOP */
 .clothing-card {
   height: auto !important;
 }
@@ -11743,9 +11074,6 @@ video + div button:last-child {
   padding: 6px 9px !important;
   font-size: 12px !important;
 }
-
-
-/* TABLET */
 @media (max-width: 991px) {
 
   .clothing-image-wrapper {
@@ -11768,9 +11096,6 @@ video + div button:last-child {
     font-size: 16px !important;
   }
 }
-
-
-/* MOBILE */
 @media (max-width: 767px) {
 
   .clothing-image-wrapper {
@@ -11827,7 +11152,7 @@ video + div button:last-child {
     padding: 5px 6px !important;
     font-size: 10px !important;
   }
-/* AVAILABLE STATUS - COMPACT */
+
 
 .clothing-status,
 .status-badge,
@@ -11842,9 +11167,7 @@ video + div button:last-child {
   font-weight: 700 !important;
   white-space: nowrap !important;
 }
-/* =====================================================
-   DASHBOARD - RECENT ACTIVITIES
-===================================================== */
+
 
 .dashboard-recent-list {
   display: flex;
@@ -11933,10 +11256,6 @@ video + div button:last-child {
   background: #fff4dc;
   color: #a66a00;
 }
-
-
-/* EMPTY STATE */
-
 .dashboard-recent-activities .dashboard-empty-box {
   padding: 28px 15px;
 }
@@ -11952,10 +11271,6 @@ video + div button:last-child {
 .dashboard-recent-activities .dashboard-empty-box p {
   font-size: 12px;
 }
-
-
-/* TABLET */
-
 @media (max-width: 991px) {
 
   .dashboard-recent-item {
@@ -11968,10 +11283,6 @@ video + div button:last-child {
     min-width: 36px;
   }
 }
-
-
-/* MOBILE */
-
 @media (max-width: 767px) {
 
   .dashboard-recent-item {
@@ -12003,10 +11314,6 @@ video + div button:last-child {
     font-size: 9px !important;
   }
 }
-/* =========================================================
-   CLOTHSWAP - ADMIN PANEL
-   Pink / Purple Glassmorphism Theme
-========================================================= */
 
 .admin-panel-page {
   width: 100%;
@@ -12024,11 +11331,6 @@ video + div button:last-child {
 
   color: #242038;
 }
-
-
-/* =========================================================
-   HEADER
-========================================================= */
 
 .admin-panel-header {
   display: flex;
@@ -12058,11 +11360,6 @@ video + div button:last-child {
   font-size: 15px;
 }
 
-
-/* =========================================================
-   ADMIN ACCESS BADGE
-========================================================= */
-
 .admin-panel-badge {
   padding: 10px 18px;
 
@@ -12091,11 +11388,6 @@ video + div button:last-child {
   white-space: nowrap;
 }
 
-
-/* =========================================================
-   LOADING
-========================================================= */
-
 .admin-loading {
   min-height: 450px;
 
@@ -12109,11 +11401,6 @@ video + div button:last-child {
   font-weight: 600;
 }
 
-
-/* =========================================================
-   STATISTICS GRID
-========================================================= */
-
 .admin-stats-grid {
   display: grid;
 
@@ -12123,11 +11410,6 @@ video + div button:last-child {
 
   margin-bottom: 30px;
 }
-
-
-/* =========================================================
-   GLASS STAT CARD
-========================================================= */
 
 .admin-stat-card {
   position: relative;
@@ -12143,7 +11425,7 @@ video + div button:last-child {
 
   box-sizing: border-box;
 
-  /* TRANSPARENT GLASS */
+  
   background:
     linear-gradient(
       135deg,
@@ -12168,10 +11450,6 @@ video + div button:last-child {
     transform 0.25s ease,
     box-shadow 0.25s ease;
 }
-
-
-/* soft pink glow */
-
 .admin-stat-card::before {
   content: "";
 
@@ -12191,10 +11469,6 @@ video + div button:last-child {
 
   pointer-events: none;
 }
-
-
-/* soft purple glow */
-
 .admin-stat-card::after {
   content: "";
 
@@ -12214,8 +11488,6 @@ video + div button:last-child {
 
   pointer-events: none;
 }
-
-
 .admin-stat-card:hover {
   transform: translateY(-4px);
 
@@ -12223,11 +11495,6 @@ video + div button:last-child {
     0 18px 40px rgba(145, 91, 170, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
-
-
-/* =========================================================
-   STAT ICON
-========================================================= */
 
 .admin-stat-icon {
   width: 55px;
@@ -12259,11 +11526,6 @@ video + div button:last-child {
   font-size: 25px;
 }
 
-
-/* =========================================================
-   STAT TEXT
-========================================================= */
-
 .admin-stat-label {
   display: block;
 
@@ -12285,11 +11547,6 @@ video + div button:last-child {
 
   line-height: 1.1;
 }
-
-
-/* =========================================================
-   GLASS SECTION CARD - MORE TRANSPARENT
-========================================================= */
 
 .admin-section-card {
   position: relative;
@@ -12318,10 +11575,6 @@ video + div button:last-child {
 }
 
 
-/* =========================================================
-   TRANSPARENT SECTION HEADER
-========================================================= */
-
 .admin-section-header {
   display: flex;
 
@@ -12338,11 +11591,6 @@ video + div button:last-child {
   border-bottom:
     1px solid rgba(255, 255, 255, 0.30);
 }
-
-
-/* =========================================================
-   SECTION COUNT
-========================================================= */
 
 .admin-section-count {
   padding: 8px 14px;
@@ -12373,22 +11621,11 @@ video + div button:last-child {
   white-space: nowrap;
 }
 
-
-/* =========================================================
-   TABLE WRAPPER
-========================================================= */
-
 .admin-table-wrapper {
   width: 100%;
 
   overflow-x: auto;
 }
-
-
-/* =========================================================
-   TABLE
-========================================================= */
-
 .admin-table {
   width: 100%;
 
@@ -12396,12 +11633,6 @@ video + div button:last-child {
 
   border-collapse: collapse;
 }
-
-
-/* =========================================================
-   TRANSPARENT TABLE HEADER
-========================================================= */
-
 .admin-table th {
   padding: 15px 20px;
 
@@ -12420,11 +11651,6 @@ video + div button:last-child {
 
   white-space: nowrap;
 }
-
-/* =========================================================
-   TABLE DATA
-========================================================= */
-
 .admin-table td {
   padding: 16px 20px;
 
@@ -12456,12 +11682,6 @@ video + div button:last-child {
 .admin-table tbody tr:last-child td {
   border-bottom: none;
 }
-
-
-/* =========================================================
-   ITEM CELL
-========================================================= */
-
 .admin-item-cell {
   display: flex;
 
@@ -12471,12 +11691,6 @@ video + div button:last-child {
 
   min-width: 210px;
 }
-
-
-/* =========================================================
-   ITEM IMAGE
-========================================================= */
-
 .admin-item-image,
 .admin-item-placeholder {
   width: 50px;
@@ -12517,12 +11731,6 @@ video + div button:last-child {
 
   font-size: 22px;
 }
-
-
-/* =========================================================
-   ITEM INFO
-========================================================= */
-
 .admin-item-info {
   min-width: 0;
 }
@@ -12544,12 +11752,6 @@ video + div button:last-child {
   font-size: 13px;
   font-weight: 700;
 }
-
-
-/* =========================================================
-   DELETE BUTTON
-========================================================= */
-
 .admin-delete-btn {
   padding: 8px 13px;
 
@@ -12595,12 +11797,6 @@ video + div button:last-child {
 .admin-delete-btn:active {
   transform: translateY(0);
 }
-
-
-/* =========================================================
-   STATUS BADGES
-========================================================= */
-
 .admin-status-badge {
   display: inline-flex;
 
@@ -12659,12 +11855,6 @@ video + div button:last-child {
 
   color: #416eb1;
 }
-
-
-/* =========================================================
-   EMPTY STATE
-========================================================= */
-
 .admin-empty-state {
   min-height: 150px;
 
@@ -12684,12 +11874,6 @@ video + div button:last-child {
   background:
     rgba(255, 255, 255, 0.08);
 }
-
-
-/* =========================================================
-   TABLE NOTE
-========================================================= */
-
 .admin-table-note {
   padding: 13px 20px;
 
@@ -12703,12 +11887,6 @@ video + div button:last-child {
 
   font-size: 12px;
 }
-
-
-/* =========================================================
-   TRANSPARENT INFORMATION FOOTER
-========================================================= */
-
 .admin-info-footer {
   margin-top: 8px;
 
@@ -12756,12 +11934,6 @@ video + div button:last-child {
 
   line-height: 1.7;
 }
-
-
-/* =========================================================
-   TABLET
-========================================================= */
-
 @media (max-width: 1000px) {
 
   .admin-panel-page {
@@ -12772,12 +11944,6 @@ video + div button:last-child {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
 @media (max-width: 767px) {
 
   .admin-panel-page {
@@ -12889,12 +12055,6 @@ video + div button:last-child {
     border-radius: 17px;
   }
 }
-
-
-/* =========================================================
-   SMALL MOBILE
-========================================================= */
-
 @media (max-width: 480px) {
 
   .admin-panel-page {
@@ -12946,10 +12106,6 @@ video + div button:last-child {
     padding: 16px;
   }
 }
-/* =========================================================
-   RECENT CLOTHING LISTINGS
-========================================================= */
-
 .admin-recent-card {
   background:
     linear-gradient(
@@ -12967,21 +12123,9 @@ video + div button:last-child {
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
 }
-
-
-/* =========================================================
-   RECENT TABLE
-========================================================= */
-
 .admin-recent-table {
   min-width: 820px;
 }
-
-
-/* =========================================================
-   RECENT DATE
-========================================================= */
-
 .admin-recent-date {
   display: inline-flex;
 
@@ -13011,12 +12155,6 @@ video + div button:last-child {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
-
-
-/* =========================================================
-   RECENT TABLE HOVER
-========================================================= */
-
 .admin-recent-table tbody tr {
   transition:
     background 0.2s ease,
@@ -13027,12 +12165,6 @@ video + div button:last-child {
   background:
     rgba(255, 255, 255, 0.18);
 }
-
-
-/* =========================================================
-   MOBILE RECENT SECTION
-========================================================= */
-
 @media (max-width: 767px) {
 
   .admin-recent-table {
@@ -13047,11 +12179,7 @@ video + div button:last-child {
     font-size: 10px;
     padding: 5px 9px;
   }
-}  
-/* =====================================================
-   ADMIN USER SUMMARY
-===================================================== */
-
+} 
 .admin-user-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -13098,11 +12226,6 @@ video + div button:last-child {
   white-space: normal;
   overflow-wrap: anywhere;
 }
-
-/* =====================================================
-   MOBILE
-===================================================== */
-
 @media (max-width: 767px) {
   .admin-user-summary {
     grid-template-columns: 1fr;
@@ -13122,7 +12245,7 @@ video + div button:last-child {
   }
 }
 
-/* ================= COURIER DELIVERY PAGE ================= */
+
 
 .courier-delivery-page {
   min-height: 100vh;
@@ -13253,7 +12376,7 @@ video + div button:last-child {
   transform: translateY(-1px);
 }
 
-/* ================= MOBILE ================= */
+
 
 @media (max-width: 768px) {
   .courier-delivery-page {
@@ -13272,7 +12395,7 @@ video + div button:last-child {
     font-size: 26px;
   }
 }
-/* ================= COURIER TRACKING CARD ================= */
+
 
 .courier-tracking-card {
   max-width: 850px;
@@ -13290,7 +12413,7 @@ video + div button:last-child {
   color: #333;
 }
 
-/* Tracking ID */
+
 
 .courier-tracking-id,
 .courier-tracking-status {
@@ -13317,7 +12440,7 @@ video + div button:last-child {
   letter-spacing: 1px;
 }
 
-/* Status */
+
 
 .courier-tracking-status strong {
   padding: 7px 14px;
@@ -13327,7 +12450,7 @@ video + div button:last-child {
   font-size: 14px;
 }
 
-/* Courier information */
+
 
 .courier-tracking-info {
   display: grid;
@@ -13346,7 +12469,7 @@ video + div button:last-child {
   font-size: 14px;
 }
 
-/* Mobile */
+
 
 @media (max-width: 768px) {
   .courier-tracking-card {
@@ -13364,7 +12487,7 @@ video + div button:last-child {
     grid-template-columns: 1fr;
   }
 }
-/* ================= COURIER STATUS BUTTONS ================= */
+
 
 .courier-status-actions {
   display: flex;
@@ -13399,7 +12522,7 @@ video + div button:last-child {
     width: 100%;
   }
 }
-/* ================= DELIVERY BOY VERIFICATION ================= */
+
 
 .delivery-boy-verification-page {
   min-height: 100vh;
@@ -13543,7 +12666,7 @@ video + div button:last-child {
     font-size: 23px;
   }
 }
-/* ================= COURIER NOTIFICATION ================= */
+
 
 .dashboard-courier-notification {
   width: 100%;
@@ -13607,10 +12730,6 @@ video + div button:last-child {
     font-size: 21px;
   }
 }
-/* =====================================================
-   CLOTHSWAP - PROFESSIONAL NAVBAR
-===================================================== */
-
 .clothswap-navbar {
   min-height: 72px;
   background: #ffffff !important;
@@ -13623,7 +12742,7 @@ video + div button:last-child {
   min-height: 72px;
 }
 
-/* LOGO */
+
 
 .clothswap-navbar-brand {
   font-size: 25px !important;
@@ -13642,7 +12761,7 @@ video + div button:last-child {
   font-weight: 400 !important;
 }
 
-/* MAIN NAVIGATION */
+
 
 .clothswap-main-nav {
   gap: 4px;
@@ -13670,7 +12789,7 @@ video + div button:last-child {
   background: #f5f5f5;
 }
 
-/* WISHLIST */
+
 
 .clothswap-navbar .wishlist-nav-link {
   position: relative;
@@ -13700,7 +12819,7 @@ video + div button:last-child {
   font-weight: 700;
 }
 
-/* USER AREA */
+
 
 .clothswap-user-area {
   margin-left: 15px;
@@ -13717,7 +12836,7 @@ video + div button:last-child {
   font-size: 14px;
 }
 
-/* LOGIN + REGISTER */
+
 
 .clothswap-user-area .btn {
   min-height: 38px;
@@ -13750,13 +12869,13 @@ video + div button:last-child {
   border-color: #333 !important;
 }
 
-/* LOGOUT */
+
 
 .clothswap-logout-btn {
   border-radius: 7px !important;
 }
 
-/* MOBILE BUTTON */
+
 
 .clothswap-mobile-toggler {
   border: 1px solid #ddd !important;
@@ -13769,7 +12888,7 @@ video + div button:last-child {
   box-shadow: none !important;
 }
 
-/* ADMIN */
+
 
 .clothswap-navbar #mainNavbar > .nav-link {
   color: #292929 !important;
@@ -13783,9 +12902,6 @@ video + div button:last-child {
   color: #000 !important;
 }
 
-/* =====================================================
-   TABLET
-===================================================== */
 
 @media (max-width: 991px) {
 
@@ -13826,10 +12942,6 @@ video + div button:last-child {
 
 }
 
-/* =====================================================
-   MOBILE
-===================================================== */
-
 @media (max-width: 575px) {
 
   .clothswap-navbar .container {
@@ -13863,9 +12975,7 @@ video + div button:last-child {
     min-height: 40px;
   }
 }
-  /* =====================================================
-   FINAL CLOTHSWAP NAVBAR
-===================================================== */
+
 
 .clothswap-logo-icon {
   font-size: 25px;
@@ -13914,9 +13024,6 @@ video + div button:last-child {
     height: 38px;
   }
 }
-/* =========================================
-   CLOTHSWAP SETTINGS - GLASS DESIGN
-   ========================================= */
 
 .clothswap-settings-page {
   min-height: calc(100vh - 70px);
@@ -13942,9 +13049,6 @@ video + div button:last-child {
       #fdf8fb 100%
     );
 }
-
-/* HEADER */
-
 .clothswap-settings-header {
   max-width: 1050px;
   margin: 0 auto 28px;
@@ -13999,9 +13103,6 @@ video + div button:last-child {
   color: #756b7b;
   font-size: 14px;
 }
-
-/* MAIN GLASS CARDS */
-
 .clothswap-settings-card {
   max-width: 1050px;
   margin: 0 auto 22px;
@@ -14031,9 +13132,6 @@ video + div button:last-child {
     0 22px 55px rgba(65, 30, 80, 0.13),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
-
-/* SECTION TITLE */
-
 .clothswap-settings-section-title {
   display: flex;
   align-items: center;
@@ -14081,9 +13179,6 @@ video + div button:last-child {
   font-size: 13px;
   color: #817685;
 }
-
-/* DIVIDER */
-
 .clothswap-setting-divider {
   height: 1px;
 
@@ -14097,9 +13192,6 @@ video + div button:last-child {
       transparent
     );
 }
-
-/* SETTING ROW */
-
 .clothswap-setting-row {
   min-height: 65px;
 
@@ -14158,9 +13250,6 @@ video + div button:last-child {
   font-size: 13px;
   line-height: 1.45;
 }
-
-/* SELECT */
-
 .clothswap-settings-select {
   min-width: 125px;
 
@@ -14191,8 +13280,6 @@ video + div button:last-child {
   box-shadow:
     0 0 0 3px rgba(142, 68, 173, 0.08);
 }
-
-/* SWITCH */
 
 .clothswap-switch {
   position: relative;
@@ -14263,7 +13350,7 @@ video + div button:last-child {
   transform: translateX(21px);
 }
 
-/* CLICKABLE ACTION ROW */
+
 
 .clothswap-settings-action {
   width: 100%;
@@ -14367,7 +13454,7 @@ video + div button:last-child {
   line-height: 1;
 }
 
-/* NOTE */
+
 
 .clothswap-settings-note {
   max-width: 1050px;
@@ -14392,9 +13479,6 @@ video + div button:last-child {
   font-size: 13px;
 }
 
-/* =========================================
-   RESPONSIVE
-   ========================================= */
 
 @media (max-width: 768px) {
   .clothswap-settings-page {
@@ -14510,9 +13594,6 @@ video + div button:last-child {
     font-size: 11px;
   }
 }
-/* =========================================
-   CLOTHSWAP INFORMATION PAGES
-   ========================================= */
 
 .clothswap-info-page {
   min-height: calc(100vh - 70px);
@@ -14633,7 +13714,7 @@ video + div button:last-child {
   font-size: 15px;
 }
 
-/* STEPS CARD */
+
 
 .clothswap-info-card {
   padding: 25px;
@@ -14735,7 +13816,7 @@ video + div button:last-child {
   line-height: 1.55;
 }
 
-/* FOOTER CARD */
+
 
 .clothswap-info-footer-card {
   display: flex;
@@ -14780,7 +13861,7 @@ video + div button:last-child {
   line-height: 1.5;
 }
 
-/* MOBILE */
+
 
 @media (max-width: 768px) {
   .clothswap-info-page {
@@ -14864,9 +13945,7 @@ video + div button:last-child {
     font-size: 11px;
   }
 }
-/* =========================
-   CLOTHSWAP FAQ PAGE
-========================= */
+
 
 .clothswap-faq-list {
   max-width: 1050px;
@@ -14934,7 +14013,7 @@ video + div button:last-child {
   line-height: 1.6;
 }
 
-/* Mobile */
+
 
 @media (max-width: 600px) {
   .clothswap-faq-card {
@@ -14956,9 +14035,6 @@ video + div button:last-child {
     font-size: 13px;
   }
 }
-/* =========================
-   CLOTHSWAP REPORT PROBLEM
-========================= */
 
 .clothswap-report-card {
   max-width: 1050px;
@@ -15056,9 +14132,6 @@ video + div button:last-child {
   background: #f4c430;
   color: #111;
 }
-/* =========================
-   GOOGLE SIGN-IN
-========================= */
 
 .clothswap-google-area {
   width: 100%;
@@ -15074,7 +14147,7 @@ video + div button:last-child {
   max-width: 100%;
 }
 
-/* Mobile */
+
 @media (max-width: 480px) {
   .clothswap-google-area {
     margin-bottom: 22px;
@@ -15086,15 +14159,6 @@ video + div button:last-child {
     justify-content: center;
   }
 }
-/* =========================================================
-   CLOTHSWAP REGISTER PAGE
-   Modern + Premium Fashion Design
-   ========================================================= */
-
-/* =========================
-   MAIN CARD
-========================= */
-
 .register-main-card {
   width: 100%;
   max-width: 1180px;
@@ -15186,11 +14250,6 @@ video + div button:last-child {
   box-sizing: border-box;
 }
 
-
-/* =========================
-   CLOTHSWAP TAG
-========================= */
-
 .register-visual-tag {
   align-self: flex-start;
 
@@ -15212,11 +14271,6 @@ video + div button:last-child {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
-
-
-/* =========================
-   IMAGE TEXT
-========================= */
 
 .register-visual-content {
   color: #ffffff;
@@ -15257,11 +14311,6 @@ video + div button:last-child {
   opacity: 0.9;
 }
 
-
-/* =========================
-   FORM SIDE
-========================= */
-
 .register-form-side {
   display: flex;
   align-items: center;
@@ -15278,12 +14327,6 @@ video + div button:last-child {
 
   margin: 0 auto;
 }
-
-
-/* =========================
-   HEADING
-========================= */
-
 .register-heading {
   margin-bottom: 30px;
 }
@@ -15329,11 +14372,6 @@ video + div button:last-child {
   line-height: 1.65;
 }
 
-
-/* =========================
-   ERROR
-========================= */
-
 .register-error {
   margin-bottom: 20px;
 
@@ -15351,12 +14389,6 @@ video + div button:last-child {
 
   line-height: 1.5;
 }
-
-
-/* =========================
-   FIELD ROW
-========================= */
-
 .register-field-row {
   display: grid;
 
@@ -15364,12 +14396,6 @@ video + div button:last-child {
 
   gap: 17px;
 }
-
-
-/* =========================
-   FIELDS
-========================= */
-
 .register-field {
   margin-bottom: 18px;
 }
@@ -15442,11 +14468,6 @@ video + div button:last-child {
   transform: translateY(-1px);
 }
 
-
-/* =========================
-   PASSWORD
-========================= */
-
 .register-password {
   position: relative;
 }
@@ -15493,11 +14514,6 @@ video + div button:last-child {
 
   color: #6f4777;
 }
-
-
-/* =========================
-   SUBMIT BUTTON
-========================= */
 
 .register-submit {
   width: 100%;
@@ -15575,11 +14591,6 @@ video + div button:last-child {
   transform: translateY(0);
 }
 
-
-/* =========================
-   LOGIN LINK
-========================= */
-
 .register-login-text {
   margin: 23px 0 0;
 
@@ -15608,11 +14619,6 @@ video + div button:last-child {
 
   text-decoration: underline;
 }
-
-
-/* =========================================================
-   TABLET
-   ========================================================= */
 
 @media (max-width: 900px) {
 
@@ -15644,11 +14650,6 @@ video + div button:last-child {
   }
 
 }
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
 
 @media (max-width: 680px) {
 
@@ -15720,11 +14721,6 @@ video + div button:last-child {
 
 }
 
-
-/* =========================================================
-   SMALL MOBILE
-   ========================================================= */
-
 @media (max-width: 400px) {
 
   .register-page-new {
@@ -15760,9 +14756,6 @@ video + div button:last-child {
     min-height: 52px;
   }
 }
-/* =========================================================
-   CLOTHSWAP REGISTER - GOOGLE SIGN IN
-   ========================================================= */
 
 .register-google-divider {
   width: 100%;
@@ -15787,12 +14780,6 @@ video + div button:last-child {
   font-weight: 700;
   letter-spacing: 1.5px;
 }
-
-
-/* =========================================================
-   GOOGLE BUTTON AREA
-   ========================================================= */
-
 .register-google-area {
   width: 100%;
   min-height: 44px;
@@ -15805,16 +14792,9 @@ video + div button:last-child {
 
   overflow: hidden;
 }
-
-
-/* Google generated button */
-
 .register-google-area > div {
   max-width: 100%;
 }
-/* =========================================================
-   GOOGLE BUTTON HOVER
-   ========================================================= */
 
 .register-google-area iframe {
   transition:
@@ -15826,10 +14806,6 @@ video + div button:last-child {
   transform: translateY(-1px);
   filter: brightness(1.02);
 }
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 680px) {
 
   .register-google-divider {
@@ -15847,9 +14823,6 @@ video + div button:last-child {
     justify-content: center;
   }
 }
-/* =========================================================
-   SMALL MOBILE
-   ========================================================= */
 
 @media (max-width: 400px) {
 
@@ -15862,7 +14835,7 @@ video + div button:last-child {
     margin-bottom: 18px;
   }
 }
-/* 🌸 ClothSwap Flower Effect */
+
 
 .clothswap-flower-effect {
   position: absolute;
@@ -15890,15 +14863,12 @@ video + div button:last-child {
   z-index: 6 !important;
 }
 
-/* Mobile */
+
 @media (max-width: 767px) {
   .clothswap-flower-effect {
     opacity: 0.65;
   }
 }
-/* =========================================
-   CLOTHSWAP STATEMENT - PINK FLORAL LOOK
-   ========================================= */
 
 .home-new-statement {
   position: relative;
@@ -15933,7 +14903,7 @@ video + div button:last-child {
   isolation: isolate;
 }
 
-/* Soft decorative flower shapes */
+
 .home-new-statement::before,
 .home-new-statement::after {
   content: "✿";
@@ -16075,7 +15045,7 @@ video + div button:last-child {
 }
 
 
-/* Mobile */
+
 @media (max-width: 767px) {
   .home-new-statement {
     margin: 30px 12px;
@@ -16107,15 +15077,10 @@ video + div button:last-child {
     right: 15px;
   }
 }
-/* =========================================
-   CLOTHSWAP HOME - SOFT PINK BACKGROUNDS
-   ========================================= */
 
 .home-new-page {
   background: #fff1f8;
 }
-
-/* Main white sections → soft pink */
 .home-new-section,
 .home-new-featured-section,
 .home-new-category-section,
@@ -16343,7 +15308,7 @@ video + div button:last-child {
   gap: 8px;
   flex-wrap: wrap;
 }
-/* Main button */
+
 .admin-user-action-btn {
   display: inline-flex;
   align-items: center;
@@ -17057,7 +16022,7 @@ video + div button:last-child {
 .clothswap-sidebar-toggle {
   position: absolute !important;
 
-  /* expanded sidebar ma right side par */
+  
   right: -14px !important;
   top: 36px !important;
 
@@ -17353,7 +16318,7 @@ video + div button:last-child {
   }
 }
 
-/* ===== MOBILE ===== */
+
 
 @media (max-width: 767px) {
   .clothswap-ai-page {
@@ -17406,7 +16371,7 @@ video + div button:last-child {
   }
 }
 
-/* ===== CLOTHSWAP NOTIFICATIONS HEADER ===== */
+
 
 .clothswap-notification-count {
   display: inline-flex;
@@ -17423,7 +16388,7 @@ video + div button:last-child {
   box-shadow: 0 4px 12px rgba(135, 89, 155, 0.08);
 }
 
-/* Select All Button */
+
 
 .clothswap-select-all-btn {
   display: inline-flex;
@@ -17458,7 +16423,7 @@ video + div button:last-child {
   transform: scale(0.97);
 }
 
-/* Delete All Button */
+
 
 .clothswap-delete-all-btn {
   display: inline-flex;
@@ -17485,7 +16450,7 @@ video + div button:last-child {
   box-shadow: 0 6px 15px rgba(189, 69, 107, 0.20);
 }
 
-/* Responsive Design */
+
 
 @media (max-width: 576px) {
   .clothswap-notification-count {
@@ -18160,7 +17125,7 @@ video + div button:last-child {
   font-size: 11px;
 }
 
-/* Responsive */
+
 @media (max-width: 1100px) {
   .cs-ceo-sidebar {
     width: 220px;
@@ -18302,7 +17267,7 @@ video + div button:last-child {
   }
 }
 
-/* PDF printing */
+
 @media print {
   body {
     background: white !important;
@@ -18352,11 +17317,6 @@ video + div button:last-child {
     grid-template-columns: repeat(2, 1fr) !important;
   }
 }
-
-/* =====================================
-   CEO DASHBOARD - FULL SCREEN LAYOUT
-===================================== */
-
 .clothswap-ceo-page-layout {
   display: block !important;
   width: 100% !important;
@@ -18376,7 +17336,7 @@ video + div button:last-child {
   flex: none !important;
 }
 
-/* Dashboard full screen and readable text */
+
 
 .cs-ceo-fullscreen {
   width: 100%;
@@ -18502,11 +17462,6 @@ video + div button:last-child {
     max-width: 100%;
   }
 }
-
-/* ==================================
-   CLOTHSWAP REPORT EXPORT BUTTONS
-================================== */
-
 .cs-report-actions {
   display: flex;
   align-items: center;
@@ -18562,11 +17517,6 @@ video + div button:last-child {
 .cs-report-page .cs-ceo-table tr:nth-child(even) {
   background: #faf7fc;
 }
-
-/* ==================================
-   PRINT REPORT
-================================== */
-
 @page {
   size: A4 landscape;
   margin: 12mm;
@@ -18639,7 +17589,7 @@ video + div button:last-child {
     padding: 8px !important;
   }
 }
-/* ADMIN PANEL NAVIGATION */
+
 
 .admin-navigation {
   display: flex;
@@ -18667,7 +17617,7 @@ video + div button:last-child {
   background: #e9c9df;
   color: #542747;
 }
-/* ================= ADMIN USER SEARCH ================= */
+
 
 .admin-search-wrapper,
 .admin-dispute-search {  width: 100%;
@@ -18711,7 +17661,7 @@ video + div button:last-child {
   box-shadow: 0 0 0 3px rgba(168, 59, 197, 0.12) !important;
 }
 
-/* Mobile responsive */
+
 @media (max-width: 600px) {
   .admin-search-input {
     height: 45px;
@@ -18732,9 +17682,6 @@ video + div button:last-child {
   border-color: #a83bc5;
   box-shadow: 0 0 4px #d8a2e5;
 }
-/* =========================================
-   ADMIN PANEL - MANAGE USERS TABLE
-========================================= */
 
 #manage-users {
   width: 100%;
@@ -18766,7 +17713,7 @@ video + div button:last-child {
   border-bottom: 1px solid rgba(180, 145, 195, 0.18);
 }
 
-/* ACTION BUTTONS */
+
 
 #manage-users td:last-child {
   white-space: nowrap;
@@ -18785,7 +17732,7 @@ video + div button:last-child {
   font-weight: 600;
 }
 
-/* TABLE RESPONSIVE */
+
 
 #manage-users {
   overflow-x: auto;
@@ -18795,7 +17742,7 @@ video + div button:last-child {
   min-width: 1100px;
 }
 
-/* MOBILE */
+
 
 @media (max-width: 768px) {
   #manage-users {
@@ -18808,7 +17755,7 @@ video + div button:last-child {
     font-size: 12px;
   }
 }
-/* ADMIN ACTION BUTTONS - HORIZONTAL */
+
 
 #manage-users tbody tr td:last-child {
   display: flex !important;
@@ -18833,10 +17780,6 @@ video + div button:last-child {
   margin: 0 !important;
   white-space: nowrap !important;
 }
-/* =====================================
-   ADMIN SWAP STATUS FILTERS
-===================================== */
-
 .admin-swap-status-filters {
   display: flex;
   flex-wrap: wrap;
@@ -18878,16 +17821,10 @@ video + div button:last-child {
     font-size: 12px;
   }
 }
-
-/* SWAP REQUESTS SECTION SPACING */
-
 #swap-activities .admin-section-header {
   padding: 20px 28px 12px;
   margin-bottom: 0;
 }
-
-/* CENTER STATUS FILTER OPTIONS */
-
 #swap-activities .admin-swap-status-filters {
   display: flex;
   justify-content: center;
@@ -18902,14 +17839,14 @@ video + div button:last-child {
   padding: 16px 24px 20px;
 }
 
-/* FILTER BUTTONS */
+
 
 #swap-activities .admin-swap-filter-btn {
   flex-shrink: 0;
   margin: 0;
 }
 
-/* MOBILE RESPONSIVE */
+
 
 @media (max-width: 600px) {
   #swap-activities .admin-swap-status-filters {
@@ -18923,7 +17860,7 @@ video + div button:last-child {
   }
 }
 
-/* REDUCE GAP BETWEEN HEADING AND FILTERS */
+
 
 #swap-activities .admin-section-header {
   padding-bottom: 4px !important;
@@ -18938,15 +17875,11 @@ video + div button:last-child {
   justify-content: center;
 }
 
-/* =================================
-   SWAP ACTIVITIES SECTION
-================================= */
-
 #swap-activities {
   margin-top: 25px;
 }
 
-/* SUMMARY CARDS */
+
 
 .admin-swap-summary-grid {
   display: grid;
@@ -18986,7 +17919,7 @@ video + div button:last-child {
   color: #66516b;
 }
 
-/* FILTER BUTTONS */
+
 
 .admin-swap-status-filters {
   display: flex;
@@ -19022,7 +17955,7 @@ video + div button:last-child {
   box-shadow: 0 4px 12px rgba(190, 91, 161, 0.2);
 }
 
-/* SWAP TABLE */
+
 
 #swap-activities .admin-table-wrapper {
   width: 100%;
@@ -19053,7 +17986,7 @@ video + div button:last-child {
   background: #fff8fc;
 }
 
-/* EMPTY STATE */
+
 
 #swap-activities .admin-empty-state {
   text-align: center;
@@ -19061,7 +17994,7 @@ video + div button:last-child {
   color: #806b80;
 }
 
-/* RESPONSIVE */
+
 
 @media (max-width: 768px) {
   .admin-swap-summary-grid {
@@ -19092,7 +18025,7 @@ video + div button:last-child {
     grid-template-columns: 1fr 1fr;
   }
 }
-/* DISPUTE SUMMARY CARDS */
+
 
 .admin-dispute-summary {
   display: grid;
@@ -19134,7 +18067,7 @@ video + div button:last-child {
     grid-template-columns: 1fr;
   }
 }
-/* DISPUTE SEARCH BOX */
+
 .admin-dispute-search {
   width: 100%;
   max-width: 380px;
@@ -19157,9 +18090,6 @@ margin: 15px 0 20px auto;
   border-color: #b65caa;
   box-shadow: 0 0 0 2px rgba(182, 92, 170, 0.12);
 }
-/* =================================
-   PREMIUM DISPUTE SEARCH BAR
-================================= */
 
 .admin-dispute-search {
   position: relative;
@@ -19188,7 +18118,7 @@ margin: 15px 0 20px auto;
   transition: all 0.3s ease;
 }
 
-/* SEARCH ICON */
+
 
 .admin-search-wrapper::before,
 .admin-dispute-search::before {  content: "";
@@ -19222,7 +18152,7 @@ margin: 15px 0 20px auto;
   pointer-events: none;
 }
 
-/* SEARCH INPUT */
+
 
 .admin-search-input,
 .admin-dispute-search input {  width: 100%;
@@ -19251,7 +18181,7 @@ margin: 15px 0 20px auto;
   font-weight: 400;
 }
 
-/* HOVER EFFECT */
+
 
 .admin-dispute-search:hover {
   border-color: #d9a9d6;
@@ -19260,7 +18190,7 @@ margin: 15px 0 20px auto;
     0 6px 18px rgba(168, 91, 199, 0.12);
 }
 
-/* FOCUS EFFECT */
+
 
 .admin-search-wrapper:focus-within,
 .admin-dispute-search:focus-within {  border-color: #b65caa;
@@ -19276,7 +18206,7 @@ margin: 15px 0 20px auto;
     0 6px 18px rgba(168, 91, 199, 0.10);
 }
 
-/* MOBILE RESPONSIVE */
+
 
 @media (max-width: 600px) {
   .admin-dispute-search {
@@ -19288,14 +18218,7 @@ margin: 15px 0 20px auto;
     height: 44px;
     font-size: 13px;
   }
-}
-/* =========================================
-   ADMIN PANEL - COMMON INNER SPACING FIX
-========================================= */
-
-/* SUMMARY CARDS SPACING */
-
-.admin-section-card > .admin-user-summary,
+}.admin-section-card > .admin-user-summary,
 .admin-section-card > .admin-dispute-summary,
 .admin-section-card > .admin-swap-summary-grid {
 
@@ -19308,7 +18231,7 @@ margin: 15px 0 20px auto;
   box-sizing: border-box;
 }
 
-/* KEEP SUMMARY CARDS INSIDE CONTAINER */
+
 
 .admin-user-summary,
 .admin-dispute-summary,
@@ -19318,7 +18241,7 @@ margin: 15px 0 20px auto;
   box-sizing: border-box;
 }
 
-/* SEARCH BOX SPACING */
+
 
 .admin-section-card > .admin-search-wrapper,
 .admin-section-card > .admin-dispute-search {
@@ -19332,7 +18255,7 @@ margin: 15px 0 20px auto;
   box-sizing: border-box;
 }
 
-/* USER SEARCH */
+
 
 .admin-search-wrapper {
   position: relative;
@@ -19416,7 +18339,7 @@ margin: 15px 0 20px auto;
     0 6px 18px rgba(168, 91, 199, 0.10);
 }
 
-/* MOBILE SPACING */
+
 
 @media (max-width: 767px) {
 
@@ -19437,7 +18360,7 @@ margin: 15px 0 20px auto;
   }
 
 }
-/* FINAL FIX - 4 SWAP CARDS IN ONE ROW */
+
 
 #swap-activities .admin-section-card > .admin-swap-summary-grid {
   display: grid !important;
@@ -19469,7 +18392,7 @@ margin: 15px 0 20px auto;
   text-align: center !important;
 }
 
-/* Mobile: 2 cards per row */
+
 
 @media (max-width: 768px) {
   #swap-activities .admin-section-card > .admin-swap-summary-grid {
@@ -19479,7 +18402,7 @@ margin: 15px 0 20px auto;
     margin: 18px 15px !important;
   }
 }
-/* SWAP SUMMARY - FOUR CARDS IN ONE ROW */
+
 
 #swap-activities .admin-swap-summary-grid {
   display: grid !important;
@@ -19500,12 +18423,7 @@ margin: 15px 0 20px auto;
   #swap-activities .admin-swap-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
-}
-/* =================================
-   CLOTHSWAP REPORT PROBLEM PAGE
-================================= */
-
-.rp-page {
+}.rp-page {
   min-height: 100vh;
   padding: 35px 20px 55px;
   background: linear-gradient(135deg, #fff8fc, #f8f3ff);
@@ -19518,7 +18436,7 @@ margin: 15px 0 20px auto;
   margin: 0 auto;
 }
 
-/* BACK BUTTON */
+
 
 .rp-back-button {
   border: none;
@@ -19537,7 +18455,7 @@ margin: 15px 0 20px auto;
   transform: translateX(-4px);
 }
 
-/* HERO */
+
 
 .rp-hero {
   display: flex;
@@ -19585,7 +18503,7 @@ margin: 15px 0 20px auto;
   color: rgba(255, 255, 255, 0.92);
 }
 
-/* INFO STRIP */
+
 
 .rp-info-strip {
   display: flex;
@@ -19617,7 +18535,7 @@ margin: 15px 0 20px auto;
   line-height: 1.6;
 }
 
-/* MAIN FORM */
+
 
 .rp-form-card {
   background: #ffffff;
@@ -19627,7 +18545,7 @@ margin: 15px 0 20px auto;
   box-shadow: 0 10px 30px rgba(120, 69, 133, 0.07);
 }
 
-/* SECTION HEADING */
+
 
 .rp-section-heading {
   display: flex;
@@ -19664,7 +18582,7 @@ margin: 15px 0 20px auto;
   line-height: 1.6;
 }
 
-/* CATEGORY CARDS */
+
 
 .rp-category-grid {
   display: grid;
@@ -19740,7 +18658,7 @@ margin: 15px 0 20px auto;
   font-weight: 800;
 }
 
-/* DIVIDER */
+
 
 .rp-divider {
   height: 1px;
@@ -19748,7 +18666,7 @@ margin: 15px 0 20px auto;
   margin: 30px 0;
 }
 
-/* FORM FIELDS */
+
 
 .rp-fields-grid {
   display: grid;
@@ -19818,7 +18736,7 @@ margin: 15px 0 20px auto;
   margin-top: 7px;
 }
 
-/* UPLOAD */
+
 
 .rp-upload-box {
   min-height: 165px;
@@ -19860,7 +18778,7 @@ margin: 15px 0 20px auto;
   display: none;
 }
 
-/* IMAGE PREVIEW */
+
 
 .rp-preview-grid {
   display: grid;
@@ -19911,7 +18829,7 @@ margin: 15px 0 20px auto;
   white-space: nowrap;
 }
 
-/* ERROR AND SUCCESS */
+
 
 .rp-error-message {
   margin-top: 20px;
@@ -19943,7 +18861,7 @@ margin: 15px 0 20px auto;
   margin: 6px 0 0;
 }
 
-/* SUBMIT AREA */
+
 
 .rp-submit-area {
   display: flex;
@@ -19990,7 +18908,7 @@ margin: 15px 0 20px auto;
   font-size: 18px;
 }
 
-/* FOOTER */
+
 
 .rp-footer-note {
   text-align: center;
@@ -19999,7 +18917,7 @@ margin: 15px 0 20px auto;
   margin-top: 24px;
 }
 
-/* TABLET */
+
 
 @media (max-width: 768px) {
   .rp-page {
@@ -20023,7 +18941,7 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* MOBILE */
+
 
 @media (max-width: 550px) {
   .rp-page {
@@ -20104,7 +19022,7 @@ margin: 15px 0 20px auto;
     width: 100%;
   }
 }
-/* ===== REPORT PROBLEM UPLOAD OPTIONS ===== */
+
 
 .rp-upload-options {
   display: grid;
@@ -20162,7 +19080,7 @@ margin: 15px 0 20px auto;
     grid-template-columns: 1fr;
   }
 }
-/* REPORT PROBLEM LIVE CAMERA */
+
 
 .rp-camera-modal {
   position: fixed;
@@ -20219,7 +19137,7 @@ margin: 15px 0 20px auto;
   color: #d93025;
   margin-bottom: 12px;
 }
-/* ADMIN DISPUTE ATTACHMENT BUTTON */
+
 
 .admin-disputes-table .admin-user-action-btn {
   white-space: nowrap;
@@ -20235,7 +19153,7 @@ margin: 15px 0 20px auto;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(180, 120, 180, 0.2);
 }
-/* ===== ADMIN DISPUTE IMAGE MODAL ===== */
+
 
 .admin-image-modal-overlay {
   position: fixed;
@@ -20369,7 +19287,7 @@ margin: 15px 0 20px auto;
     flex: 1;
   }
 }
-/* ADMIN USER SORT DROPDOWN */
+
 
 .admin-user-sort-filter {
   width: 220px;
@@ -20409,7 +19327,7 @@ margin: 15px 0 20px auto;
     min-width: 0;
   }
 }
-/* ADMIN EXPORT EXCEL BUTTON */
+
 
 .admin-export-users-btn {
   padding: 12px 18px;
@@ -20439,7 +19357,7 @@ margin: 15px 0 20px auto;
     width: 100%;
   }
 }
-/* ADMIN EXPORT PDF BUTTON */
+
 
 .admin-export-pdf-btn {
   padding: 12px 18px;
@@ -20469,11 +19387,6 @@ margin: 15px 0 20px auto;
     width: 100%;
   }
 }
-
-/* ================================
-   REPORTED LISTINGS - ADMIN PANEL
-================================ */
-
 .admin-reported-listings {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -20572,11 +19485,6 @@ margin: 15px 0 20px auto;
     flex: 1 1 100%;
   }
 }
-
-/* =====================================
-   CLOTHSWAP - REPORT LISTING
-===================================== */
-
 .item-details-actions {
   display: flex;
   align-items: center;
@@ -20684,7 +19592,7 @@ margin: 15px 0 20px auto;
     padding: 18px;
   }
 }
-/* Reported Listings Bulk Actions */
+
 .admin-report-bulk-actions {
   display: flex;
   align-items: center;
@@ -20748,10 +19656,6 @@ margin: 15px 0 20px auto;
     width: 100%;
   }
 }
-
-/* =====================================
-   DISPUTE HISTORY MODAL
-===================================== */
 
 .admin-modal-overlay {
   position: fixed;
@@ -20859,11 +19763,6 @@ margin: 15px 0 20px auto;
   .admin-modal-content h3 {
     font-size: 21px;
   }
-
-/* ==========================================
-   DISPUTES - ACTION BUTTONS
-========================================== */
-
 .admin-dispute-actions {
   display: inline-flex !important;
   flex-direction: row !important;
@@ -20884,7 +19783,7 @@ margin: 15px 0 20px auto;
   margin: 0 !important;
   white-space: nowrap !important;
 }
-/* ===== DISPUTE CENTER ===== */
+
 
 .admin-dispute-summary {
   display: grid;
@@ -20914,7 +19813,7 @@ margin: 15px 0 20px auto;
   font-weight: 600;
 }
 
-/* Search */
+
 
 .admin-dispute-search {
   max-width: 460px;
@@ -20937,10 +19836,6 @@ margin: 15px 0 20px auto;
   border-color: #bd83b9;
   box-shadow: 0 0 0 3px rgba(189, 131, 185, 0.13);
 }
-
-/* Filter buttons */
-
-/* Search + Filters Toolbar */
 
 .admin-dispute-toolbar {
   display: flex;
@@ -21043,7 +19938,7 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* Bulk actions */
+
 
 .admin-dispute-bulk-actions {
   display: flex;
@@ -21086,7 +19981,7 @@ margin: 15px 0 20px auto;
   cursor: not-allowed;
 }
 
-/* Dispute table */
+
 
 .admin-disputes-table {
   min-width: 1100px;
@@ -21118,7 +20013,7 @@ margin: 15px 0 20px auto;
   flex-wrap: nowrap;
 }
 
-/* Image modal */
+
 
 .admin-image-modal-overlay {
   position: fixed;
@@ -21169,7 +20064,7 @@ margin: 15px 0 20px auto;
   font-size: 13px;
 }
 
-/* Responsive */
+
 
 @media (max-width: 768px) {
   .admin-dispute-summary {
@@ -21193,7 +20088,7 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* Local Exchange Meeting Time Picker */
+
 
 .meeting-time-picker {
   width: 100%;
@@ -21255,7 +20150,7 @@ margin: 15px 0 20px auto;
     font-size: 13px;
   }
 }
- /* TERMS ACCEPT BUTTON */
+ 
 
 .terms-accept-area {
   text-align: center;
@@ -21287,7 +20182,7 @@ margin: 15px 0 20px auto;
   margin-bottom: 12px;
 }
 
-/* Space between Reported Listings and Removal History */
+
 
 #reported-listings {
   margin-bottom: 28px !important;
@@ -21296,11 +20191,6 @@ margin: 15px 0 20px auto;
 #removed-listings {
   margin-top: 28px !important;
 }
-
-/* =================================
-   MANAGE LISTINGS - FILTER TOOLBAR
-================================= */
-
 .admin-listing-toolbar {
   display: grid !important;
   grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(150px, 1fr));
@@ -21340,10 +20230,6 @@ margin: 15px 0 20px auto;
 .admin-listing-toolbar input::placeholder {
   color: #9b8da0;
 }
-
-/* =================================
-   MANAGE LISTINGS - PAGINATION
-================================= */
 
 .admin-table-note {
   padding: 14px 16px;
@@ -21389,10 +20275,6 @@ margin: 15px 0 20px auto;
   cursor: not-allowed;
 }
 
-/* =================================
-   RESPONSIVE
-================================= */
-
 @media (max-width: 900px) {
   .admin-listing-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -21419,7 +20301,7 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* Reduce gap between Clothing Listings and filters */
+
 #manage-listings .admin-section-header {
   margin-bottom: 5px !important;
   padding-bottom: 5px !important;
@@ -21439,7 +20321,7 @@ margin: 15px 0 20px auto;
   cursor: pointer;
 }
 
-/* ===== Automatic Matching Section ===== */
+
 
 .automatic-matching-card {
   margin-bottom: 30px;
@@ -21497,7 +20379,7 @@ margin: 15px 0 20px auto;
   box-shadow: 0 0 0 3px rgba(214, 91, 157, 0.12);
 }
 
-/* Matching Results */
+
 
 .matching-results {
   margin-top: 25px;
@@ -21520,7 +20402,7 @@ margin: 15px 0 20px auto;
   text-align: center;
 }
 
-/* Individual Matching Clothes Card */
+
 
 .matching-item {
   display: inline-block;
@@ -21584,7 +20466,7 @@ margin: 15px 0 20px auto;
   cursor: not-allowed;
 }
 
-/* Responsive Design */
+
 
 @media (max-width: 900px) {
   .matching-item {
@@ -21620,7 +20502,7 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* ===== Swap Request Toast Popup ===== */
+
 
 .swap-toast {
   position: fixed;
@@ -21750,7 +20632,7 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* ================= WISHLIST TOP BAR ================= */
+
 
 .wishlist-top {
   padding: 18px 22px;
@@ -21768,7 +20650,7 @@ margin: 15px 0 20px auto;
   color: #75436f;
 }
 
-/* CLEAR WISHLIST BUTTON */
+
 
 .wishlist-clear-btn {
   border: none;
@@ -21789,7 +20671,7 @@ margin: 15px 0 20px auto;
   box-shadow: 0 7px 16px rgba(190, 75, 155, 0.3);
 }
 
-/* ================= INDIVIDUAL REMOVE BUTTON ================= */
+
 
 .wishlist-image-wrapper {
   position: relative;
@@ -21820,7 +20702,7 @@ margin: 15px 0 20px auto;
   transform: scale(1.12);
 }
 
-/* ================= RESPONSIVE ================= */
+
 
 @media (max-width: 576px) {
   .wishlist-top {
@@ -21837,7 +20719,7 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* ================= BROWSE WISHLIST HEART ================= */
+
 
 .browse-wishlist-btn {
   position: absolute;
@@ -21878,7 +20760,7 @@ margin: 15px 0 20px auto;
 .browse-wishlist-btn:focus {
   outline: none;
 }
-/* NEARBY SWAPS - ALWAYS SHOW WISHLIST HEART */
+
 
 .location-image-wrapper {
   position: relative;
@@ -21890,14 +20772,14 @@ margin: 15px 0 20px auto;
   opacity: 1 !important;
   pointer-events: auto !important;
 }
-/* Mobile Bottom Navbar */
+
 .clothswap-mobile-bottom-nav {
   display: none;
 }
 
 @media (max-width: 768px) {
 
-  /* Mobile ma top desktop navbar hide */
+  
   .clothswap-navbar {
     min-height: 0 !important;
     height: 0 !important;
@@ -21917,7 +20799,7 @@ margin: 15px 0 20px auto;
     display: none !important;
   }
 
-  /* Bottom navigation */
+  
   .clothswap-mobile-bottom-nav {
     display: flex !important;
     position: fixed;
@@ -22008,7 +20890,7 @@ margin: 15px 0 20px auto;
     font-size: 9px;
   }
 
-  /* Notification badge */
+  
   .clothswap-mobile-nav-icon .notification-count-badge {
     position: absolute;
     top: -7px;
@@ -22025,7 +20907,7 @@ margin: 15px 0 20px auto;
     justify-content: center;
   }
 
-  /* More menu */
+  
   .clothswap-mobile-more-menu {
     position: absolute;
     bottom: 58px;
@@ -22054,11 +20936,11 @@ margin: 15px 0 20px auto;
     background: #f5eafa;
   }
 
-  /* Page content should not hide behind bottom navbar */
+  
   body {
     padding-bottom: 75px;
   }
-    /* Mobile Search Panel */
+    
   .clothswap-mobile-search-panel {
     position: fixed;
     left: 10px;
@@ -22085,7 +20967,7 @@ margin: 15px 0 20px auto;
     box-shadow: none;
   }
 }
-/* MOBILE SIDEBAR - REMOVE TOP NAVBAR GAP */
+
 @media (max-width: 767px) {
   .clothswap-sidebar {
     position: fixed !important;
@@ -22106,7 +20988,7 @@ margin: 15px 0 20px auto;
     width: 72px !important;
   }
 }
-/* MOBILE SIDEBAR - REMOVE TOP GAP */
+
 @media (max-width: 767px) {
   .clothswap-sidebar {
     position: fixed !important;
@@ -22127,7 +21009,7 @@ margin: 15px 0 20px auto;
     transform: translateX(-100%) !important;
   }
 }
-/* FIX: MOBILE SIDEBAR MUST START FROM SCREEN TOP */
+
 @media screen and (max-width: 767px) {
   body .clothswap-page-layout .clothswap-sidebar {
     position: fixed !important;
@@ -22149,10 +21031,6 @@ margin: 15px 0 20px auto;
     transform: translateX(-100%) !important;
   }
 }
-
-/* =========================================
-   CLOTHSWAP REGISTER - NEW PASTEL DESIGN
-   ========================================= */
 
 .register-page-new {
   min-height: 100vh;
@@ -22293,7 +21171,7 @@ margin: 15px 0 20px auto;
   color: #883b98;
 }
 
-/* Mobile */
+
 @media (max-width: 680px) {
   .register-page-new {
     padding: 15px;
@@ -22318,10 +21196,6 @@ margin: 15px 0 20px auto;
   }
 }
 
-/* =========================================
-   CLOTHSWAP - FULL SCREEN CLEAR IMAGE
-   ========================================= */
-
 .register-page-new {
   position: relative;
   isolation: isolate;
@@ -22334,14 +21208,14 @@ margin: 15px 0 20px auto;
   background: transparent;
 }
 
-/* Remove all old blur and overlay effects */
+
 .register-page-new::before,
 .register-page-new::after {
   display: none;
   content: none;
 }
 
-/* Full screen layout */
+
 .register-main-card {
   position: relative;
   width: 100%;
@@ -22358,7 +21232,7 @@ margin: 15px 0 20px auto;
   -webkit-backdrop-filter: none;
 }
 
-/* Clear clothes image across full screen */
+
 .register-visual {
   position: absolute;
   inset: 0;
@@ -22376,7 +21250,7 @@ margin: 15px 0 20px auto;
   filter: none;
 }
 
-/* Registration form over the image */
+
 .register-form-side {
   grid-column: 2;
   position: relative;
@@ -22384,7 +21258,7 @@ margin: 15px 0 20px auto;
   min-height: 100vh;
 }
 
-/* Mobile layout */
+
 @media (max-width: 768px) {
   .register-visual {
     position: absolute;
@@ -22394,7 +21268,7 @@ margin: 15px 0 20px auto;
     grid-column: 1 / -1;
   }
 }
-/* COMMON CLOTHSWAP BRAND LABEL */
+
 
 .clothswap-brand-label {
   display: inline-block;
@@ -22407,7 +21281,7 @@ margin: 15px 0 20px auto;
   margin-bottom: 10px;
 }
 
-/* ===== PREMIUM ITEM DETAILS DESIGN ===== */
+
 
 .item-details-content {
   padding: 12px 5px;
@@ -22511,7 +21385,7 @@ margin: 15px 0 20px auto;
   overflow-wrap: anywhere;
 }
 
-/* SELLER CARD */
+
 
 .item-owner-box {
   margin: 22px 0;
@@ -22527,7 +21401,7 @@ margin: 15px 0 20px auto;
   box-shadow: 0 8px 20px rgba(190, 75, 155, 0.10);
 }
 
-/* ACTION BUTTONS */
+
 
 .item-details-actions {
   display: flex;
@@ -22535,7 +21409,6 @@ margin: 15px 0 20px auto;
   gap: 11px;
   margin-top: 22px;
 }
-
 .item-details-actions button {
   min-height: 46px;
   padding: 11px 18px;
@@ -22544,54 +21417,43 @@ margin: 15px 0 20px auto;
   font-weight: 700;
   transition: all 0.25s ease;
 }
-
 .wishlist-action-btn {
   background: #fff;
   color: #a33cc0;
   border: 1.5px solid #b44bd0;
 }
-
 .wishlist-action-btn:hover {
   background: #f8eaff;
   transform: translateY(-2px);
 }
-
 .wishlist-action-btn.wishlisted {
   background: #fff0f5;
   color: #e34e86;
   border-color: #e34e86;
 }
-
 .swap-request-btn {
   background: #24252b;
   color: #fff;
   border: 1.5px solid #24252b;
 }
-
 .swap-request-btn:hover {
   background: linear-gradient(110deg, #e85d9e, #a85bc7);
   border-color: transparent;
   transform: translateY(-2px);
 }
-
 .report-listing-btn {
   background: #fff8fa;
   color: #dc4b70;
   border: 1.5px solid #f0a1b5;
 }
-
 .report-listing-btn:hover {
   background: #fff0f4;
   transform: translateY(-2px);
 }
-
 .item-details-actions button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
-/* REPORT FORM */
-
 .report-listing-form {
   margin-top: 22px;
   padding: 22px;
@@ -22600,82 +21462,58 @@ margin: 15px 0 20px auto;
   background: #fffafd;
   box-shadow: 0 8px 24px rgba(150, 70, 180, 0.06);
 }
-
 .report-listing-form h3 {
   color: #743b86;
   font-size: 19px;
   font-weight: 800;
   margin-bottom: 16px;
 }
-
-/* RESPONSIVE DESIGN */
-
 @media (max-width: 767px) {
   .item-details-content {
     padding: 5px 0;
   }
-
   .item-details-content h1 {
     font-size: 29px;
   }
-
   .item-details-info-grid {
     gap: 9px;
   }
-
   .item-info-box {
     padding: 12px;
   }
-
   .item-details-actions {
     display: grid;
     grid-template-columns: 1fr;
   }
-
   .item-details-actions button {
     width: 100%;
   }
 }
-/* FIX: REGISTER PAGE MOBILE LAYOUT */
 @media (max-width: 680px) {
-
   .register-visual {
     display: none !important;
   }
-
   .register-main-card {
     display: block;
     background: rgba(255, 255, 255, 0.94);
   }
-
   .register-form-side {
     padding: 35px 23px 30px;
   }
-
 }
-/* MOBILE REGISTER PAGE - DUPLICATE TEXT FIX */
-
 @media (max-width: 768px) {
-
-  /* Keep full-page background image */
   .register-visual {
     position: absolute;
     inset: 0;
   }
-
-  /* Hide duplicate text over background */
   .register-visual-overlay {
     display: none !important;
   }
-
-  /* Keep form above background */
   .register-form-side {
     position: relative;
     z-index: 2;
     grid-column: 1 / -1;
   }
-
-  /* Clear readable form card */
   .register-form-inner {
     width: 100%;
     box-sizing: border-box;
@@ -22691,11 +21529,9 @@ margin: 15px 0 20px auto;
   padding: 0 4px;
   box-sizing: border-box;
 }
-
 .clothswap-google-area iframe {
   max-width: 100% !important;
 }
-
 .clothswap-login-card {
   min-width: 0;
   overflow: visible;

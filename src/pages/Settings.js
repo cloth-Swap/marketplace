@@ -83,8 +83,6 @@ function Settings() {
     );
   }
 
-  /* ================= LOGOUT ================= */
-
   async function handleLogout() {
     const isLoggedIn =
       localStorage.getItem("clothswapLoggedIn") === "true";
@@ -230,8 +228,6 @@ function Settings() {
       className: "clothswap-settings-page"
     },
 
-    /* PAGE HEADER */
-
     React.createElement(
       "div",
       {
@@ -259,8 +255,6 @@ function Settings() {
         )
       )
     ),
-
-    /* PREFERENCES */
 
     React.createElement(
       "div",
@@ -360,8 +354,6 @@ function Settings() {
         settingSwitch(compactMode, changeCompactMode)
       )
     ),
-
-    /* COMMUNICATION */
 
     React.createElement(
       "div",
@@ -468,8 +460,6 @@ function Settings() {
       )
     ),
 
-    /* HELP & SUPPORT */
-
     React.createElement(
       "div",
       {
@@ -510,8 +500,6 @@ function Settings() {
       )
     ),
 
-    /* LEGAL & PRIVACY */
-
     React.createElement(
       "div",
       {
@@ -551,8 +539,6 @@ function Settings() {
         "/community-guidelines"
       )
     ),
-
-    /* LOGOUT */
 
     React.createElement(
       "div",

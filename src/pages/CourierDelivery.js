@@ -365,12 +365,7 @@ if (!request || !request._id) {
         setArranging(false);
         return;
       }
-
-      /*
-      ================= SUCCESS =================
-      */
-
-      setShipment(
+ setShipment(
         shipmentData.shipment
       );
 const courierUserEmail =
@@ -468,10 +463,7 @@ const courierUserEmail =
       setArranging(false);
     }
   }
-
- 
-
-  async function updateShipmentStatus(
+   async function updateShipmentStatus(
     status
   ) {
 
@@ -606,11 +598,7 @@ const statusUserEmail =
     }
   }
 
-  /*
-  ============================================================
-  PAGE
-  ============================================================
-  */
+
 
   return React.createElement(
     "div",
@@ -624,10 +612,6 @@ const statusUserEmail =
       {
         className: "container"
       },
-
-      /*
-      ================= HEADER =================
-      */
 
       React.createElement(
         "div",
@@ -649,10 +633,6 @@ const statusUserEmail =
         )
       ),
 
-      /*
-      ================= FORM CARD =================
-      */
-
       React.createElement(
         "div",
         {
@@ -672,10 +652,6 @@ const statusUserEmail =
             className:
               "courier-form-grid"
           },
-
-          /*
-          -------- PICKUP ADDRESS --------
-          */
 
           React.createElement(
             "div",
@@ -709,9 +685,6 @@ const statusUserEmail =
             )
           ),
 
-          /*
-          -------- DELIVERY ADDRESS --------
-          */
 
           React.createElement(
             "div",
@@ -745,9 +718,6 @@ const statusUserEmail =
             )
           ),
 
-          /*
-          -------- PACKAGE WEIGHT --------
-          */
 
           React.createElement(
             "div",
@@ -784,9 +754,6 @@ const statusUserEmail =
             )
           ),
 
-          /*
-          -------- COURIER SERVICE --------
-          */
 
           React.createElement(
             "div",
@@ -844,9 +811,6 @@ const statusUserEmail =
             )
           ),
 
-          /*
-          -------- PICKUP DATE --------
-          */
 
           React.createElement(
             "div",
@@ -880,9 +844,6 @@ const statusUserEmail =
           )
         ),
 
-        /*
-        ================= SECURE DELIVERY INFO =================
-        */
 
         React.createElement(
           "div",
@@ -904,9 +865,6 @@ const statusUserEmail =
           )
         ),
 
-        /*
-        ================= ARRANGE BUTTON =================
-        */
 
         React.createElement(
           "button",
@@ -927,11 +885,6 @@ const statusUserEmail =
         )
       ),
 
-      /*
-      ============================================================
-      SHIPMENT TRACKING
-      ============================================================
-      */
 
       shipment
         ? React.createElement(
@@ -947,9 +900,6 @@ const statusUserEmail =
               "📦 Shipment Tracking"
             ),
 
-            /*
-            -------- TRACKING ID --------
-            */
 
             React.createElement(
               "div",
@@ -971,9 +921,6 @@ const statusUserEmail =
               )
             ),
 
-            /*
-            -------- CURRENT STATUS --------
-            */
 
             React.createElement(
               "div",
@@ -995,11 +942,6 @@ const statusUserEmail =
               )
             ),
 
-            /*
-            ========================================================
-            STATUS BUTTONS
-            ========================================================
-            */
 
             React.createElement(
               "div",
@@ -1074,11 +1016,6 @@ const statusUserEmail =
               )
             ),
 
-            /*
-            ========================================================
-            RECEIVER OTP
-            ========================================================
-            */
 
             shipment &&
             shipment.status ===
@@ -1114,11 +1051,6 @@ const statusUserEmail =
                 )
               : null,
 
-            /*
-            ========================================================
-            TRACKING INFORMATION
-            ========================================================
-            */
 
             React.createElement(
               "div",

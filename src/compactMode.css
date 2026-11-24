@@ -1,13 +1,7 @@
-/* =========================================================
-   CLOTHSWAP COMPACT MODE
-   Only active when Compact Mode is ON
-   ========================================================= */
 
 body.clothswap-compact-mode {
   --clothswap-compact-scale: 0.88;
 }
-
-/* Main page spacing */
 
 body.clothswap-compact-mode
 .clothswap-settings-page,
@@ -17,8 +11,6 @@ body.clothswap-compact-mode
 .container-fluid {
   --clothswap-compact-gap: 0.85;
 }
-
-/* ClothSwap custom sections */
 
 body.clothswap-compact-mode
 .clothswap-setting-row {
@@ -36,15 +28,10 @@ body.clothswap-compact-mode
   margin-bottom: 18px !important;
 }
 
-/* Navigation */
-
 body.clothswap-compact-mode
 .clothswap-navbar {
   min-height: 58px;
 }
-
-/* Generic Bootstrap spacing
-   Only when compact mode is active */
 
 body.clothswap-compact-mode
 .py-5 {

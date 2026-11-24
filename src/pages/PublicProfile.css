@@ -1,8 +1,3 @@
-
-/* ========================================
-   PUBLIC SELLER PROFILE - PINK LAVENDER UI
-======================================== */
-
 * {
   box-sizing: border-box;
 }
@@ -29,9 +24,6 @@
   position: relative;
   z-index: 1;
 }
-
-/* BACK BUTTON */
-
 .public-profile-back {
   display: inline-flex;
   align-items: center;
@@ -58,9 +50,6 @@
   background: white;
   box-shadow: 0 10px 22px rgba(175, 81, 172, 0.23);
 }
-
-/* MAIN PROFILE CARD */
-
 .public-profile-card {
   width: 100%;
   min-height: 390px;
@@ -81,9 +70,6 @@
     inset 0 0 25px rgba(255, 255, 255, 0.55);
   overflow: visible;
 }
-
-/* CURVED BACKGROUND DECORATIONS */
-
 .public-profile-card::before {
   content: "";
   position: absolute;
@@ -133,8 +119,6 @@
   background: linear-gradient(135deg, rgba(223, 161, 255, 0.12), rgba(224, 124, 237, 0.42));
 }
 
-/* PROFILE PHOTO */
-
 .profile-photo-wrap {
   width: 216px;
   height: 216px;
@@ -179,9 +163,6 @@
   background: linear-gradient(135deg, #a43ce5, #7026d9);
   box-shadow: 0 4px 10px rgba(117, 38, 206, 0.25);
 }
-
-/* SELLER DETAILS */
-
 .public-profile-name {
   margin: 0;
   color: #45114f;
@@ -222,8 +203,6 @@
   font-size: 20px;
   text-align: center;
 }
-
-/* MEMBER SINCE + COMPLETED SWAPS */
 
 .public-profile-stats {
   width: min(700px, 100%);
@@ -282,8 +261,6 @@
   font-weight: 800;
 }
 
-/* LISTINGS HEADING */
-
 .profile-listings-heading {
   display: flex;
   align-items: center;
@@ -315,9 +292,6 @@
   flex-shrink: 0;
   color: #e879d0;
 }
-
-/* LISTINGS GRID */
-
 .public-profile-listings {
   width: 100%;
   display: grid;
@@ -342,9 +316,6 @@
   transform: translateY(-5px);
   box-shadow: 0 12px 25px rgba(163, 82, 175, 0.22);
 }
-
-/* LISTING IMAGE */
-
 .profile-listing-image-wrap {
   width: 100%;
   height: 230px;
@@ -388,9 +359,6 @@
   background: rgba(255, 255, 255, 0.9);
   color: #50185e;
 }
-
-/* LISTING DETAILS */
-
 .profile-listing-details {
   padding: 10px 12px 11px;
 }
@@ -475,16 +443,10 @@
 .profile-error .public-profile-back {
   margin: 20px 0 0;
 }
-
-/* ICONS */
-
 .profile-icon {
   display: inline-block;
   flex-shrink: 0;
 }
-
-/* TABLET */
-
 @media (max-width: 1100px) {
   .public-profile-page {
     padding-left: 25px;
@@ -503,9 +465,6 @@
     min-height: 390px;
   }
 }
-
-/* MOBILE */
-
 @media (max-width: 600px) {
   .public-profile-page {
     padding: 20px 14px 35px;

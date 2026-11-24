@@ -96,8 +96,6 @@ function Sidebar() {
     React.Fragment,
     null,
 
-    /* MOBILE OPEN BUTTON */
-
     !isOpen &&
       isMobile &&
       React.createElement(
@@ -116,8 +114,6 @@ function Sidebar() {
         },
         "☰"
       ),
-
-// SIDEBAR 
     React.createElement(
       "aside",
       {
@@ -256,7 +252,6 @@ function Sidebar() {
   "/my-listings"
 ),
 
-        // ADMIN PANEL - OWNER ONLY
 
         localStorage.getItem(
           "clothswapIsAdmin"

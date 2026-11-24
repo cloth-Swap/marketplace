@@ -67,7 +67,7 @@ function parseMeetingDateTimeIST(meetingDate, meetingTime) {
   } else if (period === "PM" && hour !== 12) {
     hour += 12;
   }
-c  const meetingTimestamp =
+  const meetingTimestamp =
     Date.UTC(year, month - 1, day, hour, minute) -
     (5 * 60 + 30) * 60 * 1000;
 

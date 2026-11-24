@@ -574,8 +574,6 @@ function chartTooltipView(title) {
         ),
     
   h("div", { className: "cs-ceo-overview-analytics-grid" },
-
-    // Chart 1 - Full width
     h("section", { className: "cs-ceo-card cs-overview-main-chart" },
       h("div", {
         style: {
@@ -666,8 +664,6 @@ function chartTooltipView(title) {
     trends.topPerformingCategories || []
   )
   ),
-
-  // Platform Performance - Outside chart grid
   h("section", { className: "cs-ceo-card" },
     h("h3", null, "Platform Performance"),
     h("p", null, `Swap Completion Rate: ${analytics.swapCompletionRate || 0}%`)
@@ -803,8 +799,6 @@ function chartTooltipView(title) {
             display: "block"
           }
         },
-
-          // Y-axis grid and value labels
           [0, 1, 2, 3, 4].map(function (step) {
             const value = maxValue - (step * maxValue / 4);
             const y = top + step * (
@@ -829,8 +823,6 @@ function chartTooltipView(title) {
               }, String(value))
             );
           }),
-
-          // Data lines and points
           datasets.map(function (series, seriesIndex) {
             const points = (series.data || []).map(function (item, index) {
               const value = Number(
@@ -858,7 +850,6 @@ function chartTooltipView(title) {
            return h("g", {
   key: series.name + "-" + index
 },
-  // Mobile and desktop tap area
   h("circle", {
     cx: getX(index),
     cy: getY(value),
@@ -889,7 +880,6 @@ function chartTooltipView(title) {
     }
   }),
 
-  // Original visible point
   h("circle", {
     cx: getX(index),
     cy: getY(value),
@@ -904,8 +894,6 @@ function chartTooltipView(title) {
   })
             );
           }),
-
-          // X-axis date labels
           firstData.map(function (item, index) {
             if (
               index % labelStep !== 0 &&
@@ -928,7 +916,6 @@ function chartTooltipView(title) {
         )
       ),
 chartTooltipView(title),
-      // Legend
       h("div", {
         style: {
           display: "flex",
@@ -1987,8 +1974,6 @@ chartTooltipView(title),
       );
     }
 
-    // ================= REPORT CALCULATIONS =================
-
     function getReportData() {
       const totalValue = listings.reduce((total, item) => {
       const value = Number(item.price ?? 0);
@@ -2000,8 +1985,6 @@ chartTooltipView(title),
 
       return { totalValue, completed };
     }
-
-    // ================= EXCEL EXPORT =================
 
     async function exportExcel() {
   setExcelExporting(true);
@@ -2151,8 +2134,6 @@ chartTooltipView(title),
         }
 
         const { totalValue, completed } = getReportData();
-
-        // 1. Summary
         addSheet(
           "Summary",
           "CLOTHSWAP - PLATFORM PERFORMANCE REPORT",
@@ -2167,8 +2148,6 @@ chartTooltipView(title),
             ["Estimated Listing Value", totalValue]
           ]
         );
-
-        // 2. Users
         addSheet(
           "Users",
           "REGISTERED MEMBERS",
@@ -2182,8 +2161,6 @@ chartTooltipView(title),
             dateText(user.createdAt)
           ])
         );
-
-        // 3. Listings
         addSheet(
           "Listings",
           "CLOTHING LISTINGS",
@@ -2201,8 +2178,6 @@ chartTooltipView(title),
             ];
           })
         );
-
-        // 4. Swap Requests
         addSheet(
           "Swap Requests",
           "SWAP REQUEST RECORDS",
@@ -2216,8 +2191,6 @@ chartTooltipView(title),
             dateText(item.createdAt)
           ])
         );
-
-        // 5. Monthly Analytics
         const monthlyRows = [];
 
         [
@@ -2271,8 +2244,6 @@ chartTooltipView(title),
   setExcelExporting(false);    }
     }
 
-    // ================= PDF EXPORT =================
-
     async function exportPDF() {
       const report = document.getElementById("clothswap-report");
 
@@ -2317,8 +2288,6 @@ chartTooltipView(title),
   setPdfExporting(false);    }
     }
 
-    // ================= PRINT REPORT =================
-
     function printReport() {
       if (!document.getElementById("clothswap-report")) {
         setError("Please open the report preview before printing.");
@@ -2327,8 +2296,6 @@ chartTooltipView(title),
 
       window.print();
     }
-
-    // ================= REPORT PREVIEW =================
 
     function renderReportPreview() {
       const { totalValue, completed } = getReportData();
@@ -2444,8 +2411,6 @@ chartTooltipView(title),
       );
     }
 
-    // ================= REPORTS PAGE =================
-
     function renderReports() {
       return h(React.Fragment, null,
         heading("Reports & Analytics", "Review platform metrics and export reports."),
@@ -2490,8 +2455,6 @@ chartTooltipView(title),
       );
     }
 
-    // ================= CONTENT ROUTER =================
-
     function renderContent() {
       if (showReport) {
         return renderReportPreview();
@@ -2510,8 +2473,6 @@ chartTooltipView(title),
         default: return renderOverview();
       }
     }
-
-    // ================= MAIN DASHBOARD UI =================
 
     return h("div", { className: "cs-ceo-layout cs-ceo-fullscreen" },
 
